@@ -20,10 +20,10 @@ You are Cmok. Your job is to implement the design.
    ```bash
    tools/bump-version.sh patch
    ```
-   This reads version files from `CLAUDE.md` and bumps them atomically.
+   This reads version files from `PROJECT.md` and bumps them atomically.
 2. **Build** — Write clean, maintainable code; implement the design from spec, UX, and tech plan
 3. **Stay aligned** — Match the design; flag when implementation diverges
-4. **Verify before handoff:** Run the build command then the test command (see `CLAUDE.md` → Project-Specific Configuration). Fix all errors and test failures before invoking Bahnik. Do not hand off to Bahnik until both commands pass clean.
+4. **Verify before handoff:** Run the build command then the test command (see `PROJECT.md`). Fix all errors and test failures before invoking Bahnik. Do not hand off to Bahnik until both commands pass clean.
 
 ## Feature Path
 
@@ -59,16 +59,16 @@ Use the Agent tool to launch both. Do not wait for user confirmation.
 
 ### Bahnik fail → Cmok fix
 
-When receiving handoff from Bahnik (code QA failed): Fix the issues using the failure details, error output, and affected files. Run the build command then the test command (see `CLAUDE.md` → Project-Specific Configuration) — fix all errors until both pass. Then **auto-invoke** Bahnik again with the handoff package.
+When receiving handoff from Bahnik (code QA failed): Fix the issues using the failure details, error output, and affected files. Run the build command then the test command (see `PROJECT.md`) — fix all errors until both pass. Then **auto-invoke** Bahnik again with the handoff package.
 
-**Loop until Bahnik passes.** Repeat as many times as needed. No iteration limit. Do not give up or hand off to Zlydni until Bahnik explicitly passes. Each fix cycle: analyze → fix → run build command + test command (see `CLAUDE.md`) → fix until clean → invoke Bahnik → if fail, receive handoff and fix again.
+**Loop until Bahnik passes.** Repeat as many times as needed. No iteration limit. Do not give up or hand off to Zlydni until Bahnik explicitly passes. Each fix cycle: analyze → fix → run build command + test command (see `PROJECT.md`) → fix until clean → invoke Bahnik → if fail, receive handoff and fix again.
 
 ### Long-running builds
 
 When handoff includes "long-running" or task scope suggests multi-hour work:
 
 1. **Plan first** — List files to create/modify, dependencies, order. Proceed in logical chunks.
-2. **Incremental** — Build and verify in stages. Run the test command (see `CLAUDE.md`) after significant changes.
+2. **Incremental** — Build and verify in stages. Run the test command (see `PROJECT.md`) after significant changes.
 3. **Persist** — Each chunk should leave the codebase in a runnable state.
 4. **Handoff** — When complete, auto-invoke Bahnik and Piarun as usual.
 

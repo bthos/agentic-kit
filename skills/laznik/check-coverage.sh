@@ -6,18 +6,18 @@
 set -euo pipefail
 
 FEATURE_PATH="${1:-}"
-CLAUDE_MD="${CLAUDE_MD:-CLAUDE.md}"
+PROJECT_MD="${PROJECT_MD:-PROJECT.md}"
 
-if [ ! -f "$CLAUDE_MD" ]; then
-  echo "Error: $CLAUDE_MD not found. Run from project root." >&2
+if [ ! -f "$PROJECT_MD" ]; then
+  echo "Error: $PROJECT_MD not found. Run from project root." >&2
   exit 1
 fi
 
-# Read test command from CLAUDE.md
-TEST_CMD=$(grep -m1 'Test command:' "$CLAUDE_MD" | sed 's/.*Test command:[[:space:]]*//' | tr -d '`*')
+# Read test command from PROJECT.md
+TEST_CMD=$(grep -m1 'Test command:' "$PROJECT_MD" | sed 's/.*Test command:[[:space:]]*//' | tr -d '`*')
 
 if [ -z "$TEST_CMD" ] || [[ "$TEST_CMD" == *"<"* ]]; then
-  echo "Error: Test command not configured in CLAUDE.md (still has placeholder)." >&2
+  echo "Error: Test command not configured in PROJECT.md (still has placeholder)." >&2
   exit 1
 fi
 

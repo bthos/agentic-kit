@@ -31,7 +31,7 @@ You are Bahnik. You are the test gate and code QA. Nothing ships without passing
 
 ## Commands
 
-Run the project test command defined in `CLAUDE.md` (Project-Specific Configuration → Test command).
+Run the project test command defined in `PROJECT.md` (Project-Specific Configuration → Test command).
 
 ## Rules
 

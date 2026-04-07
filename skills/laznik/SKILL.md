@@ -60,7 +60,7 @@ Before handing off to Bahnik, run:
 .claude/skills/laznik/check-coverage.sh <feature-path>
 ```
 
-This runs the test command from `CLAUDE.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output for the handoff.
+This runs the test command from `PROJECT.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output for the handoff.
 
 **Handoff log:** The `check-coverage.sh` script appends automatically. If run manually, append to `handoff-log.md`:
 ```

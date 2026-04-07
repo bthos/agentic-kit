@@ -59,9 +59,39 @@ done
 # ---------------------------------------------------------------------------
 if [ ! -f "$PROJECT_ROOT/CLAUDE.md" ]; then
   cp "$SCRIPT_DIR/CLAUDE.md.template" "$PROJECT_ROOT/CLAUDE.md"
-  echo "  + CLAUDE.md created — edit the Project-Specific Configuration section."
+  echo "  + CLAUDE.md created"
 else
   echo "  SKIP CLAUDE.md (already exists — manually merge from $SUBMODULE_DIR/CLAUDE.md.template if needed)"
+fi
+
+# ---------------------------------------------------------------------------
+# Copy PROJECT.md template (only if none exists), optionally fill via Claude
+# ---------------------------------------------------------------------------
+if [ ! -f "$PROJECT_ROOT/PROJECT.md" ]; then
+  cp "$SCRIPT_DIR/PROJECT.md.template" "$PROJECT_ROOT/PROJECT.md"
+  echo "  + PROJECT.md created"
+
+  if command -v claude &>/dev/null; then
+    echo ""
+    read -r -p "  Use Claude to fill in PROJECT.md automatically? [Y/n] " yn
+    yn="${yn:-Y}"
+    if [[ "$yn" =~ ^[Yy]$ ]]; then
+      echo "  Running Claude..."
+      cd "$PROJECT_ROOT"
+      claude -p "Inspect this project's files (e.g. package.json, pyproject.toml, \
+Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build \
+command, and any version files. Then fill in all the placeholder values in PROJECT.md \
+and write the completed file. Only ask me if you genuinely cannot determine a value."
+      echo "  PROJECT.md filled in. Run $SUBMODULE_DIR/tools/validate-config.sh to verify."
+    else
+      echo "  Edit PROJECT.md manually, then run: $SUBMODULE_DIR/tools/validate-config.sh"
+    fi
+  else
+    echo "  Edit PROJECT.md → Project-Specific Configuration, then run:"
+    echo "  $SUBMODULE_DIR/tools/validate-config.sh"
+  fi
+else
+  echo "  SKIP PROJECT.md (already exists)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -77,5 +107,3 @@ done
 
 echo ""
 echo "Done. Agents and skills symlinked into .claude/"
-echo "Next: edit CLAUDE.md → Project-Specific Configuration, then run:"
-echo "  $SUBMODULE_DIR/tools/validate-config.sh"

@@ -22,7 +22,7 @@ You are Zlydni. Your job is commits and version control.
    ```bash
    tools/bump-version.sh minor
    ```
-   This reads version files from `CLAUDE.md` and bumps them atomically (e.g. `1.2.4` → `1.3.0`).
+   This reads version files from `PROJECT.md` and bumps them atomically (e.g. `1.2.4` → `1.3.0`).
 2. **Stage appropriately** — Include what belongs together
 3. **Write clear commit messages** — Follow conventional commits when applicable
 4. **Verify before commit** — Ensure Bahnik has passed (tests) if applicable

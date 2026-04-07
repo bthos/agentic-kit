@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bumps the version in all files listed in CLAUDE.md → Project-Specific Configuration → Version files.
+# Bumps the version in all files listed in PROJECT.md → Project-Specific Configuration → Version files.
 # Usage: tools/bump-version.sh [patch|minor]
 #   patch — increments Z in X.Y.Z  (Cmok agent calls before each build)
 #   minor — increments Y, resets Z  (Zlydni agent calls before commit)
@@ -13,21 +13,21 @@ if [[ "$TYPE" != "patch" && "$TYPE" != "minor" ]]; then
   exit 1
 fi
 
-CLAUDE_MD="${CLAUDE_MD:-CLAUDE.md}"
-if [ ! -f "$CLAUDE_MD" ]; then
-  echo "Error: $CLAUDE_MD not found. Run from project root." >&2
+PROJECT_MD="${PROJECT_MD:-PROJECT.md}"
+if [ ! -f "$PROJECT_MD" ]; then
+  echo "Error: $PROJECT_MD not found. Run from project root." >&2
   exit 1
 fi
 
-VERSION_LINE=$(grep -m1 'Version files:' "$CLAUDE_MD" | sed 's/.*Version files:[[:space:]]*//' | tr -d '`*')
+VERSION_LINE=$(grep -m1 'Version files:' "$PROJECT_MD" | sed 's/.*Version files:[[:space:]]*//' | tr -d '`*')
 
 if [ -z "$VERSION_LINE" ]; then
-  echo "Error: 'Version files:' not found in $CLAUDE_MD." >&2
+  echo "Error: 'Version files:' not found in $PROJECT_MD." >&2
   exit 1
 fi
 
 if [[ "$VERSION_LINE" == *"<"* ]]; then
-  echo "Error: Version files still has a placeholder in $CLAUDE_MD — fill in the config first." >&2
+  echo "Error: Version files still has a placeholder in $PROJECT_MD — fill in the config first." >&2
   exit 1
 fi
 

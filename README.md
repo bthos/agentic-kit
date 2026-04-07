@@ -36,11 +36,11 @@ Idea → Vadavik (spec) → Lojma (UX) + Piarun (docs, parallel)
 
 ```bash
 cd your-project
-git submodule add <repo-url> .agentic-kit
+git submodule add https://github.com/bthos/agentic-kit .agentic-kit
 .agentic-kit/init.sh
 ```
 
-Then open `CLAUDE.md` and fill in the **Project-Specific Configuration** section:
+Then open `PROJECT.md` and fill in the **Project-Specific Configuration** section:
 
 ```markdown
 - Test command:   `npm test`
@@ -54,8 +54,9 @@ That's it. Start your first feature with `/vadavik` in Claude Code.
 
 1. Creates `.claude/agents/` and `.claude/skills/` in your project root
 2. Creates **relative symlinks** from those directories into the submodule (portable across machines)
-3. Copies `CLAUDE.md.template` → `CLAUDE.md` if none exists (so you can customize it)
-4. Appends `.agentic-kit` and `.artefacts/` to your `.gitignore` if not already present
+3. Copies `CLAUDE.md.template` → `CLAUDE.md` (pipeline docs, kit-owned) if none exists
+4. Copies `PROJECT.md.template` → `PROJECT.md` (your project config) if none exists
+5. Appends `.agentic-kit` and `.artefacts/` to your `.gitignore` if not already present
 
 The script is **idempotent** — running it again skips files that already exist.
 
@@ -132,8 +133,8 @@ Each skill bundles its own script. Shared scripts live in `tools/`. All scripts 
 
 | Script | What it does |
 |--------|-------------|
-| `tools/bump-version.sh patch\|minor` | Bumps version in all files listed in `CLAUDE.md` (Cmok uses `patch`, Zlydni uses `minor`) |
-| `tools/validate-config.sh` | Checks `CLAUDE.md` for unfilled `<placeholder>` values — run after `init.sh` |
+| `tools/bump-version.sh patch\|minor` | Bumps version in all files listed in `PROJECT.md` (Cmok uses `patch`, Zlydni uses `minor`) |
+| `tools/validate-config.sh` | Checks `PROJECT.md` for unfilled `<placeholder>` values — run after `init.sh` |
 | `tools/feature-status.sh` | Shows pipeline status for active features in `.artefacts/features/` |
 
 ### Lifecycle scripts
