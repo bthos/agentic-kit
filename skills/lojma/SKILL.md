@@ -52,12 +52,12 @@ When finding missing or ambiguous requirements, add "Spec feedback: [gap or ques
 
 ## Feature Path
 
-When Zheuzhyk or handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-name/`), write UX artifacts there. Include this path in handoffs.
+When handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-name/`), write UX artifacts there. Include this path in handoffs.
 
 ## Handoff
 
-**Receive from:** Vadavik (spec), Zheuzhyk
-**Hand off to:** Cmok (mockups), Pisar (parallel docs)
+**Receive from:** Vadavik (spec)
+**Hand off to:** Cmok (mockups), Piarun (parallel docs)
 
 When handing off to Cmok:
 - Include UX artifacts (wireframes, flows, component hierarchy)
@@ -65,10 +65,10 @@ When handing off to Cmok:
 - Include "States to implement: [list from states matrix]. Key decisions: [list]. Accessibility: [notes]."
 - Suggest: `/cmok` — "Create mockups from UX at [path]. Key decisions: [list]"
 
-When handing off to Pisar (parallel):
+When handing off to Piarun (parallel):
 - Always pass ux-design.md path and "Key flows to document"
 - Template: "Feature path: [path]. Spec: [path]. UX: [path]. Document: [user guide | API | both]. Key flows to document: [list from ux-design.md]."
-- Suggest: `/pisar` — "Document [feature] from spec [path] and UX [path]"
+- Suggest: `/piarun` — "Document [feature] from spec [path] and UX [path]"
 
 ## Guardrails
 

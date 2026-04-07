@@ -36,16 +36,24 @@ When updating specs:
 - **Open questions** — Mandatory section in every spec. List unresolved items.
 - **Deferred decisions** — Document what was deferred and why. Add "Cmok: implement [X] for now; revisit in [condition]" when deferring.
 - **Architecture & test implications** — Subsection: key dependencies, storage/API surface, constraints that affect Laznik and Cmok.
-- **Documentation implications** — When spec has user-facing flows: what should appear in docs. Enables Pisar.
+- **Documentation implications** — When spec has user-facing flows: what should appear in docs. Enables Piarun.
 
 ## Feature Path
 
-When Zheuzhyk or handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-name/`), write spec and artifacts there. Include this path in handoffs.
+When starting a new feature, run:
+
+```bash
+.claude/skills/vadavik/new-feature.sh <feature-slug>
+```
+
+This creates `.artefacts/features/YYYY-MM-DD-<slug>/` with a `spec.md` skeleton and `handoff-log.md`. Use the printed `FEATURE_PATH` value in every handoff.
+
+When a handoff already specifies a feature path, use it instead of creating a new one.
 
 ## Handoff
 
-**Receive from:** Idea/User, Zheuzhyk
-**Hand off to:** Lojma (with spec); optionally Pisar in parallel
+**Receive from:** Idea/User
+**Hand off to:** Lojma (with spec); optionally Piarun in parallel
 
 When handing off to Lojma:
 - Include spec/requirements artifact (path or content)
@@ -59,7 +67,13 @@ When handing off to Lojma:
 - [ ] Feature path included?
 - [ ] Architecture implications noted (if relevant)?
 
-**Explicit Pisar invoke:** When spec is substantial, invoke Pisar in parallel with Lojma: "Spec at [path]. Document: [scope]."
+**Explicit Piarun invoke:** When spec is substantial, invoke Piarun in parallel with Lojma: "Spec at [path]. Document: [scope]."
+
+**Handoff log:** After creating the feature folder (which includes a `handoff-log.md`), append the first entry:
+```
+## HH:MM Vadavik → Lojma [spec]
+Spec: [path]. Key ACs: [count]. Open questions: [count].
+```
 
 **Spec update notification:** When updating spec mid-pipeline, include "Spec updated at [path]" in handoff.
 

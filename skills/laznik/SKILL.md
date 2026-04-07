@@ -37,11 +37,11 @@ You are Laznik. Your job is to keep the architecture sound and tests solid.
 
 ## Feature Path
 
-When Zheuzhyk or handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-name/`), write tech plan and architecture docs there. Include this path in handoffs.
+When handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-name/`), write tech plan and architecture docs there. Include this path in handoffs.
 
-## Phase 2 Fix Loop (invoked by Bahnik on test gate failure)
+## Fix Loop (invoked by Bahnik on test gate failure)
 
-When Bahnik fails the Phase 2 test gate and hands off to Laznik:
+When Bahnik fails the test gate and hands off to Laznik:
 
 1. **Analyze failures** — Read error output and stack traces from the handoff
 2. **Fix tests or arch** — Fix broken tests, adjust architecture, add missing coverage
@@ -51,12 +51,25 @@ When Bahnik fails the Phase 2 test gate and hands off to Laznik:
 
 ## Handoff
 
-**Receive from:** User (after UAT), Cmok (mockups), Zheuzhyk, Bahnik (Phase 2 test gate fail)
+**Receive from:** User (after UAT), Cmok (mockups), Bahnik (test gate fail)
 **Hand off to:** Bahnik (test gate)
 
-When handing off to Bahnik:
+Before handing off to Bahnik, run:
+
+```bash
+.claude/skills/laznik/check-coverage.sh <feature-path>
+```
+
+This runs the test command from `CLAUDE.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output for the handoff.
+
+**Handoff log:** The `check-coverage.sh` script appends automatically. If run manually, append to `handoff-log.md`:
+```
+## HH:MM Laznik → Bahnik [test gate]
+Coverage: [summary]. Gaps: [list]. Arch: [path]. Tests: [paths].
+```
+
 - **Always include:** "Coverage summary: [what tests cover]. Known gaps: [what's not yet tested]."
-- Format: "Phase: 2 test gate. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."
+- Format: "Context: test gate. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."
 - Suggest: `/bahnik` — "Run test gate. Arch at [path], tests in [paths]. Block if fail."
 
 ## Guardrails
