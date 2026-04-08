@@ -64,11 +64,30 @@ The script is **idempotent** — running it again skips files that already exist
 ## Updating the kit
 
 ```bash
+# Pull the latest kit version
 git submodule update --remote .agentic-kit
+
+# Pick up any newly added agents, skills, or tools
 .agentic-kit/init.sh
+
+# Commit the updated submodule pointer so the team gets the same version
+git add .agentic-kit
+git commit -m "chore: update agentic-kit"
 ```
 
-New agents and skills are symlinked in automatically. Existing symlinks are untouched.
+**What updates automatically:**
+- New agents and skills — `init.sh` creates missing symlinks; existing symlinks are untouched
+- `tools/` — already a symlink into the submodule, so tool scripts update with it
+
+**What does NOT update automatically:**
+- `CLAUDE.md` — your project's copy is never overwritten. To pick up protocol changes, diff it against the new template:
+  ```bash
+  diff CLAUDE.md .agentic-kit/CLAUDE.md.template
+  ```
+- `PROJECT.md` — project-specific config, never touched
+- Any agent/skill you replaced with a local file (override) — `init.sh` skips non-symlink files
+
+**Team members:** after pulling, run `git submodule update --init` to sync the submodule to the committed version (no `--remote` needed — that's only for the person pulling the new release).
 
 ## Overriding an agent or skill
 
