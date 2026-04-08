@@ -5,82 +5,120 @@
 
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# Colors & helpers
+# ---------------------------------------------------------------------------
+if [ -t 1 ]; then
+  BOLD='\033[1m'
+  DIM='\033[2m'
+  CYAN='\033[36m'
+  GREEN='\033[32m'
+  YELLOW='\033[33m'
+  RED='\033[31m'
+  RESET='\033[0m'
+else
+  BOLD='' DIM='' CYAN='' GREEN='' YELLOW='' RED='' RESET=''
+fi
+
+info()    { printf "  ${DIM}%s${RESET}\n" "$*"; }
+removed() { printf "  ${RED}-${RESET} %s\n" "$*"; }
+skip()    { printf "  ${YELLOW}skip${RESET} %s %s\n" "$1" "${2:-}"; }
+header()  { printf "\n${BOLD}${CYAN}%s${RESET}\n" "$*"; }
+
+# ---------------------------------------------------------------------------
+# Setup
+# ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
 
-echo "agentic-kit: tearing down from $PROJECT_ROOT"
+printf "\n${BOLD}${CYAN}  agentic-kit${RESET} ${DIM}teardown${RESET}\n"
+info "project root: $PROJECT_ROOT"
 
 # ---------------------------------------------------------------------------
 # Remove agent symlinks
 # ---------------------------------------------------------------------------
+header "Agents"
+
 for agent in "$SCRIPT_DIR/agents/"*.md; do
   [ -e "$agent" ] || continue
   name=$(basename "$agent")
   target="$PROJECT_ROOT/.claude/agents/$name"
   if [ -L "$target" ]; then
     rm "$target"
-    echo "  - .claude/agents/$name"
+    removed ".claude/agents/$name"
   elif [ -e "$target" ]; then
-    echo "  SKIP .claude/agents/$name (not a symlink — may be a local override; delete manually)"
+    skip ".claude/agents/$name" "(local override — delete manually)"
   fi
 done
 
 # ---------------------------------------------------------------------------
 # Remove skill symlinks
 # ---------------------------------------------------------------------------
+header "Skills"
+
 for skill_dir in "$SCRIPT_DIR/skills/"*/; do
   [ -d "$skill_dir" ] || continue
   name=$(basename "$skill_dir")
   target="$PROJECT_ROOT/.claude/skills/$name"
   if [ -L "$target" ]; then
     rm "$target"
-    echo "  - .claude/skills/$name"
+    removed ".claude/skills/$name"
   elif [ -e "$target" ]; then
-    echo "  SKIP .claude/skills/$name (not a symlink — may be a local override; delete manually)"
+    skip ".claude/skills/$name" "(local override — delete manually)"
   fi
 done
 
 # ---------------------------------------------------------------------------
 # Remove tools/ symlink
 # ---------------------------------------------------------------------------
+header "Tools"
 TOOLS_TARGET="$PROJECT_ROOT/tools"
+
 if [ -L "$TOOLS_TARGET" ]; then
   rm "$TOOLS_TARGET"
-  echo "  - tools/"
+  removed "tools/"
 elif [ -e "$TOOLS_TARGET" ]; then
-  echo "  SKIP tools/ (not a symlink — delete manually if it was added by agentic-kit)"
+  skip "tools/" "(not a symlink — delete manually)"
+else
+  info "tools/ not present"
 fi
 
 # ---------------------------------------------------------------------------
 # Clean .gitignore entries
 # ---------------------------------------------------------------------------
+header ".gitignore"
 GITIGNORE="$PROJECT_ROOT/.gitignore"
+
 if [ -f "$GITIGNORE" ]; then
   for entry in ".artefacts/"; do
     if grep -qxF "$entry" "$GITIGNORE" 2>/dev/null; then
-      # Portable in-place removal without temp file race
       grep -v "^${entry}\$" "$GITIGNORE" > "${GITIGNORE}.tmp" && mv "${GITIGNORE}.tmp" "$GITIGNORE"
-      echo "  - .gitignore: removed '$entry'"
+      removed ".gitignore: $entry"
     fi
   done
+else
+  info ".gitignore not found"
 fi
 
 # ---------------------------------------------------------------------------
 # Optionally remove the submodule
 # ---------------------------------------------------------------------------
 if [[ "${1:-}" == "--remove-submodule" ]]; then
-  echo ""
-  echo "Removing git submodule..."
+  header "Submodule"
   cd "$PROJECT_ROOT"
-  git submodule deinit -f "$SUBMODULE_DIR"
-  git rm -f "$SUBMODULE_DIR"
+  git submodule deinit -f "$SUBMODULE_DIR" 2>/dev/null || true
+  git rm -f "$SUBMODULE_DIR" 2>/dev/null || true
   rm -rf ".git/modules/$SUBMODULE_DIR"
-  echo "  - submodule removed"
+  removed "submodule $SUBMODULE_DIR"
 fi
 
-echo ""
-echo "Done. CLAUDE.md kept — edit or delete manually."
+# ---------------------------------------------------------------------------
+# Done
+# ---------------------------------------------------------------------------
+printf "\n${BOLD}${GREEN}  Done.${RESET} "
+info "CLAUDE.md and PROJECT.md kept — edit or delete manually."
 if [[ "${1:-}" != "--remove-submodule" ]]; then
-  echo "To also remove the submodule: $SUBMODULE_DIR/teardown.sh --remove-submodule"
+  info "To also remove the submodule: $SUBMODULE_DIR/teardown.sh --remove-submodule"
 fi
+echo ""
