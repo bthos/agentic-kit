@@ -90,7 +90,7 @@ if [ ! -f "$PROJECT_ROOT/PROJECT.md" ]; then
     if [[ "$yn" =~ ^[Yy]$ ]]; then
       echo "  Running Claude..."
       cd "$PROJECT_ROOT"
-      claude -p "Inspect this project's files (e.g. package.json, pyproject.toml, \
+      claude -p --allowedTools 'Edit,Write,Read,Glob,Grep,Bash' "Inspect this project's files (e.g. package.json, pyproject.toml, \
 Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build \
 command, and any version files. Then fill in all the placeholder values in PROJECT.md \
 and write the completed file. Only ask me if you genuinely cannot determine a value."
