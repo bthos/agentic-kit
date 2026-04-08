@@ -55,6 +55,18 @@ for skill_dir in "$SCRIPT_DIR/skills/"*/; do
 done
 
 # ---------------------------------------------------------------------------
+# Symlink tools/ directory
+# Relative path from project root to submodule tools/ is <submodule-dir>/tools/
+# ---------------------------------------------------------------------------
+TOOLS_TARGET="$PROJECT_ROOT/tools"
+if [ -e "$TOOLS_TARGET" ] || [ -L "$TOOLS_TARGET" ]; then
+  echo "  SKIP tools/ (already exists — if not a kit symlink, agents may need manual path adjustment)"
+else
+  ln -s "$SUBMODULE_DIR/tools" "$TOOLS_TARGET"
+  echo "  + tools/"
+fi
+
+# ---------------------------------------------------------------------------
 # Copy CLAUDE.md template (only if none exists)
 # ---------------------------------------------------------------------------
 if [ ! -f "$PROJECT_ROOT/CLAUDE.md" ]; then

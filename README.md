@@ -54,9 +54,10 @@ That's it. Start your first feature with `/vadavik` in Claude Code.
 
 1. Creates `.claude/agents/` and `.claude/skills/` in your project root
 2. Creates **relative symlinks** from those directories into the submodule (portable across machines)
-3. Copies `CLAUDE.md.template` → `CLAUDE.md` (pipeline docs, kit-owned) if none exists
-4. Copies `PROJECT.md.template` → `PROJECT.md` (your project config) if none exists
-5. Appends `.agentic-kit` and `.artefacts/` to your `.gitignore` if not already present
+3. Creates a `tools/` symlink at your project root pointing to the submodule's `tools/` (used by `@cmok` and `@zlydni` for version bumping)
+4. Copies `CLAUDE.md.template` → `CLAUDE.md` (pipeline docs, kit-owned) if none exists
+5. Copies `PROJECT.md.template` → `PROJECT.md` (your project config) if none exists
+6. Appends `.agentic-kit` and `.artefacts/` to your `.gitignore` if not already present
 
 The script is **idempotent** — running it again skips files that already exist.
 
