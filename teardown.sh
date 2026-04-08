@@ -42,6 +42,17 @@ for skill_dir in "$SCRIPT_DIR/skills/"*/; do
 done
 
 # ---------------------------------------------------------------------------
+# Remove tools/ symlink
+# ---------------------------------------------------------------------------
+TOOLS_TARGET="$PROJECT_ROOT/tools"
+if [ -L "$TOOLS_TARGET" ]; then
+  rm "$TOOLS_TARGET"
+  echo "  - tools/"
+elif [ -e "$TOOLS_TARGET" ]; then
+  echo "  SKIP tools/ (not a symlink — delete manually if it was added by agentic-kit)"
+fi
+
+# ---------------------------------------------------------------------------
 # Clean .gitignore entries
 # ---------------------------------------------------------------------------
 GITIGNORE="$PROJECT_ROOT/.gitignore"
