@@ -110,7 +110,7 @@ fi
 # Update target project's .gitignore
 # ---------------------------------------------------------------------------
 GITIGNORE="$PROJECT_ROOT/.gitignore"
-for entry in "$SUBMODULE_DIR" ".artefacts/"; do
+for entry in ".artefacts/"; do
   if [ ! -f "$GITIGNORE" ] || ! grep -qxF "$entry" "$GITIGNORE"; then
     echo "$entry" >> "$GITIGNORE"
     echo "  + .gitignore ← $entry"

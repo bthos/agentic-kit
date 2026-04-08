@@ -57,7 +57,7 @@ fi
 # ---------------------------------------------------------------------------
 GITIGNORE="$PROJECT_ROOT/.gitignore"
 if [ -f "$GITIGNORE" ]; then
-  for entry in "$SUBMODULE_DIR" ".artefacts/"; do
+  for entry in ".artefacts/"; do
     if grep -qxF "$entry" "$GITIGNORE" 2>/dev/null; then
       # Portable in-place removal without temp file race
       grep -v "^${entry}\$" "$GITIGNORE" > "${GITIGNORE}.tmp" && mv "${GITIGNORE}.tmp" "$GITIGNORE"
