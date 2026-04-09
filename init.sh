@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # Run from the target project root after adding the submodule.
-# Usage: .agentic-kit/init.sh [--force | --skip] [--ide=claude|cursor|both]
+# Usage: .agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all] [--ide=claude|cursor|both]
 # Env: IDE_CHOICE=claude|cursor|both (same as --ide, for non-interactive)
 #
 # Creates symlinks for Claude Code (.claude/) and/or generates Cursor rules (.cursor/rules/*.mdc),
 # copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template, symlinks tools/, updates .gitignore.
 #
 # Flags:
-#   --force   Overwrite all existing files without prompting
-#   --skip    Skip all existing files without prompting (default non-interactive)
-#   --ide=X   Target IDE: claude (default), cursor, or both (non-interactive; skips prompt)
+#   --force, --overwrite-all   Overwrite all existing kit-managed paths without prompting
+#   --skip, --skip-all         Skip every existing path without prompting (non-interactive default when stdin is not a TTY)
+#   --ide=X                    Target IDE: claude (default), cursor, or both (non-interactive; skips IDE prompt)
+#
+# Interactive conflict prompt: [s]kip this  [o]verwrite this  overwrite [a]ll  skip [r]est (this + all later conflicts)
 
 set -euo pipefail
 
@@ -36,17 +38,20 @@ err()     { printf "  ${RED}error${RESET} %s\n" "$*"; }
 header()  { printf "\n${BOLD}${CYAN}%s${RESET}\n" "$*"; }
 
 OVERWRITE_ALL=false
+SKIP_ALL=false
 ask_conflict() {
   local label="$1"
   if $OVERWRITE_ALL; then return 0; fi
+  if $SKIP_ALL; then return 1; fi
   if [ ! -t 0 ]; then return 1; fi
   while true; do
     printf "  ${YELLOW}exists${RESET} %s — " "$label"
-    printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  [${BOLD}a${RESET}]ll  "
+    printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  overwrite ${BOLD}a${RESET}ll  skip ${BOLD}r${RESET}est  "
     read -r -n1 choice; echo
     case "$choice" in
       o|O) return 0 ;;
       a|A) OVERWRITE_ALL=true; return 0 ;;
+      r|R) SKIP_ALL=true; return 1 ;;
       s|S|"") return 1 ;;
       *) ;;
     esac
@@ -58,8 +63,8 @@ IDE_CHOICE="${IDE_CHOICE:-}"
 
 for arg in "$@"; do
   case "$arg" in
-    --force) MODE="force" ;;
-    --skip)  MODE="skip" ;;
+    --force|--overwrite-all) MODE="force" ;;
+    --skip|--skip-all)       MODE="skip" ;;
     --ide=claude)  IDE_CHOICE="claude" ;;
     --ide=cursor)  IDE_CHOICE="cursor" ;;
     --ide=both)    IDE_CHOICE="both" ;;
@@ -71,7 +76,11 @@ if [ "$MODE" = "force" ]; then OVERWRITE_ALL=true; fi
 should_overwrite() {
   local label="$1"
   if [ "$MODE" = "skip" ]; then
-    skip "$label (use --force to overwrite)"
+    skip "$label (use --force or --overwrite-all to overwrite)"
+    return 1
+  fi
+  if $SKIP_ALL; then
+    skip "$label (skip rest)"
     return 1
   fi
   ask_conflict "$label"
@@ -376,7 +385,7 @@ info "kit location: $SUBMODULE_DIR/"
 
 if [ -z "$IDE_CHOICE" ]; then
   if [ -t 0 ] && [ -t 1 ]; then
-    printf "\n  Target IDE? [${BOLD}c${RESET}]laude  c${BOLD}u${RESET}rsor  [${BOLD}b${RESET}]oth  (default: claude) "
+    printf "\n  Target IDE? [${BOLD}c${RESET}]laude  c${BOLD}[u]${RESET}rsor  [${BOLD}b${RESET}]oth  (default: claude) "
     read -r -n1 ide_key; echo
     case "$ide_key" in
       u|U) IDE_CHOICE="cursor" ;;
@@ -445,11 +454,10 @@ if [ "$fresh_project_md_from_template" = true ]; then
       fi
       ;;
     cursor)
+      # Use the Cursor Agent CLI (`agent` from https://cursor.com/install), not the desktop `cursor`
+      # launcher — that binary is Electron/Chromium and treats unknown flags like -p as Chromium args.
       if command -v agent &>/dev/null; then
         fill_cli="agent"
-        fill_label="Cursor Agent"
-      elif command -v cursor &>/dev/null; then
-        fill_cli="cursor_agent"
         fill_label="Cursor Agent"
       fi
       ;;
@@ -459,9 +467,6 @@ if [ "$fresh_project_md_from_template" = true ]; then
         fill_label="Claude"
       elif command -v agent &>/dev/null; then
         fill_cli="agent"
-        fill_label="Cursor Agent"
-      elif command -v cursor &>/dev/null; then
-        fill_cli="cursor_agent"
         fill_label="Cursor Agent"
       fi
       ;;
@@ -495,9 +500,6 @@ if [ "$fresh_project_md_from_template" = true ]; then
         agent)
           agent -p --force "$project_md_fill_prompt"
           ;;
-        cursor_agent)
-          cursor agent -p --force "$project_md_fill_prompt"
-          ;;
       esac
       success "PROJECT.md filled in"
       info "Run ${SUBMODULE_DIR}/tools/validate-config.sh to verify."
@@ -514,10 +516,10 @@ if [ "$fresh_project_md_from_template" = true ]; then
           info "Claude CLI (\`claude\`) not on PATH — install Claude Code or edit PROJECT.md manually."
           ;;
         cursor)
-          info "Cursor Agent CLI not on PATH — install so \`agent\` or \`cursor\` is available (https://cursor.com/docs/cli/installation)."
+          info "Cursor Agent CLI (\`agent\`) not on PATH — https://cursor.com/docs/cli/installation (the desktop \`cursor\` command is the editor, not this CLI)."
           ;;
         both)
-          info "Neither \`claude\` nor Cursor Agent CLI (\`agent\` / \`cursor\`) on PATH — install one or edit PROJECT.md manually."
+          info "Neither \`claude\` nor \`agent\` (Cursor Agent CLI) on PATH — install one or edit PROJECT.md manually."
           ;;
       esac
     fi

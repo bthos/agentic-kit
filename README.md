@@ -47,7 +47,12 @@ git submodule add https://github.com/bthos/agentic-kit .agentic-kit
 .agentic-kit/init.sh --ide=cursor
 .agentic-kit/init.sh --ide=both
 IDE_CHOICE=cursor .agentic-kit/init.sh --skip
+# Non-interactive bulk choices (aliases):
+.agentic-kit/init.sh --skip-all       # same as --skip — keep all existing kit paths
+.agentic-kit/init.sh --overwrite-all  # same as --force — replace all kit-managed files
 ```
+
+When a path already exists, the interactive prompt is: **s**kip this file, **o**verwrite this file, overwrite **a**ll remaining, or skip **r**est (this file and every later conflict).
 
 Then open `PROJECT.md` and fill in the **Project-Specific Configuration** section:
 
@@ -68,7 +73,7 @@ That's it.
 **Always (all IDE modes):**
 
 1. Creates a `tools/` symlink at your project root → submodule `tools/` (version bumping, validate-config, etc.)
-2. Copies `PROJECT.md.template` → `PROJECT.md` if none exists, or when you choose to overwrite an existing `PROJECT.md`. After any fresh copy from the template, optionally fills placeholders via the CLI that matches `--ide`: **`claude -p`** (Claude Code) for `claude`, **`agent -p --force`** or **`cursor agent -p --force`** ([Cursor Agent CLI](https://cursor.com/docs/cli/overview)) for `cursor` (tries `agent` first, then `cursor`). For `both`, it prefers `claude` if installed, otherwise Cursor’s CLI. If stdin is not a TTY but `/dev/tty` exists, the Y/n prompt is read from `/dev/tty` so the step is not skipped silently in some IDE terminals.
+2. Copies `PROJECT.md.template` → `PROJECT.md` if none exists, or when you choose to overwrite an existing `PROJECT.md`. After any fresh copy from the template, optionally fills placeholders via the CLI that matches `--ide`: **`claude -p`** (Claude Code) for `claude`, **`agent -p --force`** ([Cursor Agent CLI](https://cursor.com/docs/cli/overview)) for `cursor`. Use the **`agent`** binary from [Cursor CLI install](https://cursor.com/docs/cli/installation) — the GUI **`cursor`** launcher is Electron-based and is not used here (passing `-p` to it triggers Chromium “unknown option” warnings). For `both`, it prefers `claude` if installed, otherwise `agent`. If stdin is not a TTY but `/dev/tty` exists, the Y/n prompt is read from `/dev/tty` so the step is not skipped silently in some IDE terminals.
 3. Appends `.artefacts/` to `.gitignore` if missing
 
 **Claude Code (`claude` or `both`):**
@@ -84,7 +89,7 @@ That's it.
 9. Writes `pipeline.mdc` (`alwaysApply: true`) from `PIPELINE.md.template` (minus the `@PROJECT.md` line)
 10. Copies `PIPELINE.md.template` → `AGENTS.md` with a kit-managed marker (for teardown)
 
-The script is **idempotent** — existing kit-managed files prompt for overwrite; use `--force` or `--skip` for non-interactive runs.
+The script is **idempotent** — existing kit-managed files prompt for overwrite (or **s** / **o** / **a** / **r** as above). For CI or scripts, use **`--force`** / **`--overwrite-all`** or **`--skip`** / **`--skip-all`** so nothing blocks on prompts.
 
 ## Updating the kit
 
