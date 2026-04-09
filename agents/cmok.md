@@ -1,5 +1,7 @@
 ---
 name: cmok
+# Cursor rule filename (agent vs skill both use "cmok" — disambiguate .mdc output)
+cursor_rule_name: cmok-build
 description: Build. Implements the design after Bahnik test gate passes. Supports long-running builds when handoff indicates multi-hour task.
 model: sonnet
 background: false

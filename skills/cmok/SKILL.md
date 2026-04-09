@@ -1,5 +1,6 @@
 ---
 name: cmok
+cursor_rule_name: cmok-mockups
 description: Mockups. Creates UX mockups from Lojma's design before implementation. Use for mockup creation and user UAT.
 disable-model-invocation: false
 ---

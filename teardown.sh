@@ -5,32 +5,8 @@
 
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
-# Colors & helpers
-# ---------------------------------------------------------------------------
-if [ -t 1 ]; then
-  BOLD='\033[1m'
-  DIM='\033[2m'
-  CYAN='\033[36m'
-  GREEN='\033[32m'
-  YELLOW='\033[33m'
-  RED='\033[31m'
-  RESET='\033[0m'
-else
-  BOLD='' DIM='' CYAN='' GREEN='' YELLOW='' RED='' RESET=''
-fi
-
-info()    { printf "  ${DIM}%s${RESET}\n" "$*"; }
-removed() { printf "  ${RED}-${RESET} %s\n" "$*"; }
-skip()    { printf "  ${YELLOW}skip${RESET} %s %s\n" "$1" "${2:-}"; }
-header()  { printf "\n${BOLD}${CYAN}%s${RESET}\n" "$*"; }
-
-# ---------------------------------------------------------------------------
-# Setup
-# ---------------------------------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 printf "\n${BOLD}${CYAN}  agentic-kit${RESET} ${DIM}teardown${RESET}\n"
 info "project root: $PROJECT_ROOT"
@@ -48,7 +24,7 @@ for agent in "$SCRIPT_DIR/agents/"*.md; do
     rm "$target"
     removed ".claude/agents/$name"
   elif [ -e "$target" ]; then
-    skip ".claude/agents/$name" "(local override — delete manually)"
+    skip ".claude/agents/$name (local override — delete manually)"
   fi
 done
 
@@ -65,7 +41,7 @@ for skill_dir in "$SCRIPT_DIR/skills/"*/; do
     rm "$target"
     removed ".claude/skills/$name"
   elif [ -e "$target" ]; then
-    skip ".claude/skills/$name" "(local override — delete manually)"
+    skip ".claude/skills/$name (local override — delete manually)"
   fi
 done
 
@@ -74,8 +50,6 @@ done
 # ---------------------------------------------------------------------------
 header "Cursor"
 
-AGENTIC_MARKER='<!-- agentic-kit managed -->'
-
 if [ -d "$PROJECT_ROOT/.cursor/rules" ]; then
   for mdc in "$PROJECT_ROOT/.cursor/rules/"*.mdc; do
     [ -e "$mdc" ] || continue
@@ -83,7 +57,7 @@ if [ -d "$PROJECT_ROOT/.cursor/rules" ]; then
       rm "$mdc"
       removed ".cursor/rules/$(basename "$mdc")"
     else
-      skip ".cursor/rules/$(basename "$mdc")" "(not kit-managed)"
+      skip ".cursor/rules/$(basename "$mdc") (not kit-managed)"
     fi
   done
   if [ -d "$PROJECT_ROOT/.cursor/rules" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/rules" 2>/dev/null)" ]; then
@@ -99,7 +73,7 @@ if [ -f "$AGENTS" ]; then
     rm "$AGENTS"
     removed "AGENTS.md"
   else
-    skip "AGENTS.md" "(not kit-managed)"
+    skip "AGENTS.md (not kit-managed)"
   fi
 else
   info "AGENTS.md not present"
@@ -115,7 +89,7 @@ if [ -L "$TOOLS_TARGET" ]; then
   rm "$TOOLS_TARGET"
   removed "tools/"
 elif [ -e "$TOOLS_TARGET" ]; then
-  skip "tools/" "(not a symlink — delete manually)"
+  skip "tools/ (not a symlink — delete manually)"
 else
   info "tools/ not present"
 fi
@@ -127,6 +101,7 @@ header ".gitignore"
 GITIGNORE="$PROJECT_ROOT/.gitignore"
 
 if [ -f "$GITIGNORE" ]; then
+  # Extend this list when init.sh adds more managed ignore entries.
   for entry in ".artefacts/"; do
     if grep -qxF "$entry" "$GITIGNORE" 2>/dev/null; then
       grep -v "^${entry}\$" "$GITIGNORE" > "${GITIGNORE}.tmp" && mv "${GITIGNORE}.tmp" "$GITIGNORE"
@@ -157,4 +132,4 @@ info "CLAUDE.md and PROJECT.md kept — edit or delete manually (AGENTS.md remov
 if [[ "${1:-}" != "--remove-submodule" ]]; then
   info "To also remove the submodule: $SUBMODULE_DIR/teardown.sh --remove-submodule"
 fi
-echo ""
+printf '\n'

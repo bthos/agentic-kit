@@ -85,7 +85,7 @@ That's it.
 **Cursor (`cursor` or `both`):**
 
 7. Symlinks `skills/*/` → `.claude/skills/` (Cursor-only mode only — so paths like `.claude/skills/vadavik/new-feature.sh` in skill docs still work)
-8. Generates `.cursor/rules/*.mdc` from agents and skills (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh rules)
+8. Generates `.cursor/rules/*.mdc` from agents and skills (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh rules). Output filenames default to `<name>.mdc`; optional YAML frontmatter `cursor_rule_name` overrides the basename (e.g. Cmok agent vs skill both use `name: cmok`, so they set `cmok-build` / `cmok-mockups`).
 9. Writes `pipeline.mdc` (`alwaysApply: true`) from `PIPELINE.md.template` (minus the `@PROJECT.md` line)
 10. Copies `PIPELINE.md.template` → `AGENTS.md` with a kit-managed marker (for teardown)
 
@@ -196,6 +196,7 @@ Each skill bundles its own script. Shared scripts live in `tools/`. All scripts 
 
 | Script | What it does |
 |--------|-------------|
+| `lib.sh` | Shared helpers (colors, paths, `AGENTIC_MARKER`) — sourced by `init.sh` and `teardown.sh`, not run directly |
 | `init.sh` | IDE choice: Claude Code, Cursor, or both; symlinks / generates rules; copies `CLAUDE.md` / `AGENTS.md` / `PROJECT.md`; updates `.gitignore` |
 | `teardown.sh` | Removes `.claude/` symlinks, kit-managed `.cursor/rules/*.mdc`, kit-managed `AGENTS.md`, `tools/` symlink, `.gitignore` entries; `--remove-submodule` deinits git |
 
