@@ -68,7 +68,7 @@ That's it.
 **Always (all IDE modes):**
 
 1. Creates a `tools/` symlink at your project root → submodule `tools/` (version bumping, validate-config, etc.)
-2. Copies `PROJECT.md.template` → `PROJECT.md` if none exists. On a TTY, optionally fills placeholders via the CLI that matches `--ide`: **`claude -p`** (Claude Code) for `claude`, **`agent -p --force`** ([Cursor Agent CLI](https://cursor.com/docs/cli/overview)) for `cursor`. For `both`, it prefers `claude` if installed, otherwise `agent`.
+2. Copies `PROJECT.md.template` → `PROJECT.md` if none exists, or when you choose to overwrite an existing `PROJECT.md`. After any fresh copy from the template, optionally fills placeholders via the CLI that matches `--ide`: **`claude -p`** (Claude Code) for `claude`, **`agent -p --force`** or **`cursor agent -p --force`** ([Cursor Agent CLI](https://cursor.com/docs/cli/overview)) for `cursor` (tries `agent` first, then `cursor`). For `both`, it prefers `claude` if installed, otherwise Cursor’s CLI. If stdin is not a TTY but `/dev/tty` exists, the Y/n prompt is read from `/dev/tty` so the step is not skipped silently in some IDE terminals.
 3. Appends `.artefacts/` to `.gitignore` if missing
 
 **Claude Code (`claude` or `both`):**

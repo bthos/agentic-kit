@@ -376,7 +376,7 @@ info "kit location: $SUBMODULE_DIR/"
 
 if [ -z "$IDE_CHOICE" ]; then
   if [ -t 0 ] && [ -t 1 ]; then
-    printf "\n  Target IDE? [${BOLD}c${RESET}]laude  [${BOLD}u${RESET}]rsor  [${BOLD}b${RESET}]oth  (default: claude) "
+    printf "\n  Target IDE? [${BOLD}c${RESET}]laude  c${BOLD}u${RESET}rsor  [${BOLD}b${RESET}]oth  (default: claude) "
     read -r -n1 ide_key; echo
     case "$ide_key" in
       u|U) IDE_CHOICE="cursor" ;;
@@ -417,15 +417,21 @@ setup_tools_symlink
 # ---------------------------------------------------------------------------
 header "PROJECT.md"
 
+fresh_project_md_from_template=false
+
 if [ -f "$PROJECT_ROOT/PROJECT.md" ]; then
   if should_overwrite "PROJECT.md"; then
     cp "$SCRIPT_DIR/PROJECT.md.template" "$PROJECT_ROOT/PROJECT.md"
     success "PROJECT.md (overwritten from template)"
+    fresh_project_md_from_template=true
   fi
 else
   cp "$SCRIPT_DIR/PROJECT.md.template" "$PROJECT_ROOT/PROJECT.md"
   success "PROJECT.md"
+  fresh_project_md_from_template=true
+fi
 
+if [ "$fresh_project_md_from_template" = true ]; then
   # Optional AI fill: Claude Code CLI vs Cursor Agent CLI — see https://cursor.com/docs/cli/installation
   project_md_fill_prompt="Inspect this project's files (e.g. package.json, pyproject.toml, Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build command, and any version files. Then fill in all the placeholder values in PROJECT.md and write the completed file. Only ask me if you genuinely cannot determine a value."
 
@@ -442,6 +448,9 @@ else
       if command -v agent &>/dev/null; then
         fill_cli="agent"
         fill_label="Cursor Agent"
+      elif command -v cursor &>/dev/null; then
+        fill_cli="cursor_agent"
+        fill_label="Cursor Agent"
       fi
       ;;
     both)
@@ -451,14 +460,31 @@ else
       elif command -v agent &>/dev/null; then
         fill_cli="agent"
         fill_label="Cursor Agent"
+      elif command -v cursor &>/dev/null; then
+        fill_cli="cursor_agent"
+        fill_label="Cursor Agent"
       fi
       ;;
   esac
 
-  if [ -n "$fill_cli" ] && [ -t 0 ]; then
+  # Prompt on stdin, or /dev/tty when stdin is piped but a real terminal exists (IDEs / CI sometimes leave stdin non-TTY).
+  project_md_can_prompt=false
+  if [ -t 0 ]; then
+    project_md_can_prompt=true
+  elif [ -r /dev/tty ] 2>/dev/null; then
+    project_md_can_prompt=true
+  fi
+
+  if [ -n "$fill_cli" ] && [ "$project_md_can_prompt" = true ]; then
     echo ""
-    printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] "
-    read -r yn; yn="${yn:-Y}"
+    if [ -t 0 ]; then
+      printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] "
+      read -r yn
+    else
+      printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] " > /dev/tty
+      read -r yn < /dev/tty
+    fi
+    yn="${yn:-Y}"
     if [[ "$yn" =~ ^[Yy]$ ]]; then
       info "Running ${fill_label}..."
       cd "$PROJECT_ROOT"
@@ -469,6 +495,9 @@ else
         agent)
           agent -p --force "$project_md_fill_prompt"
           ;;
+        cursor_agent)
+          cursor agent -p --force "$project_md_fill_prompt"
+          ;;
       esac
       success "PROJECT.md filled in"
       info "Run ${SUBMODULE_DIR}/tools/validate-config.sh to verify."
@@ -476,16 +505,19 @@ else
       info "Edit PROJECT.md manually, then run: ${SUBMODULE_DIR}/tools/validate-config.sh"
     fi
   else
-    if [ -t 0 ] && [ -z "$fill_cli" ]; then
+    if [ -n "$fill_cli" ] && [ "$project_md_can_prompt" = false ]; then
+      info "PROJECT.md auto-fill skipped (no TTY for Y/n — stdin is not a terminal and /dev/tty is unavailable). Edit PROJECT.md manually or run your IDE CLI from the project root with the same task."
+    fi
+    if [ -z "$fill_cli" ]; then
       case "$IDE_CHOICE" in
         claude)
           info "Claude CLI (\`claude\`) not on PATH — install Claude Code or edit PROJECT.md manually."
           ;;
         cursor)
-          info "Cursor Agent CLI (\`agent\`) not on PATH — https://cursor.com/docs/cli/installation"
+          info "Cursor Agent CLI not on PATH — install so \`agent\` or \`cursor\` is available (https://cursor.com/docs/cli/installation)."
           ;;
         both)
-          info "Neither \`claude\` nor \`agent\` on PATH — install one or edit PROJECT.md manually."
+          info "Neither \`claude\` nor Cursor Agent CLI (\`agent\` / \`cursor\`) on PATH — install one or edit PROJECT.md manually."
           ;;
       esac
     fi
