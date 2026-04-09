@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Run from the target project root after adding the submodule.
-# Usage: .agentic-kit/init.sh [--force | --skip]
+# Usage: .agentic-kit/init.sh [--force | --skip] [--ide=claude|cursor|both]
+# Env: IDE_CHOICE=claude|cursor|both (same as --ide, for non-interactive)
 #
-# Creates symlinks from .claude/agents/ and .claude/skills/ into the submodule,
-# copies CLAUDE.md and PROJECT.md templates, and updates .gitignore.
+# Creates symlinks for Claude Code (.claude/) and/or generates Cursor rules (.cursor/rules/*.mdc),
+# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template, symlinks tools/, updates .gitignore.
 #
 # Flags:
 #   --force   Overwrite all existing files without prompting
 #   --skip    Skip all existing files without prompting (default non-interactive)
+#   --ide=X   Target IDE: claude (default), cursor, or both (non-interactive; skips prompt)
 
 set -euo pipefail
 
@@ -33,13 +35,11 @@ warn()    { printf "  ${YELLOW}!${RESET} %s\n" "$*"; }
 err()     { printf "  ${RED}error${RESET} %s\n" "$*"; }
 header()  { printf "\n${BOLD}${CYAN}%s${RESET}\n" "$*"; }
 
-# Prompt: [s]kip  [o]verwrite  [a]ll
-# Sets CONFLICT_CHOICE. Returns 0 if overwrite, 1 if skip.
 OVERWRITE_ALL=false
 ask_conflict() {
   local label="$1"
   if $OVERWRITE_ALL; then return 0; fi
-  if [ ! -t 0 ]; then return 1; fi  # non-interactive → skip
+  if [ ! -t 0 ]; then return 1; fi
   while true; do
     printf "  ${YELLOW}exists${RESET} %s — " "$label"
     printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  [${BOLD}a${RESET}]ll  "
@@ -53,21 +53,21 @@ ask_conflict() {
   done
 }
 
-# ---------------------------------------------------------------------------
-# Parse flags
-# ---------------------------------------------------------------------------
 MODE=""
+IDE_CHOICE="${IDE_CHOICE:-}"
+
 for arg in "$@"; do
   case "$arg" in
     --force) MODE="force" ;;
     --skip)  MODE="skip" ;;
+    --ide=claude)  IDE_CHOICE="claude" ;;
+    --ide=cursor)  IDE_CHOICE="cursor" ;;
+    --ide=both)    IDE_CHOICE="both" ;;
   esac
 done
 
 if [ "$MODE" = "force" ]; then OVERWRITE_ALL=true; fi
 
-# Resolve: should we overwrite this item?
-# Returns 0 = overwrite, 1 = skip
 should_overwrite() {
   local label="$1"
   if [ "$MODE" = "skip" ]; then
@@ -78,99 +78,345 @@ should_overwrite() {
 }
 
 # ---------------------------------------------------------------------------
-# Setup
+# Paths
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
 
+AGENTIC_MARKER='<!-- agentic-kit managed -->'
+
+# ---------------------------------------------------------------------------
+# YAML / .mdc helpers (Cursor)
+# ---------------------------------------------------------------------------
+# Body: everything after the closing --- of YAML frontmatter
+strip_frontmatter_body() {
+  awk '/^---$/ { if (++c == 2) { body=1; next } } body { print }' "$1"
+}
+
+# Extract first line matching "^key:" from the first frontmatter block only
+extract_yaml_field() {
+  local file="$1" key="$2"
+  sed -n '/^---$/,/^---$/p' "$file" | sed '1d;$d' | grep -m1 "^${key}:" | sed "s/^${key}:[[:space:]]*//" | sed 's/^"\(.*\)"$/\1/'
+}
+
+escape_yaml_double() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+# $1 = source md path, $2 = output .mdc path (no dir), $3 = Cursor rule description (plain text)
+write_mdc() {
+  local src="$1"
+  local dest_name="$2"
+  local desc="$3"
+  local dest="$PROJECT_ROOT/.cursor/rules/$dest_name"
+  local esc
+  esc=$(escape_yaml_double "$desc")
+  mkdir -p "$PROJECT_ROOT/.cursor/rules"
+  {
+    echo "---"
+    echo "description: \"$esc\""
+    echo "alwaysApply: false"
+    echo "---"
+    echo ""
+    echo "$AGENTIC_MARKER"
+    echo ""
+    strip_frontmatter_body "$src"
+  } > "$dest"
+}
+
+# Skill bodies reference `.claude/skills/<name>/…sh` — symlink skills even in Cursor-only mode.
+ensure_claude_skill_symlinks() {
+  header "Claude Code — Skills (for bundled scripts)"
+  mkdir -p "$PROJECT_ROOT/.claude/skills"
+
+  local skill_dir name target link
+  for skill_dir in "$SCRIPT_DIR/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    name=$(basename "$skill_dir")
+    target="$PROJECT_ROOT/.claude/skills/$name"
+    link="../../$SUBMODULE_DIR/skills/$name"
+
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      if [ -L "$target" ] && [ "$(readlink "$target")" = "$link" ]; then
+        info ".claude/skills/$name (already linked)"
+        continue
+      fi
+      if should_overwrite ".claude/skills/$name"; then
+        rm -rf "$target"
+        ln -s "$link" "$target"
+        success ".claude/skills/$name (overwritten)"
+      fi
+    else
+      ln -s "$link" "$target"
+      success ".claude/skills/$name"
+    fi
+  done
+}
+
+setup_cursor_rules_from_sources() {
+  header "Cursor rules (.cursor/rules/)"
+
+  local agent base out desc
+  for agent in "$SCRIPT_DIR/agents/"*.md; do
+    [ -e "$agent" ] || continue
+    base=$(basename "$agent" .md)
+    if [ "$base" = "cmok" ]; then
+      out="cmok-build.mdc"
+    else
+      out="${base}.mdc"
+    fi
+    desc=$(extract_yaml_field "$agent" "description")
+    [ -n "$desc" ] || desc="Agent: $base"
+
+    if [ -f "$PROJECT_ROOT/.cursor/rules/$out" ]; then
+      if ! grep -qF "$AGENTIC_MARKER" "$PROJECT_ROOT/.cursor/rules/$out" 2>/dev/null; then
+        skip ".cursor/rules/$out (not kit-managed — delete manually to replace)"
+        continue
+      fi
+      if should_overwrite ".cursor/rules/$out"; then
+        write_mdc "$agent" "$out" "$desc"
+        success ".cursor/rules/$out (overwritten)"
+      fi
+    else
+      write_mdc "$agent" "$out" "$desc"
+      success ".cursor/rules/$out"
+    fi
+  done
+
+  local skill_dir skill_name skill_file out desc
+  for skill_dir in "$SCRIPT_DIR/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    skill_file="${skill_dir}SKILL.md"
+    [ -f "$skill_file" ] || continue
+    if [ "$skill_name" = "cmok" ]; then
+      out="cmok-mockups.mdc"
+    else
+      out="${skill_name}.mdc"
+    fi
+    desc=$(extract_yaml_field "$skill_file" "description")
+    [ -n "$desc" ] || desc="Skill: $skill_name"
+
+    if [ -f "$PROJECT_ROOT/.cursor/rules/$out" ]; then
+      if ! grep -qF "$AGENTIC_MARKER" "$PROJECT_ROOT/.cursor/rules/$out" 2>/dev/null; then
+        skip ".cursor/rules/$out (not kit-managed — delete manually to replace)"
+        continue
+      fi
+      if should_overwrite ".cursor/rules/$out"; then
+        write_mdc "$skill_file" "$out" "$desc"
+        success ".cursor/rules/$out (overwritten)"
+      fi
+    else
+      write_mdc "$skill_file" "$out" "$desc"
+      success ".cursor/rules/$out"
+    fi
+  done
+
+  # pipeline.mdc — always-on handoff protocol
+  local pipe="$PROJECT_ROOT/.cursor/rules/pipeline.mdc"
+  local pipe_body
+  pipe_body=$(grep -v '^@PROJECT.md$' "$SCRIPT_DIR/PIPELINE.md.template")
+  if [ -f "$pipe" ]; then
+    if ! grep -qF "$AGENTIC_MARKER" "$pipe" 2>/dev/null; then
+      skip ".cursor/rules/pipeline.mdc (not kit-managed)"
+    elif should_overwrite ".cursor/rules/pipeline.mdc"; then
+      {
+        echo "---"
+        echo "description: \"Agentic kit — pipeline overview, handoff protocol, invocation map\""
+        echo "alwaysApply: true"
+        echo "---"
+        echo ""
+        echo "$AGENTIC_MARKER"
+        echo ""
+        printf '%s\n' "$pipe_body"
+      } > "$pipe"
+      success ".cursor/rules/pipeline.mdc (overwritten)"
+    fi
+  else
+    {
+      echo "---"
+      echo "description: \"Agentic kit — pipeline overview, handoff protocol, invocation map\""
+      echo "alwaysApply: true"
+      echo "---"
+      echo ""
+      echo "$AGENTIC_MARKER"
+      echo ""
+      printf '%s\n' "$pipe_body"
+    } > "$pipe"
+    success ".cursor/rules/pipeline.mdc"
+  fi
+}
+
+setup_agents_md() {
+  header "AGENTS.md (Cursor / cross-tool)"
+  local dest="$PROJECT_ROOT/AGENTS.md"
+  if [ -f "$dest" ]; then
+    if ! grep -qF "$AGENTIC_MARKER" "$dest" 2>/dev/null; then
+      skip "AGENTS.md (not kit-managed — merge manually)"
+      return
+    fi
+    if should_overwrite "AGENTS.md"; then
+      {
+        echo "$AGENTIC_MARKER"
+        echo ""
+        cat "$SCRIPT_DIR/PIPELINE.md.template"
+      } > "$dest"
+      success "AGENTS.md (overwritten)"
+    fi
+  else
+    {
+      echo "$AGENTIC_MARKER"
+      echo ""
+      cat "$SCRIPT_DIR/PIPELINE.md.template"
+    } > "$dest"
+    success "AGENTS.md"
+  fi
+}
+
+setup_tools_symlink() {
+  header "Tools"
+  local TOOLS_TARGET="$PROJECT_ROOT/tools"
+  local link="$SUBMODULE_DIR/tools"
+
+  if [ -L "$TOOLS_TARGET" ]; then
+    local cur
+    cur=$(readlink "$TOOLS_TARGET" || true)
+    if [ "$cur" = "$link" ]; then
+      info "tools/ already linked → $link"
+      return
+    fi
+  fi
+
+  if [ -e "$TOOLS_TARGET" ] || [ -L "$TOOLS_TARGET" ]; then
+    if should_overwrite "tools/"; then
+      rm -rf "$TOOLS_TARGET"
+      ln -s "$link" "$TOOLS_TARGET"
+      success "tools/ (overwritten)"
+    fi
+  else
+    ln -s "$link" "$TOOLS_TARGET"
+    success "tools/"
+  fi
+}
+
+setup_claude() {
+  header "Claude Code — Agents"
+  mkdir -p "$PROJECT_ROOT/.claude/agents"
+
+  local agent name target link
+  for agent in "$SCRIPT_DIR/agents/"*.md; do
+    [ -e "$agent" ] || continue
+    name=$(basename "$agent")
+    target="$PROJECT_ROOT/.claude/agents/$name"
+    link="../../$SUBMODULE_DIR/agents/$name"
+
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      if should_overwrite ".claude/agents/$name"; then
+        rm -f "$target"
+        ln -s "$link" "$target"
+        success ".claude/agents/$name (overwritten)"
+      fi
+    else
+      ln -s "$link" "$target"
+      success ".claude/agents/$name"
+    fi
+  done
+
+  header "Claude Code — Skills"
+  mkdir -p "$PROJECT_ROOT/.claude/skills"
+
+  local skill_dir name target link
+  for skill_dir in "$SCRIPT_DIR/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    name=$(basename "$skill_dir")
+    target="$PROJECT_ROOT/.claude/skills/$name"
+    link="../../$SUBMODULE_DIR/skills/$name"
+
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      if should_overwrite ".claude/skills/$name"; then
+        rm -rf "$target"
+        ln -s "$link" "$target"
+        success ".claude/skills/$name (overwritten)"
+      fi
+    else
+      ln -s "$link" "$target"
+      success ".claude/skills/$name"
+    fi
+  done
+
+  header "Claude Code — CLAUDE.md"
+  if [ -f "$PROJECT_ROOT/CLAUDE.md" ]; then
+    if should_overwrite "CLAUDE.md"; then
+      cp "$SCRIPT_DIR/PIPELINE.md.template" "$PROJECT_ROOT/CLAUDE.md"
+      success "CLAUDE.md (overwritten from template)"
+    fi
+  else
+    cp "$SCRIPT_DIR/PIPELINE.md.template" "$PROJECT_ROOT/CLAUDE.md"
+    success "CLAUDE.md"
+  fi
+}
+
+setup_cursor() {
+  # Cursor-only: symlink skills so paths like .claude/skills/vadavik/new-feature.sh work.
+  # "both" already linked skills in setup_claude.
+  if [ "$IDE_CHOICE" = "cursor" ]; then
+    ensure_claude_skill_symlinks
+  fi
+  setup_cursor_rules_from_sources
+  setup_agents_md
+}
+
+# ---------------------------------------------------------------------------
+# IDE choice
+# ---------------------------------------------------------------------------
 printf "\n${BOLD}${CYAN}  agentic-kit${RESET}\n"
 info "project root: $PROJECT_ROOT"
 info "kit location: $SUBMODULE_DIR/"
 
-# ---------------------------------------------------------------------------
-# Agents
-# ---------------------------------------------------------------------------
-header "Agents"
-mkdir -p "$PROJECT_ROOT/.claude/agents"
-
-for agent in "$SCRIPT_DIR/agents/"*.md; do
-  [ -e "$agent" ] || continue
-  name=$(basename "$agent")
-  target="$PROJECT_ROOT/.claude/agents/$name"
-  link="../../$SUBMODULE_DIR/agents/$name"
-
-  if [ -e "$target" ] || [ -L "$target" ]; then
-    if should_overwrite ".claude/agents/$name"; then
-      rm -f "$target"
-      ln -s "$link" "$target"
-      success ".claude/agents/$name (overwritten)"
-    fi
+if [ -z "$IDE_CHOICE" ]; then
+  if [ -t 0 ] && [ -t 1 ]; then
+    printf "\n  Target IDE? [${BOLD}c${RESET}]laude  [${BOLD}u${RESET}]rsor  [${BOLD}b${RESET}]oth  (default: claude) "
+    read -r -n1 ide_key; echo
+    case "$ide_key" in
+      u|U) IDE_CHOICE="cursor" ;;
+      b|B) IDE_CHOICE="both" ;;
+      *)   IDE_CHOICE="claude" ;;
+    esac
   else
-    ln -s "$link" "$target"
-    success ".claude/agents/$name"
+    IDE_CHOICE="claude"
   fi
-done
-
-# ---------------------------------------------------------------------------
-# Skills
-# ---------------------------------------------------------------------------
-header "Skills"
-mkdir -p "$PROJECT_ROOT/.claude/skills"
-
-for skill_dir in "$SCRIPT_DIR/skills/"*/; do
-  [ -d "$skill_dir" ] || continue
-  name=$(basename "$skill_dir")
-  target="$PROJECT_ROOT/.claude/skills/$name"
-  link="../../$SUBMODULE_DIR/skills/$name"
-
-  if [ -e "$target" ] || [ -L "$target" ]; then
-    if should_overwrite ".claude/skills/$name"; then
-      rm -rf "$target"
-      ln -s "$link" "$target"
-      success ".claude/skills/$name (overwritten)"
-    fi
-  else
-    ln -s "$link" "$target"
-    success ".claude/skills/$name"
-  fi
-done
-
-# ---------------------------------------------------------------------------
-# Tools
-# ---------------------------------------------------------------------------
-header "Tools"
-TOOLS_TARGET="$PROJECT_ROOT/tools"
-
-if [ -e "$TOOLS_TARGET" ] || [ -L "$TOOLS_TARGET" ]; then
-  if should_overwrite "tools/"; then
-    rm -rf "$TOOLS_TARGET"
-    ln -s "$SUBMODULE_DIR/tools" "$TOOLS_TARGET"
-    success "tools/ (overwritten)"
-  fi
-else
-  ln -s "$SUBMODULE_DIR/tools" "$TOOLS_TARGET"
-  success "tools/"
 fi
 
-# ---------------------------------------------------------------------------
-# CLAUDE.md
-# ---------------------------------------------------------------------------
-header "Configuration"
-
-if [ -f "$PROJECT_ROOT/CLAUDE.md" ]; then
-  if should_overwrite "CLAUDE.md"; then
-    cp "$SCRIPT_DIR/CLAUDE.md.template" "$PROJECT_ROOT/CLAUDE.md"
-    success "CLAUDE.md (overwritten from template)"
-  fi
-else
-  cp "$SCRIPT_DIR/CLAUDE.md.template" "$PROJECT_ROOT/CLAUDE.md"
-  success "CLAUDE.md"
-fi
+info "IDE mode: $IDE_CHOICE"
 
 # ---------------------------------------------------------------------------
-# PROJECT.md
+# Run setups
 # ---------------------------------------------------------------------------
+case "$IDE_CHOICE" in
+  claude)
+    setup_claude
+    ;;
+  cursor)
+    setup_cursor
+    ;;
+  both)
+    setup_claude
+    setup_cursor
+    ;;
+  *)
+    err "Invalid --ide value (use claude, cursor, or both)"
+    exit 1
+    ;;
+esac
+
+setup_tools_symlink
+
+# ---------------------------------------------------------------------------
+# PROJECT.md (shared)
+# ---------------------------------------------------------------------------
+header "PROJECT.md"
+
 if [ -f "$PROJECT_ROOT/PROJECT.md" ]; then
   if should_overwrite "PROJECT.md"; then
     cp "$SCRIPT_DIR/PROJECT.md.template" "$PROJECT_ROOT/PROJECT.md"
@@ -180,23 +426,69 @@ else
   cp "$SCRIPT_DIR/PROJECT.md.template" "$PROJECT_ROOT/PROJECT.md"
   success "PROJECT.md"
 
-  if command -v claude &>/dev/null && [ -t 0 ]; then
+  # Optional AI fill: Claude Code CLI vs Cursor Agent CLI — see https://cursor.com/docs/cli/installation
+  project_md_fill_prompt="Inspect this project's files (e.g. package.json, pyproject.toml, Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build command, and any version files. Then fill in all the placeholder values in PROJECT.md and write the completed file. Only ask me if you genuinely cannot determine a value."
+
+  fill_cli=""
+  fill_label=""
+  case "$IDE_CHOICE" in
+    claude)
+      if command -v claude &>/dev/null; then
+        fill_cli="claude"
+        fill_label="Claude"
+      fi
+      ;;
+    cursor)
+      if command -v agent &>/dev/null; then
+        fill_cli="agent"
+        fill_label="Cursor Agent"
+      fi
+      ;;
+    both)
+      if command -v claude &>/dev/null; then
+        fill_cli="claude"
+        fill_label="Claude"
+      elif command -v agent &>/dev/null; then
+        fill_cli="agent"
+        fill_label="Cursor Agent"
+      fi
+      ;;
+  esac
+
+  if [ -n "$fill_cli" ] && [ -t 0 ]; then
     echo ""
-    printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using Claude? [${BOLD}Y${RESET}/n] "
+    printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] "
     read -r yn; yn="${yn:-Y}"
     if [[ "$yn" =~ ^[Yy]$ ]]; then
-      info "Running Claude..."
+      info "Running ${fill_label}..."
       cd "$PROJECT_ROOT"
-      claude -p --allowedTools 'Edit,Write,Read,Glob,Grep,Bash' "Inspect this project's files (e.g. package.json, pyproject.toml, \
-Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build \
-command, and any version files. Then fill in all the placeholder values in PROJECT.md \
-and write the completed file. Only ask me if you genuinely cannot determine a value."
+      case "$fill_cli" in
+        claude)
+          claude -p --allowedTools 'Edit,Write,Read,Glob,Grep,Bash' "$project_md_fill_prompt"
+          ;;
+        agent)
+          agent -p --force "$project_md_fill_prompt"
+          ;;
+      esac
       success "PROJECT.md filled in"
       info "Run ${SUBMODULE_DIR}/tools/validate-config.sh to verify."
     else
       info "Edit PROJECT.md manually, then run: ${SUBMODULE_DIR}/tools/validate-config.sh"
     fi
   else
+    if [ -t 0 ] && [ -z "$fill_cli" ]; then
+      case "$IDE_CHOICE" in
+        claude)
+          info "Claude CLI (\`claude\`) not on PATH — install Claude Code or edit PROJECT.md manually."
+          ;;
+        cursor)
+          info "Cursor Agent CLI (\`agent\`) not on PATH — https://cursor.com/docs/cli/installation"
+          ;;
+        both)
+          info "Neither \`claude\` nor \`agent\` on PATH — install one or edit PROJECT.md manually."
+          ;;
+      esac
+    fi
     info "Edit PROJECT.md → Project-Specific Configuration, then run:"
     info "${SUBMODULE_DIR}/tools/validate-config.sh"
   fi
@@ -220,6 +512,10 @@ done
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
-printf "\n${BOLD}${GREEN}  Done.${RESET} Agents and skills symlinked into .claude/\n"
-info "Start a feature with /vadavik in Claude Code"
+printf "\n${BOLD}${GREEN}  Done.${RESET}\n"
+case "$IDE_CHOICE" in
+  claude)  info "Claude Code: start a feature with /vadavik" ;;
+  cursor)  info "Cursor: .mdc rules generated — re-run init after submodule update" ;;
+  both)    info "Claude Code: /vadavik  |  Cursor: rules in .cursor/rules/" ;;
+esac
 echo ""

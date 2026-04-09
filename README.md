@@ -1,6 +1,6 @@
 # agentic-kit
 
-A reusable Claude Code development pipeline — 4 agents, 4 skills, and a structured handoff protocol. Import into any project as a git submodule in under a minute.
+A reusable AI development pipeline — 4 agents, 4 skills, and a structured handoff protocol. Works with **Claude Code** (native `.claude/` layout) and **Cursor** (generated `.cursor/rules/*.mdc` + `AGENTS.md`). Import as a git submodule in under a minute.
 
 ## What it is
 
@@ -40,6 +40,15 @@ git submodule add https://github.com/bthos/agentic-kit .agentic-kit
 .agentic-kit/init.sh
 ```
 
+`init.sh` asks which IDE to target (**Claude Code**, **Cursor**, or **both**). Non-interactive / CI:
+
+```bash
+.agentic-kit/init.sh --ide=claude   # default behavior
+.agentic-kit/init.sh --ide=cursor
+.agentic-kit/init.sh --ide=both
+IDE_CHOICE=cursor .agentic-kit/init.sh --skip
+```
+
 Then open `PROJECT.md` and fill in the **Project-Specific Configuration** section:
 
 ```markdown
@@ -48,18 +57,34 @@ Then open `PROJECT.md` and fill in the **Project-Specific Configuration** sectio
 - Version files:  `package.json, manifest.json`
 ```
 
-That's it. Start your first feature with `/vadavik` in Claude Code.
+**Claude Code:** start a feature with `/vadavik`.
+
+**Cursor:** agents and skills become `.cursor/rules/*.mdc` (with `description` + `alwaysApply` for Cursor's rule system). `PIPELINE.md.template` is also copied to **`AGENTS.md`** (Cursor reads it natively). A `pipeline.mdc` rule uses `alwaysApply: true` so the handoff protocol is always in context. Cmok is split into `cmok-build.mdc` and `cmok-mockups.mdc`. Cursor has no slash commands — the agent picks rules by relevance, or you `@`-mention a rule file.
+
+That's it.
 
 ## What `init.sh` does
 
-1. Creates `.claude/agents/` and `.claude/skills/` in your project root
-2. Creates **relative symlinks** from those directories into the submodule (portable across machines)
-3. Creates a `tools/` symlink at your project root pointing to the submodule's `tools/` (used by `@cmok` and `@zlydni` for version bumping)
-4. Copies `CLAUDE.md.template` → `CLAUDE.md` (pipeline docs, kit-owned) if none exists
-5. Copies `PROJECT.md.template` → `PROJECT.md` (your project config) if none exists
-6. Appends `.artefacts/` to your `.gitignore` if not already present
+**Always (all IDE modes):**
 
-The script is **idempotent** — running it again skips files that already exist.
+1. Creates a `tools/` symlink at your project root → submodule `tools/` (version bumping, validate-config, etc.)
+2. Copies `PROJECT.md.template` → `PROJECT.md` if none exists. On a TTY, optionally fills placeholders via the CLI that matches `--ide`: **`claude -p`** (Claude Code) for `claude`, **`agent -p --force`** ([Cursor Agent CLI](https://cursor.com/docs/cli/overview)) for `cursor`. For `both`, it prefers `claude` if installed, otherwise `agent`.
+3. Appends `.artefacts/` to `.gitignore` if missing
+
+**Claude Code (`claude` or `both`):**
+
+4. Symlinks `agents/*.md` → `.claude/agents/`
+5. Symlinks `skills/*/` → `.claude/skills/`
+6. Copies `PIPELINE.md.template` → `CLAUDE.md` if none exists
+
+**Cursor (`cursor` or `both`):**
+
+7. Symlinks `skills/*/` → `.claude/skills/` (Cursor-only mode only — so paths like `.claude/skills/vadavik/new-feature.sh` in skill docs still work)
+8. Generates `.cursor/rules/*.mdc` from agents and skills (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh rules)
+9. Writes `pipeline.mdc` (`alwaysApply: true`) from `PIPELINE.md.template` (minus the `@PROJECT.md` line)
+10. Copies `PIPELINE.md.template` → `AGENTS.md` with a kit-managed marker (for teardown)
+
+The script is **idempotent** — existing kit-managed files prompt for overwrite; use `--force` or `--skip` for non-interactive runs.
 
 ## Updating the kit
 
@@ -79,11 +104,14 @@ git commit -m "chore: update agentic-kit"
 - New agents and skills — `init.sh` creates missing symlinks; existing symlinks are untouched
 - `tools/` — already a symlink into the submodule, so tool scripts update with it
 
+**Cursor:** `.cursor/rules/*.mdc` are generated copies — after updating the submodule, run `init.sh` again (same `--ide=` as before) to regenerate rules from the new kit sources.
+
 **What does NOT update automatically:**
 - `CLAUDE.md` — your project's copy is never overwritten. To pick up protocol changes, diff it against the new template:
   ```bash
-  diff CLAUDE.md .agentic-kit/CLAUDE.md.template
+  diff CLAUDE.md .agentic-kit/PIPELINE.md.template
   ```
+- `AGENTS.md` — same as `CLAUDE.md` for Cursor users; re-copy from template manually or delete and re-run `init.sh --ide=cursor`
 - `PROJECT.md` — project-specific config, never touched
 - Any agent/skill you replaced with a local file (override) — `init.sh` skips non-symlink files
 
@@ -104,12 +132,14 @@ cp .agentic-kit/agents/bahnik.md .claude/agents/bahnik.md
 ## Removing the kit
 
 ```bash
-# Remove symlinks and clean .gitignore
+# Remove Claude symlinks, Cursor kit-managed rules, AGENTS.md, tools/, clean .gitignore
 .agentic-kit/teardown.sh
 
-# Or remove symlinks AND the submodule in one step
+# Or remove the above AND the submodule in one step
 .agentic-kit/teardown.sh --remove-submodule
 ```
+
+`teardown.sh` removes only `.cursor/rules/*.mdc` and `AGENTS.md` files that contain the kit marker (`<!-- agentic-kit managed -->`). Local rules you added yourself are left alone.
 
 ## Feature artifacts
 
@@ -161,12 +191,12 @@ Each skill bundles its own script. Shared scripts live in `tools/`. All scripts 
 
 | Script | What it does |
 |--------|-------------|
-| `init.sh` | Sets up symlinks, copies `CLAUDE.md`, updates `.gitignore` |
-| `teardown.sh` | Removes symlinks, cleans `.gitignore`; add `--remove-submodule` to also deinit git |
+| `init.sh` | IDE choice: Claude Code, Cursor, or both; symlinks / generates rules; copies `CLAUDE.md` / `AGENTS.md` / `PROJECT.md`; updates `.gitignore` |
+| `teardown.sh` | Removes `.claude/` symlinks, kit-managed `.cursor/rules/*.mdc`, kit-managed `AGENTS.md`, `tools/` symlink, `.gitignore` entries; `--remove-submodule` deinits git |
 
 ## Handoff protocol
 
-See `CLAUDE.md` (Handoff Protocol section) for the full structured handoff format, handoff map, and agent-specific checklists.
+See `CLAUDE.md` or `AGENTS.md` (Handoff Protocol section) for the full structured handoff format, handoff map, and agent-specific checklists.
 
 ## Team use
 

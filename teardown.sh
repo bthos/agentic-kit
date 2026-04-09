@@ -70,6 +70,42 @@ for skill_dir in "$SCRIPT_DIR/skills/"*/; do
 done
 
 # ---------------------------------------------------------------------------
+# Remove Cursor-generated rules and AGENTS.md
+# ---------------------------------------------------------------------------
+header "Cursor"
+
+AGENTIC_MARKER='<!-- agentic-kit managed -->'
+
+if [ -d "$PROJECT_ROOT/.cursor/rules" ]; then
+  for mdc in "$PROJECT_ROOT/.cursor/rules/"*.mdc; do
+    [ -e "$mdc" ] || continue
+    if grep -qF "$AGENTIC_MARKER" "$mdc" 2>/dev/null; then
+      rm "$mdc"
+      removed ".cursor/rules/$(basename "$mdc")"
+    else
+      skip ".cursor/rules/$(basename "$mdc")" "(not kit-managed)"
+    fi
+  done
+  if [ -d "$PROJECT_ROOT/.cursor/rules" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/rules" 2>/dev/null)" ]; then
+    rmdir "$PROJECT_ROOT/.cursor/rules" 2>/dev/null && removed ".cursor/rules/ (empty dir)" || true
+  fi
+else
+  info ".cursor/rules/ not present"
+fi
+
+AGENTS="$PROJECT_ROOT/AGENTS.md"
+if [ -f "$AGENTS" ]; then
+  if grep -qF "$AGENTIC_MARKER" "$AGENTS" 2>/dev/null; then
+    rm "$AGENTS"
+    removed "AGENTS.md"
+  else
+    skip "AGENTS.md" "(not kit-managed)"
+  fi
+else
+  info "AGENTS.md not present"
+fi
+
+# ---------------------------------------------------------------------------
 # Remove tools/ symlink
 # ---------------------------------------------------------------------------
 header "Tools"
@@ -117,7 +153,7 @@ fi
 # Done
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${GREEN}  Done.${RESET} "
-info "CLAUDE.md and PROJECT.md kept — edit or delete manually."
+info "CLAUDE.md and PROJECT.md kept — edit or delete manually (AGENTS.md removed if kit-managed)."
 if [[ "${1:-}" != "--remove-submodule" ]]; then
   info "To also remove the submodule: $SUBMODULE_DIR/teardown.sh --remove-submodule"
 fi
