@@ -444,6 +444,23 @@ if [ "$fresh_project_md_from_template" = true ]; then
   # Optional AI fill: Claude Code CLI vs Cursor Agent CLI — see https://cursor.com/docs/cli/installation
   project_md_fill_prompt="Inspect this project's files (e.g. package.json, pyproject.toml, Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build command, and any version files. Then fill in all the placeholder values in PROJECT.md and write the completed file. Only ask me if you genuinely cannot determine a value."
 
+  # On Windows, the Cursor Agent CLI is installed on the Windows PATH but Git Bash / MSYS2 inherit
+  # their own PATH subset.  Fall back to PowerShell to resolve the real exe path.
+  find_agent_bin() {
+    if command -v agent &>/dev/null; then
+      command -v agent; return 0
+    fi
+    if command -v powershell.exe &>/dev/null; then
+      local p
+      p=$(powershell.exe -NoProfile -Command \
+        "Get-Command agent -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source" \
+        2>/dev/null | tr -d '\r\n')
+      [ -n "$p" ] && { echo "$p"; return 0; }
+    fi
+    return 1
+  }
+
+  AGENT_BIN=""
   fill_cli=""
   fill_label=""
   case "$IDE_CHOICE" in
@@ -456,7 +473,8 @@ if [ "$fresh_project_md_from_template" = true ]; then
     cursor)
       # Use the Cursor Agent CLI (`agent` from https://cursor.com/install), not the desktop `cursor`
       # launcher — that binary is Electron/Chromium and treats unknown flags like -p as Chromium args.
-      if command -v agent &>/dev/null; then
+      AGENT_BIN=$(find_agent_bin 2>/dev/null) || AGENT_BIN=""
+      if [ -n "$AGENT_BIN" ]; then
         fill_cli="agent"
         fill_label="Cursor Agent"
       fi
@@ -465,9 +483,12 @@ if [ "$fresh_project_md_from_template" = true ]; then
       if command -v claude &>/dev/null; then
         fill_cli="claude"
         fill_label="Claude"
-      elif command -v agent &>/dev/null; then
-        fill_cli="agent"
-        fill_label="Cursor Agent"
+      else
+        AGENT_BIN=$(find_agent_bin 2>/dev/null) || AGENT_BIN=""
+        if [ -n "$AGENT_BIN" ]; then
+          fill_cli="agent"
+          fill_label="Cursor Agent"
+        fi
       fi
       ;;
   esac
@@ -498,7 +519,7 @@ if [ "$fresh_project_md_from_template" = true ]; then
           claude -p --allowedTools 'Edit,Write,Read,Glob,Grep,Bash' "$project_md_fill_prompt"
           ;;
         agent)
-          agent -p --force "$project_md_fill_prompt"
+          "$AGENT_BIN" -p --force "$project_md_fill_prompt"
           ;;
       esac
       success "PROJECT.md filled in"
