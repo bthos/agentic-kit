@@ -36,7 +36,7 @@ When updating specs:
 - **Open questions** — Mandatory section in every spec. List unresolved items.
 - **Deferred decisions** — Document what was deferred and why. Add "Cmok: implement [X] for now; revisit in [condition]" when deferring.
 - **Architecture & test implications** — Subsection: key dependencies, storage/API surface, constraints that affect Laznik and Cmok.
-- **Documentation implications** — When spec has user-facing flows: what should appear in docs. Enables Piarun.
+- **Documentation implications** — When spec has user-facing flows: what should appear in docs. Enables Veles.
 
 ## Feature Path
 
@@ -53,7 +53,7 @@ When a handoff already specifies a feature path, use it instead of creating a ne
 ## Handoff
 
 **Receive from:** Idea/User
-**Hand off to:** Lojma (with spec); optionally Piarun in parallel
+**Hand off to:** Lojma (with spec); optionally Veles in parallel
 
 When handing off to Lojma:
 - Include spec/requirements artifact (path or content)
@@ -67,7 +67,7 @@ When handing off to Lojma:
 - [ ] Feature path included?
 - [ ] Architecture implications noted (if relevant)?
 
-**Explicit Piarun invoke:** When spec is substantial, invoke Piarun in parallel with Lojma: "Spec at [path]. Document: [scope]."
+**Explicit Veles invoke:** When spec is substantial, invoke Veles in parallel with Lojma: "Spec at [path]. Document: [scope]."
 
 **Handoff log:** After creating the feature folder (which includes a `handoff-log.md`), append the first entry:
 ```

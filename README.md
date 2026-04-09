@@ -7,10 +7,10 @@ A reusable Claude Code development pipeline — 4 agents, 4 skills, and a struct
 A self-organizing team of AI agents for structured development. Each agent knows its role and who to hand off to next. Quality gates ensure nothing ships without passing Bahnik.
 
 ```
-Idea → Vadavik (spec) → Lojma (UX) + Piarun (docs, parallel)
+Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
      → Cmok /skill/ (mockups) → User UAT
      → Laznik (arch + tests) → Bahnik (test gate)
-     → Cmok /agent/ (build) + Piarun (docs, parallel) → Bahnik (code QA)
+     → Cmok /agent/ (build) + Veles (docs, parallel) → Bahnik (code QA)
      → Zlydni (commit + archive)
 ```
 
@@ -20,7 +20,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Piarun (docs, parallel)
 |---------|---------------------------|--------|
 | Bahnik  | Test gate & code QA       | Opus   |
 | Cmok    | Build                     | Sonnet |
-| Piarun  | Documentation             | Sonnet |
+| Veles  | Documentation             | Sonnet |
 | Zlydni  | Commits & version control | Haiku  |
 
 ### Skills
@@ -135,7 +135,7 @@ Vadavik creates the feature folder automatically when starting a new spec.
 | Architecture & tests | `/laznik` |
 | Run test gate or code QA | `@bahnik` |
 | Build | `@cmok` |
-| Write docs | `@piarun` |
+| Write docs | `@veles` |
 | Commit | `@zlydni` |
 
 ## Scripts

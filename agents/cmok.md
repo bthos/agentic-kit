@@ -32,12 +32,12 @@ All feature artifacts live in `.artefacts/features/YYYY-MM-DD-feature-name/`. Re
 ## Handoff
 
 **Receive from:** Bahnik (after test gate pass or after code QA fail)
-**Hand off to:** Bahnik (code QA), Piarun (parallel docs)
+**Hand off to:** Bahnik (code QA), Veles (parallel docs)
 
-**After build, auto-invoke** Bahnik and Piarun. Handoff packages must include:
+**After build, auto-invoke** Bahnik and Veles. Handoff packages must include:
 
 **Bahnik (mandatory):** Feature path, "What was built" (2–3 sentences), changed files list, new storage/API surface (if any), tech plan path, any architecture divergence.
-**Piarun (mandatory):** Feature path, spec path, UX path, tech plan path, **"What was built" (2–3 sentences)**, changed files, document scope: [README | API | user guide | all].
+**Veles (mandatory):** Feature path, spec path, UX path, tech plan path, **"What was built" (2–3 sentences)**, changed files, document scope: [README | API | user guide | all].
 
 **Handoff log:** Append an entry to `handoff-log.md` in the feature folder before handing off:
 ```
@@ -53,7 +53,7 @@ What was built: [2–3 sentences]. Changed files: [list]. Divergence: [none|desc
 
 When build completes, immediately invoke:
 1. `@bahnik` — with handoff package (feature path, "What was built", changed files, new storage/API surface, tech plan path, any divergence)
-2. `@piarun` — in parallel, with handoff (feature path, spec/UX/tech plan paths, "What was built", changed files, document scope)
+2. `@veles` — in parallel, with handoff (feature path, spec/UX/tech plan paths, "What was built", changed files, document scope)
 
 Use the Agent tool to launch both. Do not wait for user confirmation.
 
@@ -70,7 +70,7 @@ When handoff includes "long-running" or task scope suggests multi-hour work:
 1. **Plan first** — List files to create/modify, dependencies, order. Proceed in logical chunks.
 2. **Incremental** — Build and verify in stages. Run the test command (see `PROJECT.md`) after significant changes.
 3. **Persist** — Each chunk should leave the codebase in a runnable state.
-4. **Handoff** — When complete, auto-invoke Bahnik and Piarun as usual.
+4. **Handoff** — When complete, auto-invoke Bahnik and Veles as usual.
 
 ## Output
 

@@ -57,7 +57,7 @@ When handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-n
 ## Handoff
 
 **Receive from:** Vadavik (spec)
-**Hand off to:** Cmok (mockups), Piarun (parallel docs)
+**Hand off to:** Cmok (mockups), Veles (parallel docs)
 
 When handing off to Cmok:
 - Include UX artifacts (wireframes, flows, component hierarchy)
@@ -65,10 +65,10 @@ When handing off to Cmok:
 - Include "States to implement: [list from states matrix]. Key decisions: [list]. Accessibility: [notes]."
 - Suggest: `/cmok` — "Create mockups from UX at [path]. Key decisions: [list]"
 
-When handing off to Piarun (parallel):
+When handing off to Veles (parallel):
 - Always pass ux-design.md path and "Key flows to document"
 - Template: "Feature path: [path]. Spec: [path]. UX: [path]. Document: [user guide | API | both]. Key flows to document: [list from ux-design.md]."
-- Suggest: `/piarun` — "Document [feature] from spec [path] and UX [path]"
+- Suggest: `/veles` — "Document [feature] from spec [path] and UX [path]"
 
 ## Guardrails
 
