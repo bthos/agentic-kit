@@ -105,14 +105,20 @@ The script is **idempotent** — existing kit-managed files prompt for overwrite
 
 ## Updating the kit
 
+One command (pulls the submodule’s **remote** tracking branch, then runs `init.sh` with your usual flags):
+
 ```bash
-# Pull the latest kit version
+.agentic-kit/update.sh --ide=cursor --skip          # example: match how you first ran init
+.agentic-kit/update.sh --non-interactive --ide=all
+.agentic-kit/update.sh --no-pull --ide=github --skip   # submodule already updated; only re-run init
+```
+
+Equivalent manual steps:
+
+```bash
 git submodule update --remote .agentic-kit
+.agentic-kit/init.sh   # same --ide= / --skip / etc. as before
 
-# Pick up any newly added agents, skills, or tools
-.agentic-kit/init.sh
-
-# Commit the updated submodule pointer so the team gets the same version
 git add .agentic-kit
 git commit -m "chore: update agentic-kit"
 ```
@@ -210,7 +216,8 @@ Each skill bundles its own script. Shared scripts live in `tools/`. All scripts 
 
 | Script | What it does |
 |--------|-------------|
-| `lib.sh` | Shared helpers (colors, paths, `AGENTIC_MARKER`) — sourced by `init.sh` and `teardown.sh`, not run directly |
+| `lib.sh` | Shared helpers (colors, paths, `AGENTIC_MARKER`) — sourced by `init.sh`, `update.sh`, and `teardown.sh`, not run directly |
+| `update.sh` | `git submodule update --remote` for the kit, then `exec` into `init.sh` with the same arguments you pass (optional `--no-pull` to skip the fetch) |
 | `init.sh` | IDE choice: Claude Code, Cursor, Copilot, or all; symlinks / generates rules; copies `CLAUDE.md` / `AGENTS.md` / `PROJECT.md`; updates `.gitignore` |
 | `teardown.sh` | Removes `.claude/` symlinks, kit-managed `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`, `tools/` symlink, `.gitignore` entries; `--remove-submodule` deinits git |
 
