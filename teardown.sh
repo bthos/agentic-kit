@@ -129,21 +129,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Remove tools/ symlink
-# ---------------------------------------------------------------------------
-header "Tools"
-TOOLS_TARGET="$PROJECT_ROOT/tools"
-
-if [ -L "$TOOLS_TARGET" ]; then
-  rm "$TOOLS_TARGET"
-  removed "tools/"
-elif [ -e "$TOOLS_TARGET" ]; then
-  skip "tools/ (not a symlink — delete manually)"
-else
-  info "tools/ not present"
-fi
-
-# ---------------------------------------------------------------------------
 # Clean .gitignore entries
 # ---------------------------------------------------------------------------
 header ".gitignore"

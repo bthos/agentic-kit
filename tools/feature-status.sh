@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shows pipeline status for all active features in .artefacts/features/.
-# Usage: tools/feature-status.sh
+# Usage: .agentic-kit/tools/feature-status.sh  (from project root)
 # Run from project root.
 
 set -euo pipefail

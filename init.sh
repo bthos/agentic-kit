@@ -4,7 +4,7 @@
 # Env: IDE_CHOICE=claude|cursor|github|all (same as --ide, for non-interactive)
 #
 # Creates symlinks for Claude Code (.claude/) and/or generates Cursor rules (.cursor/rules/*.mdc),
-# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template, symlinks tools/, updates .gitignore.
+# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template, updates .gitignore.
 #
 # Flags:
 #   --force, --overwrite-all   Overwrite all existing kit-managed paths without prompting
@@ -360,13 +360,6 @@ setup_agents_md() {
   write_if_kit_managed "AGENTS.md" "$dest" write_agents_md_body "$dest"
 }
 
-setup_tools_symlink() {
-  header "Tools"
-  local TOOLS_TARGET="$PROJECT_ROOT/tools"
-  local link="$SUBMODULE_DIR/tools"
-  ensure_symlink "tools/" "$TOOLS_TARGET" "$link" || true
-}
-
 setup_claude() {
   header "Claude Code — Agents"
   mkdir -p "$PROJECT_ROOT/.claude/agents"
@@ -569,8 +562,6 @@ case "$IDE_CHOICE" in
     exit 1
     ;;
 esac
-
-setup_tools_symlink
 
 # ---------------------------------------------------------------------------
 # PROJECT.md (shared)

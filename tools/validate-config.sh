@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks PROJECT.md for unfilled Project-Specific Configuration placeholders.
-# Usage: tools/validate-config.sh
+# Usage: .agentic-kit/tools/validate-config.sh  (from project root)
 # Run from project root. Exits non-zero if any placeholders remain.
 
 set -euo pipefail
