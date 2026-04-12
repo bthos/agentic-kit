@@ -21,13 +21,13 @@ Then run `.agentic-kit/tools/validate-config.sh` to confirm all placeholders are
 
 ## Pipeline Overview
 
-A self-organizing team of agents. Each agent knows who to hand off to next based on the context it receives. Nothing ships without passing Bahnik.
+A self-organizing team of agents. Each agent knows who to hand off to next based on the context it receives. Nothing ships without passing Bagnik.
 
 ```
 Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
      → Cmok /skill/ (mockups) → User UAT
-     → Laznik (arch + tests) → Bahnik (test gate)
-     → Cmok /agent/ (build) + Veles (docs, parallel) → Bahnik (code QA)
+     → Laznik (arch + tests) → Bagnik (test gate)
+     → Cmok /agent/ (build) + Veles (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
 ```
 
@@ -35,7 +35,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
 
 | Agent   | Role                        | Model  |
 |---------|-----------------------------|--------|
-| Bahnik  | Test gate & code QA         | Opus   |
+| Bagnik  | Test gate & code QA         | Opus   |
 | Cmok    | Build                       | Sonnet |
 | Veles  | Documentation               | Sonnet |
 | Zlydni  | Commits & version control   | Haiku  |
@@ -52,7 +52,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
 ### Invocation
 
 **Skills** (slash commands in chat): `/vadavik`, `/lojma`, `/laznik`, `/cmok` (mockups only)
-**Agents** (@-mention or Agent tool): `@bahnik`, `@cmok` (build), `@veles`, `@zlydni`
+**Agents** (@-mention or Agent tool): `@bagnik`, `@cmok` (build), `@veles`, `@zlydni`
 
 ---
 
@@ -60,7 +60,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
 
 Structured handoff format for agent-to-agent transitions. Explicit handoffs reduce context loss.
 
-*Agents: Vadavik, Lojma, Laznik, Cmok, Bahnik, Zlydni, Veles.*
+*Agents: Vadavik, Lojma, Laznik, Cmok, Bagnik, Zlydni, Veles.*
 
 ### Autonomous Flow
 
@@ -72,15 +72,15 @@ Agents hand off to each other without user intervention where possible. Flow sto
 | Lojma → Veles + Cmok mockup | yes | — |
 | Cmok mockup → User UAT | — | **Yes** — user must approve mockups |
 | User UAT → Laznik | — | **Yes** — user confirms to proceed |
-| Laznik → Bahnik | yes | — |
-| Bahnik (test gate pass) → Cmok build | yes | — |
-| Cmok build → Bahnik + Veles | yes | — |
-| Bahnik (code QA pass) → Zlydni | yes | — |
-| Bahnik (test gate fail) → Laznik | yes | — |
-| Bahnik (code QA fail) → Cmok | yes | — |
+| Laznik → Bagnik | yes | — |
+| Bagnik (test gate pass) → Cmok build | yes | — |
+| Cmok build → Bagnik + Veles | yes | — |
+| Bagnik (code QA pass) → Zlydni | yes | — |
+| Bagnik (test gate fail) → Laznik | yes | — |
+| Bagnik (code QA fail) → Cmok | yes | — |
 | Zlydni → End | — | Optional — user may push |
 
-**Background subagents:** Veles (`background: true`) runs in parallel. Cmok, Bahnik, Zlydni run foreground for sequential handoff.
+**Background subagents:** Veles (`background: true`) runs in parallel. Cmok, Bagnik, Zlydni run foreground for sequential handoff.
 
 ### Principles
 
@@ -111,7 +111,7 @@ When handing off to another agent, include:
 - **Blockers:** [None | List if any]
 
 ### Next Agent
-**Invoke:** `/vadavik` `/lojma` `/laznik` or `@cmok` `@bahnik` `@zlydni` `@veles`
+**Invoke:** `/vadavik` `/lojma` `/laznik` or `@cmok` `@bagnik` `@zlydni` `@veles`
 **Why:** [One-line justification for this agent]
 **Prompt:** [Suggested prompt for next agent]
 ```
@@ -123,10 +123,10 @@ When handing off to another agent, include:
 **Vadavik → Lojma:** Open questions listed? Deferred decisions documented? Feature path included?
 **Lojma → Cmok:** States matrix for each screen? UX path? Key decisions?
 **Lojma → Veles:** UX path? Key flows to document?
-**Laznik → Bahnik:** Coverage summary? Known gaps? Arch path? Test paths?
-**Cmok → Bahnik:** Feature path? What was built? Changed files? New storage/API?
+**Laznik → Bagnik:** Coverage summary? Known gaps? Arch path? Test paths?
+**Cmok → Bagnik:** Feature path? What was built? Changed files? New storage/API?
 **Cmok → Veles:** What was built? Feature path? Spec/UX/tech plan paths?
-**Bahnik → Zlydni:** Bahnik passed. Feature path. Changed files. Safe to commit.
+**Bagnik → Zlydni:** Bagnik passed. Feature path. Changed files. Safe to commit.
 
 ### Handoff Map
 
@@ -138,28 +138,28 @@ When handing off to another agent, include:
 | Lojma | Cmok | `/cmok` (mockups) | yes |
 | Cmok mockup | User UAT | — | **STOP** |
 | User UAT | Laznik | `/laznik` | **STOP** |
-| Laznik | Bahnik | `@bahnik` (test gate) | yes |
-| Bahnik (test gate pass) | Cmok | `@cmok` (build) | yes |
+| Laznik | Bagnik | `@bagnik` (test gate) | yes |
+| Bagnik (test gate pass) | Cmok | `@cmok` (build) | yes |
 | Cmok | Veles (parallel) | `@veles` | yes |
-| Cmok | Bahnik | `@bahnik` (code QA) | yes |
-| Bahnik (code QA pass) | Zlydni | `@zlydni` | yes |
-| Bahnik (test gate fail) | Laznik | `/laznik` | yes |
-| Bahnik (code QA fail) | Cmok | `@cmok` | yes |
+| Cmok | Bagnik | `@bagnik` (code QA) | yes |
+| Bagnik (code QA pass) | Zlydni | `@zlydni` | yes |
+| Bagnik (test gate fail) | Laznik | `/laznik` | yes |
+| Bagnik (code QA fail) | Cmok | `@cmok` | yes |
 | Zlydni | End | — | Optional push |
 
-**Bahnik context inference:** Bahnik determines its role from who invoked it. From Laznik = test gate (fail → Laznik, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bahnik passes — no iteration limit.
+**Bagnik context inference:** Bagnik determines its role from who invoked it. From Laznik = test gate (fail → Laznik, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bagnik passes — no iteration limit.
 
 ### Quality Gates
 
-- **Bahnik test gate** — Block if tests fail. Do not proceed to build.
-- **Bahnik code QA** — Block if QA fails. Do not proceed to Zlydni.
-- **Bahnik security & PII** — Block if security issues or personal data leaks found.
-- **Nothing ships without passing Bahnik.** Bahnik does not negotiate.
+- **Bagnik test gate** — Block if tests fail. Do not proceed to build.
+- **Bagnik code QA** — Block if QA fails. Do not proceed to Zlydni.
+- **Bagnik security & PII** — Block if security issues or personal data leaks found.
+- **Nothing ships without passing Bagnik.** Bagnik does not negotiate.
 
 ### Invocation Format (Claude Code)
 
 - **Skills** (conversational, slash commands): `/vadavik`, `/lojma`, `/laznik` — type in chat
-- **Subagents** (focused execution): `@cmok`, `@bahnik`, `@zlydni`, `@veles` — @-mention or name in chat
+- **Subagents** (focused execution): `@cmok`, `@bagnik`, `@zlydni`, `@veles` — @-mention or name in chat
 
 ### Handoff Log
 
@@ -171,7 +171,7 @@ Key decisions: ...
 Artifacts: ...
 ```
 
-This gives any agent a full chain of custody when context is lost, especially across Bahnik-Cmok fix loop iterations. `tools/feature-status.sh` checks whether the log exists.
+This gives any agent a full chain of custody when context is lost, especially across Bagnik-Cmok fix loop iterations. `tools/feature-status.sh` checks whether the log exists.
 
 ### Best Practices
 

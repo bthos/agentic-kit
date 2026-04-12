@@ -1,16 +1,18 @@
-# agentic-kit
+# Agentic Kit
 
-A reusable AI development pipeline — 4 agents, 4 skills, and a structured handoff protocol. Works with **Claude Code** (native `.claude/` layout), **Cursor** (generated `.cursor/rules/*.mdc` + `AGENTS.md`), and **GitHub Copilot** (generated `.github/agents/*.agent.md` + `.github/instructions/*.instructions.md`). Import as a git submodule in under a minute.
+A reusable AI development pipeline — 4 agents, 4 skills, and a structured handoff protocol. Works with **Claude Code** (native `.claude/` layout), **Cursor** (generated `.cursor/rules/*.mdc` + `AGENTS.md`), and **GitHub Copilot** (generated `.github/agents/*.agent.md` + `.github/instructions/*.instructions.md`). 
+
+Import as a git submodule in under a minute.
 
 ## What it is
 
-A self-organizing team of AI agents for structured development. Each agent knows its role and who to hand off to next. Quality gates ensure nothing ships without passing Bahnik.
+A self-organizing team of AI agents for structured development. Each agent knows its role and who to hand off to next. Quality gates ensure nothing ships without passing Bagnik.
 
 ```
 Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
      → Cmok /skill/ (mockups) → User UAT
-     → Laznik (arch + tests) → Bahnik (test gate)
-     → Cmok /agent/ (build) + Veles (docs, parallel) → Bahnik (code QA)
+     → Laznik (arch + tests) → Bagnik (test gate)
+     → Cmok /agent/ (build) + Veles (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
 ```
 
@@ -18,7 +20,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
 
 | Agent   | Role                      | Model  |
 |---------|---------------------------|--------|
-| Bahnik  | Test gate & code QA       | Opus   |
+| Bagnik  | Test gate & code QA       | Opus   |
 | Cmok    | Build                     | Sonnet |
 | Veles  | Documentation             | Sonnet |
 | Zlydni  | Commits & version control | Haiku  |
@@ -139,9 +141,9 @@ git commit -m "chore: update agentic-kit"
 To customize an agent for your project, replace its symlink with a local file:
 
 ```bash
-rm .claude/agents/bahnik.md
-cp .agentic-kit/agents/bahnik.md .claude/agents/bahnik.md
-# Edit .claude/agents/bahnik.md to your needs
+rm .claude/agents/bagnik.md
+cp .agentic-kit/agents/bagnik.md .claude/agents/bagnik.md
+# Edit .claude/agents/bagnik.md to your needs
 ```
 
 `init.sh` skips files that already exist, so your override persists across updates.
@@ -180,7 +182,7 @@ Vadavik creates the feature folder automatically when starting a new spec.
 | Design UX | `/lojma` |
 | Create UX mockups | `/cmok` |
 | Architecture & tests | `/laznik` |
-| Run test gate or code QA | `@bahnik` |
+| Run test gate or code QA | `@bagnik` |
 | Build | `@cmok` |
 | Write docs | `@veles` |
 | Commit | `@zlydni` |
