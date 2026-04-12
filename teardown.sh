@@ -80,6 +80,55 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Remove GitHub Copilot generated files
+# ---------------------------------------------------------------------------
+header "GitHub Copilot"
+
+GITHUB_DIR="$PROJECT_ROOT/.github"
+
+if [ -d "$GITHUB_DIR/agents" ]; then
+  for f in "$GITHUB_DIR/agents/"*.agent.md; do
+    [ -e "$f" ] || continue
+    if grep -qF "$AGENTIC_MARKER" "$f" 2>/dev/null; then
+      rm "$f"
+      removed ".github/agents/$(basename "$f")"
+    else
+      skip ".github/agents/$(basename "$f") (not kit-managed)"
+    fi
+  done
+  [ -z "$(ls -A "$GITHUB_DIR/agents" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/agents" 2>/dev/null && removed ".github/agents/ (empty dir)" || true
+else
+  info ".github/agents/ not present"
+fi
+
+if [ -d "$GITHUB_DIR/instructions" ]; then
+  for f in "$GITHUB_DIR/instructions/"*.instructions.md; do
+    [ -e "$f" ] || continue
+    if grep -qF "$AGENTIC_MARKER" "$f" 2>/dev/null; then
+      rm "$f"
+      removed ".github/instructions/$(basename "$f")"
+    else
+      skip ".github/instructions/$(basename "$f") (not kit-managed)"
+    fi
+  done
+  [ -z "$(ls -A "$GITHUB_DIR/instructions" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/instructions" 2>/dev/null && removed ".github/instructions/ (empty dir)" || true
+else
+  info ".github/instructions/ not present"
+fi
+
+CI_FILE="$GITHUB_DIR/copilot-instructions.md"
+if [ -f "$CI_FILE" ]; then
+  if grep -qF "$AGENTIC_MARKER" "$CI_FILE" 2>/dev/null; then
+    rm "$CI_FILE"
+    removed ".github/copilot-instructions.md"
+  else
+    skip ".github/copilot-instructions.md (not kit-managed)"
+  fi
+else
+  info ".github/copilot-instructions.md not present"
+fi
+
+# ---------------------------------------------------------------------------
 # Remove tools/ symlink
 # ---------------------------------------------------------------------------
 header "Tools"

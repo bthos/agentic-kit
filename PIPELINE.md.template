@@ -4,6 +4,21 @@
 
 ---
 
+## Kit Setup (for agents)
+
+To set up agentic-kit in a project, run:
+
+```bash
+.agentic-kit/init.sh --non-interactive --ide=cursor   # or --ide=claude / --ide=both
+```
+
+When `--yes` is used, the script will output a `[AGENT ACTION REQUIRED]` block.
+**After the script exits, fill in `PROJECT.md` yourself:**
+inspect the project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, version files, etc.) and replace every `<placeholder>` with the correct value.
+Then run `.agentic-kit/tools/validate-config.sh` to confirm all placeholders are resolved.
+
+---
+
 ## Pipeline Overview
 
 A self-organizing team of agents. Each agent knows who to hand off to next based on the context it receives. Nothing ships without passing Bahnik.
