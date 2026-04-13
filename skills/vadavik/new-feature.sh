@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Creates a new feature folder under .artefacts/features/ with today's date prefix.
-# Usage: .claude/skills/vadavik/new-feature.sh <feature-slug>
-# Example: .claude/skills/vadavik/new-feature.sh user-login-flow
+# Usage: /skills/vadavik/new-feature.sh <feature-slug>
+# Example: /skills/vadavik/new-feature.sh user-login-flow
 # Run from project root.
 
 set -euo pipefail

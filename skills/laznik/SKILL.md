@@ -57,7 +57,7 @@ When Bagnik fails the test gate and hands off to Laznik:
 Before handing off to Bagnik, run:
 
 ```bash
-.claude/skills/laznik/check-coverage.sh <feature-path>
+/skills/laznik/check-coverage.sh <feature-path>
 ```
 
 This runs the test command from `PROJECT.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output for the handoff.

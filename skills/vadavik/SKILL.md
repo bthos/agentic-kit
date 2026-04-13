@@ -43,7 +43,7 @@ When updating specs:
 When starting a new feature, run:
 
 ```bash
-.claude/skills/vadavik/new-feature.sh <feature-slug>
+/skills/vadavik/new-feature.sh <feature-slug>
 ```
 
 This creates `.artefacts/features/YYYY-MM-DD-<slug>/` with a `spec.md` skeleton and `handoff-log.md`. Use the printed `FEATURE_PATH` value in every handoff.

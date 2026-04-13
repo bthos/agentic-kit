@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the project test command and extracts a coverage summary for the handoff to Bagnik.
-# Usage: .claude/skills/laznik/check-coverage.sh [feature-path]
+# Usage: /skills/laznik/check-coverage.sh [feature-path]
 # Run from project root.
 
 set -euo pipefail

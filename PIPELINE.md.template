@@ -6,16 +6,27 @@
 
 ## Kit Setup (for agents)
 
-To set up agentic-kit in a project, run:
+To set up agentic-kit in a project, run from the **project root** (the directory that contains `.agentic-kit/`):
 
 ```bash
-.agentic-kit/init.sh --non-interactive --ide=cursor   # or --ide=claude / --ide=both
+.agentic-kit/init.sh --non-interactive --ide=claude    # Claude Code: .claude/, CLAUDE.md
+.agentic-kit/init.sh --non-interactive --ide=cursor   # Cursor: .cursor/skills/, .cursor/rules/*.mdc, AGENTS.md
+.agentic-kit/init.sh --non-interactive --ide=github  # Copilot: .github/agents/, .github/instructions/
+.agentic-kit/init.sh --non-interactive --ide=all      # all three (alias: --ide=both)
 ```
 
-When `--yes` is used, the script will output a `[AGENT ACTION REQUIRED]` block.
-**After the script exits, fill in `PROJECT.md` yourself:**
-inspect the project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, version files, etc.) and replace every `<placeholder>` with the correct value.
-Then run `.agentic-kit/tools/validate-config.sh` to confirm all placeholders are resolved.
+Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script prints a **`[AGENT ACTION REQUIRED]`** block instead of spawning a nested CLI to edit `PROJECT.md`.
+
+**After the script exits, fill in `PROJECT.md` yourself:** inspect the project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, version files, etc.) and replace every `<placeholder>` with the correct value. Then run `.agentic-kit/tools/validate-config.sh` to confirm all placeholders are resolved.
+
+**What each `--ide` produces (high level):**
+
+| Target | Skills | Agents / rules | Pipeline doc |
+|--------|--------|----------------|----------------|
+| `claude` | Symlinks → `.claude/skills/` | Symlinks → `.claude/agents/` | `CLAUDE.md` (copy of this template) |
+| `cursor` | Symlinks → `.cursor/skills/` (and `.claude/skills/` for bundled shell scripts) | Generated `.cursor/rules/*.mdc` (agents + `pipeline.mdc`) | `AGENTS.md` |
+| `github` | `.github/instructions/*.instructions.md` | `.github/agents/*.agent.md` | `.github/copilot-instructions.md` |
+| `all` | All of the above | All of the above | All of the above |
 
 ---
 
@@ -51,8 +62,26 @@ Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
 
 ### Invocation
 
-**Skills** (slash commands in chat): `/vadavik`, `/lojma`, `/laznik`, `/cmok` (mockups only)
-**Agents** (@-mention or Agent tool): `@bagnik`, `@cmok` (build), `@veles`, `@zlydni`
+The kit uses the **same role names** in every IDE. What changes is only the **control** your editor exposes (slash menu, `@` rules, agent picker, and so on).
+
+**Roles**
+
+| Kind | Names |
+|------|--------|
+| **Skills** | `vadavik`, `lojma`, `laznik`, `cmok` (mockups only for `cmok`) |
+| **Agents** | `bagnik`, `cmok` (implementation after gates), `veles`, `zlydni` |
+
+**Mockups vs Cmok build:** the **skill** `cmok` is mockups only. **Implementation** after Bagnik is the **agent** `cmok` in Claude/Copilot; in Cursor that agent is exposed as the rule **`cmok-build`** so it does not clash with the **`cmok`** skill.
+
+**How to invoke (by IDE)**
+
+| IDE | Skills | Agents |
+|-----|--------|--------|
+| **Claude Code** | Slash in chat: **`/vadavik`**, **`/lojma`**, **`/laznik`**, **`/cmok`** | **`@bagnik`**, **`@cmok`**, **`@veles`**, **`@zlydni`**, or the Agent / subagent flow with those names |
+| **Cursor** | In **Agent** chat, type **`/`** and pick the skill by name (discovered automatically; see [Agent Skills](https://cursor.com/docs/context/skills)). Optional: type **`/vadavik`**-style if your build resolves it the same way. | [Project rules](https://cursor.com/docs/context/rules): type **`@`** + rule basename to attach a rule explicitly, e.g. **`@bagnik`**, **`@cmok-build`**, **`@veles`**, **`@zlydni`**; kit agent rules use **Apply Intelligently** (`alwaysApply: false`), so the Agent can also include them **by relevance** from each rule’s description. Baseline protocol: root **`AGENTS.md`** plus the always-on **pipeline** rule. |
+| **GitHub Copilot** (VS Code) | No Claude-style slash; workspace instructions apply broadly—refer to **Vadavik / Lojma / Laznik / Cmok** by name in the prompt. | Open the **agents** control in Copilot Chat and choose the workspace agent (**bagnik**, **cmok**, **veles**, **zlydni**); labels match each agent file’s `name:` field (see [Custom agents in VS Code](https://code.visualstudio.com/docs/copilot/customization/custom-chat-modes)). If your build offers **`@`** participants for those agents, you can use the same names there. |
+
+The **Handoff Map** below uses **`/…`** and **`@…`** as **short labels** for those same roles (Claude-style). Translate using the table above.
 
 ---
 
@@ -80,7 +109,7 @@ Agents hand off to each other without user intervention where possible. Flow sto
 | Bagnik (code QA fail) → Cmok | yes | — |
 | Zlydni → End | — | Optional — user may push |
 
-**Background subagents:** Veles (`background: true`) runs in parallel. Cmok, Bagnik, Zlydni run foreground for sequential handoff.
+**Parallel docs (Veles):** In Claude Code, Veles is often launched with `background: true` so it runs alongside Lojma or Cmok. In Cursor / Copilot, still pass the same handoff context to Veles in parallel when the flow calls for docs + design or docs + build — your UI may not expose “background” the same way.
 
 ### Principles
 
@@ -88,7 +117,7 @@ Agents hand off to each other without user intervention where possible. Flow sto
 - **Explicit over implicit** — Never assume context carries; pass it explicitly
 - **Structured format** — Use the handoff template below
 - **Justify routing** — Explain why the next agent is appropriate
-- **Auto-handoff** — When completing, invoke next agent via the Agent tool unless user stop
+- **Auto-handoff** — When completing, hand off to the next role using the **How to invoke** table above unless a user stop applies
 
 ### Handoff Template
 
@@ -111,7 +140,7 @@ When handing off to another agent, include:
 - **Blockers:** [None | List if any]
 
 ### Next Agent
-**Invoke:** `/vadavik` `/lojma` `/laznik` or `@cmok` `@bagnik` `@zlydni` `@veles`
+**Invoke:** name the next **role** from the Handoff Map (e.g. `/vadavik`, `/laznik`, `@bagnik`, `@cmok` for build, `@veles`, `@zlydni`) — those tokens are Claude shortcuts; use the **How to invoke** table for Cursor and Copilot.
 **Why:** [One-line justification for this agent]
 **Prompt:** [Suggested prompt for next agent]
 ```
@@ -147,6 +176,8 @@ When handing off to another agent, include:
 | Bagnik (code QA fail) | Cmok | `@cmok` | yes |
 | Zlydni | End | — | Optional push |
 
+*The **Invocation** column is Claude-style shorthand (`/` skills, `@` agents). Same roles elsewhere: **Cursor** — `/` skill picker and `@` rule names (**`@cmok-build`** for implementation). **Copilot** — agents menu (**cmok** agent for build).*
+
 **Bagnik context inference:** Bagnik determines its role from who invoked it. From Laznik = test gate (fail → Laznik, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bagnik passes — no iteration limit.
 
 ### Quality Gates
@@ -156,14 +187,9 @@ When handing off to another agent, include:
 - **Bagnik security & PII** — Block if security issues or personal data leaks found.
 - **Nothing ships without passing Bagnik.** Bagnik does not negotiate.
 
-### Invocation Format (Claude Code)
-
-- **Skills** (conversational, slash commands): `/vadavik`, `/lojma`, `/laznik` — type in chat
-- **Subagents** (focused execution): `@cmok`, `@bagnik`, `@zlydni`, `@veles` — @-mention or name in chat
-
 ### Handoff Log
 
-Each feature folder contains a `handoff-log.md` created by `skills/vadavik/new-feature.sh`. Every agent appends one entry before handing off:
+Each feature folder contains a `handoff-log.md` created by **`.claude/skills/vadavik/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is symlinked by `init.sh` whenever the kit sets up Claude paths — modes `claude`, `cursor`, `github`, or `all`). Every agent appends one entry before handing off:
 
 ```markdown
 ## HH:MM [From] → [To] [context]
