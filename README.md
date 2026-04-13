@@ -1,6 +1,6 @@
 # Agentic Kit
 
-A reusable AI development pipeline — 4 agents, 4 skills, and a structured handoff protocol. Works with **Claude Code** (native `.claude/` layout), **Cursor** (generated `.cursor/rules/*.mdc` + `AGENTS.md`), and **GitHub Copilot** (generated `.github/agents/*.agent.md` + `.github/instructions/*.instructions.md`). 
+A reusable AI development pipeline — 4 agents, 4 skills, and a structured handoff protocol. Works with **Claude Code** (native `.claude/` layout), **Cursor** (symlinked `.cursor/skills/`, generated `.cursor/rules/*.mdc` for agents + `AGENTS.md`), and **GitHub Copilot** (generated `.github/agents/*.agent.md` + `.github/instructions/*.instructions.md`). 
 
 Import as a git submodule in under a minute.
 
@@ -74,7 +74,7 @@ Then open `PROJECT.md` and fill in the **Project-Specific Configuration** sectio
 
 **Claude Code:** start a feature with `/vadavik`.
 
-**Cursor:** agents and skills become `.cursor/rules/*.mdc` (with `description` + `alwaysApply` for Cursor's rule system). `PIPELINE.md.template` is also copied to **`AGENTS.md`** (Cursor reads it natively). A `pipeline.mdc` rule uses `alwaysApply: true` so the handoff protocol is always in context. Cmok is split into `cmok-build.mdc` and `cmok-mockups.mdc`. Cursor has no slash commands — the agent picks rules by relevance, or you `@`-mention a rule file.
+**Cursor:** each kit skill is symlinked to **`.cursor/skills/<name>/`** (with `SKILL.md` and bundled scripts) so [Cursor Agent Skills](https://cursor.com/docs/context/skills) pick them up. Agents become **`.cursor/rules/*.mdc`**. `PIPELINE.md.template` is copied to **`AGENTS.md`**. A `pipeline.mdc` rule uses `alwaysApply: true` so the handoff protocol is always in context. Invoke skills from chat with **`/<skill-name>`** or attach them as context; use **`@`** for rules files.
 
 **GitHub Copilot:** each agent becomes a `.github/agents/<name>.agent.md` custom agent (VS Code Copilot picks these up automatically). Each skill becomes a `.github/instructions/<name>.instructions.md` with `applyTo: '**'` so it applies to every chat. `PIPELINE.md.template` becomes `.github/copilot-instructions.md` — the workspace-wide instructions file Copilot always reads. Use `@<agentname>` in Copilot Chat to invoke a specific agent.
 
@@ -98,16 +98,17 @@ Shared scripts live only under **`.agentic-kit/tools/`** — run them from the *
 **Cursor (`cursor` or `all`):**
 
 6. Symlinks `skills/*/` → `.claude/skills/` (Cursor-only mode only — so paths like `.claude/skills/vadavik/new-feature.sh` in skill docs still work)
-7. Generates `.cursor/rules/*.mdc` from agents and skills (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh rules). Output filenames default to `<name>.mdc`; optional YAML frontmatter `cursor_rule_name` overrides the basename (e.g. Cmok agent vs skill both use `name: cmok`, so they set `cmok-build` / `cmok-mockups`).
-8. Writes `pipeline.mdc` (`alwaysApply: true`) from `PIPELINE.md.template` (minus the `@PROJECT.md` line)
-9. Copies `PIPELINE.md.template` → `AGENTS.md` with a kit-managed marker (for teardown)
+7. Symlinks `skills/*/` → `.cursor/skills/` (same relative layout as the kit — **re-run `init.sh` after `git submodule update`** to refresh)
+8. Generates `.cursor/rules/*.mdc` from **agents only** (copies, not symlinks). Optional YAML frontmatter `cursor_rule_name` overrides the basename (e.g. Cmok agent uses `cmok-build.mdc`).
+9. Writes `pipeline.mdc` (`alwaysApply: true`) from `PIPELINE.md.template` (minus the `@PROJECT.md` line)
+10. Copies `PIPELINE.md.template` → `AGENTS.md` with a kit-managed marker (for teardown)
 
 **GitHub Copilot (`github` or `all`):**
 
-10. Symlinks `skills/*/` → `.claude/skills/` (Copilot-only mode only — for bundled shell scripts)
-11. Generates `.github/agents/<name>.agent.md` from each agent (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh). Strips Claude-specific fields; adds standard Copilot `tools` list.
-12. Generates `.github/instructions/<name>.instructions.md` from each skill with `applyTo: '**'`
-13. Writes `.github/copilot-instructions.md` from `PIPELINE.md.template` (minus the `@PROJECT.md` line) with a kit-managed marker
+11. Symlinks `skills/*/` → `.claude/skills/` (Copilot-only mode only — for bundled shell scripts)
+12. Generates `.github/agents/<name>.agent.md` from each agent (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh). Strips Claude-specific fields; adds standard Copilot `tools` list.
+13. Generates `.github/instructions/<name>.instructions.md` from each skill with `applyTo: '**'`
+14. Writes `.github/copilot-instructions.md` from `PIPELINE.md.template` (minus the `@PROJECT.md` line) with a kit-managed marker
 
 The script is **idempotent** — existing kit-managed files prompt for overwrite (or **s** / **o** / **a** / **r** as above). For CI or scripts, use **`--force`** / **`--overwrite-all`** or **`--skip`** / **`--skip-all`** so nothing blocks on prompts.
 
@@ -135,7 +136,7 @@ git commit -m "chore: update agentic-kit"
 - New agents and skills — `init.sh` creates missing symlinks; existing symlinks are untouched
 - Scripts under `.agentic-kit/tools/` — they ship with the submodule; `git submodule update` brings new versions
 
-**Cursor:** `.cursor/rules/*.mdc` are generated copies — after updating the submodule, run `init.sh` again (same `--ide=` as before) to regenerate rules from the new kit sources.
+**Cursor:** `.cursor/skills/` symlinks and `.cursor/rules/*.mdc` copies — after updating the submodule, run `init.sh` again (same `--ide=` as before) to refresh them from the new kit sources.
 
 **GitHub Copilot:** same as Cursor — `.github/agents/*.agent.md` and `.github/instructions/*.instructions.md` are generated copies; re-run `init.sh --ide=github` (or `--ide=all`) after `git submodule update`.
 
@@ -162,6 +163,8 @@ cp .agentic-kit/agents/bagnik.md .claude/agents/bagnik.md
 
 `init.sh` skips files that already exist, so your override persists across updates.
 
+For **Cursor** skills, `.cursor/skills/<name>` is a symlink to the kit; replace it with a real directory (copy the kit folder and edit) if you need a project-local override — `init.sh` will then skip that path.
+
 ## Removing the kit
 
 ```bash
@@ -172,7 +175,7 @@ cp .agentic-kit/agents/bagnik.md .claude/agents/bagnik.md
 .agentic-kit/teardown.sh --remove-submodule
 ```
 
-`teardown.sh` removes only files that contain the kit marker (`<!-- agentic-kit managed -->`): `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`. Files you added yourself are left alone.
+`teardown.sh` removes kit skill symlinks under `.cursor/skills/`, then only files that contain the kit marker (`<!-- agentic-kit managed -->`): `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`. Files you added yourself are left alone.
 
 ## Feature artifacts
 
@@ -227,7 +230,7 @@ Each skill bundles its own script. Shared scripts live in `.agentic-kit/tools/`.
 | `lib.sh` | Shared helpers (colors, paths, `AGENTIC_MARKER`) — sourced by `init.sh`, `update.sh`, and `teardown.sh`, not run directly |
 | `update.sh` | `git submodule update --remote` for the kit, then `exec` into `init.sh` with the same arguments you pass (optional `--no-pull` to skip the fetch) |
 | `init.sh` | IDE choice: Claude Code, Cursor, Copilot, or all; symlinks / generates rules; copies `CLAUDE.md` / `AGENTS.md` / `PROJECT.md`; updates `.gitignore` |
-| `teardown.sh` | Removes `.claude/` symlinks, kit-managed `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`, `.gitignore` entries; `--remove-submodule` deinits git |
+| `teardown.sh` | Removes `.claude/` symlinks, `.cursor/skills/` kit symlinks, kit-managed `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`, `.gitignore` entries; `--remove-submodule` deinits git |
 
 ## Handoff protocol
 

@@ -46,9 +46,24 @@ for skill_dir in "$SCRIPT_DIR/skills/"*/; do
 done
 
 # ---------------------------------------------------------------------------
-# Remove Cursor-generated rules and AGENTS.md
+# Remove Cursor skills symlinks, generated rules, and AGENTS.md
 # ---------------------------------------------------------------------------
 header "Cursor"
+
+for skill_dir in "$SCRIPT_DIR/skills/"*/; do
+  [ -d "$skill_dir" ] || continue
+  name=$(basename "$skill_dir")
+  target="$PROJECT_ROOT/.cursor/skills/$name"
+  if [ -L "$target" ]; then
+    rm "$target"
+    removed ".cursor/skills/$name"
+  elif [ -e "$target" ]; then
+    skip ".cursor/skills/$name (local override — delete manually)"
+  fi
+done
+if [ -d "$PROJECT_ROOT/.cursor/skills" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/skills" 2>/dev/null)" ]; then
+  rmdir "$PROJECT_ROOT/.cursor/skills" 2>/dev/null && removed ".cursor/skills/ (empty dir)" || true
+fi
 
 if [ -d "$PROJECT_ROOT/.cursor/rules" ]; then
   for mdc in "$PROJECT_ROOT/.cursor/rules/"*.mdc; do

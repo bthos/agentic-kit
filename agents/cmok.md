@@ -1,6 +1,6 @@
 ---
 name: cmok
-# Cursor rule filename (agent vs skill both use "cmok" — disambiguate .mdc output)
+# Cursor rule filename (agent `name` is cmok — use a distinct .mdc basename; skill lives under .cursor/skills/cmok/)
 cursor_rule_name: cmok-build
 description: Build. Implements the design after Bagnik test gate passes. Supports long-running builds when handoff indicates multi-hour task.
 model: sonnet

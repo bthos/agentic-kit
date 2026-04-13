@@ -3,7 +3,7 @@
 # Usage: .agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive] [--ide=claude|cursor|github|all]
 # Env: IDE_CHOICE=claude|cursor|github|all (same as --ide, for non-interactive)
 #
-# Creates symlinks for Claude Code (.claude/) and/or generates Cursor rules (.cursor/rules/*.mdc),
+# Creates symlinks for Claude Code (.claude/) and/or Cursor (.cursor/skills/, .cursor/rules/*.mdc),
 # copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template, updates .gitignore.
 #
 # Flags:
@@ -43,7 +43,7 @@ show_help() {
   OPTIONS
     --ide=<target>          Which IDE to configure (default: claude)
                               claude   — Claude Code (.claude/ symlinks, CLAUDE.md)
-                              cursor   — Cursor (.cursor/rules/*.mdc, AGENTS.md)
+                              cursor   — Cursor (.cursor/skills/, .cursor/rules/*.mdc, AGENTS.md)
                               github   — GitHub Copilot (.github/agents/*.agent.md,
                                          .github/instructions/*.instructions.md,
                                          .github/copilot-instructions.md)
@@ -306,7 +306,7 @@ install_or_update_mdc_rule() {
 }
 
 generate_mdc_rules_from_sources() {
-  local agent base out desc skill_dir skill_name skill_file
+  local agent base out desc
   for agent in "$SCRIPT_DIR/agents/"*.md; do
     [ -e "$agent" ] || continue
     base=$(basename "$agent" .md)
@@ -315,17 +315,22 @@ generate_mdc_rules_from_sources() {
     [ -n "$desc" ] || desc="Agent: $base"
     install_or_update_mdc_rule ".cursor/rules/$out" "$agent" "$out" "$desc"
   done
+}
 
-  local skill_dir skill_name skill_file
+# Cursor Agent Skills: one folder per skill with SKILL.md (see https://cursor.com/docs/context/skills).
+link_cursor_skills() {
+  header "Cursor — Skills (.cursor/skills/)"
+  mkdir -p "$PROJECT_ROOT/.cursor/skills"
+
+  local skill_dir name target link skill_file
   for skill_dir in "$SCRIPT_DIR/skills/"*/; do
     [ -d "$skill_dir" ] || continue
-    skill_name=$(basename "$skill_dir")
+    name=$(basename "$skill_dir")
     skill_file="${skill_dir}SKILL.md"
     [ -f "$skill_file" ] || continue
-    out=$(cursor_rule_out_name "$skill_file" "$skill_name")
-    desc=$(extract_yaml_field "$skill_file" "description")
-    [ -n "$desc" ] || desc="Skill: $skill_name"
-    install_or_update_mdc_rule ".cursor/rules/$out" "$skill_file" "$out" "$desc"
+    target="$PROJECT_ROOT/.cursor/skills/$name"
+    link="../../$SUBMODULE_DIR/skills/$name"
+    ensure_symlink ".cursor/skills/$name" "$target" "$link" || true
   done
 }
 
@@ -393,6 +398,7 @@ setup_cursor() {
   if [ "$IDE_CHOICE" = "cursor" ]; then
     link_claude_skills "Claude Code — Skills (for bundled scripts)"
   fi
+  link_cursor_skills
   setup_cursor_rules_from_sources
   setup_agents_md
 }
@@ -722,7 +728,7 @@ done
 printf "\n${BOLD}${GREEN}  Done.${RESET}\n"
 case "$IDE_CHOICE" in
   claude)   info "Claude Code: start a feature with /vadavik" ;;
-  cursor)   info "Cursor: .mdc rules generated — re-run init after submodule update" ;;
+  cursor)   info "Cursor: .cursor/skills/ + .cursor/rules/ — re-run init after submodule update" ;;
   github)   info "GitHub Copilot: agents in .github/agents/, instructions in .github/instructions/ — re-run init after submodule update" ;;
   all)      info "Claude Code: /vadavik  |  Cursor: .cursor/rules/  |  GitHub Copilot: .github/agents/ + .github/instructions/" ;;
 esac
