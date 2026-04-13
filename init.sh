@@ -4,7 +4,7 @@
 # Env: IDE_CHOICE=claude|cursor|github|all (same as --ide, for non-interactive)
 #
 # Creates symlinks for Claude Code (.claude/) and/or Cursor (.cursor/skills/, .cursor/rules/*.mdc),
-# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template, updates .gitignore.
+# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template.
 #
 # Flags:
 #   --force, --overwrite-all   Overwrite all existing kit-managed paths without prompting
@@ -705,22 +705,6 @@ if [ "$fresh_project_md_from_template" = true ]; then
     fi
   fi
 fi
-
-# ---------------------------------------------------------------------------
-# .gitignore
-# ---------------------------------------------------------------------------
-header ".gitignore"
-GITIGNORE="$PROJECT_ROOT/.gitignore"
-
-# Add more entries here alongside teardown.sh's removal loop.
-for entry in ".artefacts/"; do
-  if [ ! -f "$GITIGNORE" ] || ! grep -qxF "$entry" "$GITIGNORE"; then
-    printf '%s\n' "$entry" >> "$GITIGNORE"
-    success ".gitignore ← $entry"
-  else
-    info "$entry already in .gitignore"
-  fi
-done
 
 # ---------------------------------------------------------------------------
 # Done

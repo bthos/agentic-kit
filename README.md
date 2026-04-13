@@ -85,30 +85,31 @@ That's it.
 **Always (all IDE modes):**
 
 1. Copies `PROJECT.md.template` → `PROJECT.md` if none exists, or when you choose to overwrite an existing `PROJECT.md`. After any fresh copy from the template, optionally fills placeholders via the CLI that matches `--ide`: **`claude -p`** (Claude Code) for `claude`, **`agent -p --force`** ([Cursor Agent CLI](https://cursor.com/docs/cli/overview)) for `cursor`. Use the **`agent`** binary from [Cursor CLI install](https://cursor.com/docs/cli/installation) — the GUI **`cursor`** launcher is Electron-based and is not used here (passing `-p` to it triggers Chromium “unknown option” warnings). For `all` / `github`, it prefers `claude` if installed, otherwise `agent`. If stdin is not a TTY but `/dev/tty` exists, the Y/n prompt is read from `/dev/tty` so the step is not skipped silently in some IDE terminals.
-2. Appends `.artefacts/` to `.gitignore` if missing
+
+The kit does **not** modify `.gitignore` for `.artefacts/` — add an ignore rule yourself if you want that directory untracked.
 
 Shared scripts live only under **`.agentic-kit/tools/`** — run them from the **project root**, for example `.agentic-kit/tools/validate-config.sh`.
 
 **Claude Code (`claude` or `all`):**
 
-3. Symlinks `agents/*.md` → `.claude/agents/`
-4. Symlinks `skills/*/` → `.claude/skills/`
-5. Copies `PIPELINE.md.template` → `CLAUDE.md` if none exists
+2. Symlinks `agents/*.md` → `.claude/agents/`
+3. Symlinks `skills/*/` → `.claude/skills/`
+4. Copies `PIPELINE.md.template` → `CLAUDE.md` if none exists
 
 **Cursor (`cursor` or `all`):**
 
-6. Symlinks `skills/*/` → `.claude/skills/` (Cursor-only mode only — so paths like `.claude/skills/vadavik/new-feature.sh` in skill docs still work)
-7. Symlinks `skills/*/` → `.cursor/skills/` (same relative layout as the kit — **re-run `init.sh` after `git submodule update`** to refresh)
-8. Generates `.cursor/rules/*.mdc` from **agents only** (copies, not symlinks). Optional YAML frontmatter `cursor_rule_name` overrides the basename (e.g. Cmok agent uses `cmok-build.mdc`).
-9. Writes `pipeline.mdc` (`alwaysApply: true`) from `PIPELINE.md.template` (minus the `@PROJECT.md` line)
-10. Copies `PIPELINE.md.template` → `AGENTS.md` with a kit-managed marker (for teardown)
+5. Symlinks `skills/*/` → `.claude/skills/` (Cursor-only mode only — so paths like `.claude/skills/vadavik/new-feature.sh` in skill docs still work)
+6. Symlinks `skills/*/` → `.cursor/skills/` (same relative layout as the kit — **re-run `init.sh` after `git submodule update`** to refresh)
+7. Generates `.cursor/rules/*.mdc` from **agents only** (copies, not symlinks). Optional YAML frontmatter `cursor_rule_name` overrides the basename (e.g. Cmok agent uses `cmok-build.mdc`).
+8. Writes `pipeline.mdc` (`alwaysApply: true`) from `PIPELINE.md.template` (minus the `@PROJECT.md` line)
+9. Copies `PIPELINE.md.template` → `AGENTS.md` with a kit-managed marker (for teardown)
 
 **GitHub Copilot (`github` or `all`):**
 
-11. Symlinks `skills/*/` → `.claude/skills/` (Copilot-only mode only — for bundled shell scripts)
-12. Generates `.github/agents/<name>.agent.md` from each agent (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh). Strips Claude-specific fields; adds standard Copilot `tools` list.
-13. Generates `.github/instructions/<name>.instructions.md` from each skill with `applyTo: '**'`
-14. Writes `.github/copilot-instructions.md` from `PIPELINE.md.template` (minus the `@PROJECT.md` line) with a kit-managed marker
+10. Symlinks `skills/*/` → `.claude/skills/` (Copilot-only mode only — for bundled shell scripts)
+11. Generates `.github/agents/<name>.agent.md` from each agent (copies, not symlinks — **re-run `init.sh` after `git submodule update`** to refresh). Strips Claude-specific fields; adds standard Copilot `tools` list.
+12. Generates `.github/instructions/<name>.instructions.md` from each skill with `applyTo: '**'`
+13. Writes `.github/copilot-instructions.md` from `PIPELINE.md.template` (minus the `@PROJECT.md` line) with a kit-managed marker
 
 The script is **idempotent** — existing kit-managed files prompt for overwrite (or **s** / **o** / **a** / **r** as above). For CI or scripts, use **`--force`** / **`--overwrite-all`** or **`--skip`** / **`--skip-all`** so nothing blocks on prompts.
 
@@ -168,7 +169,7 @@ For **Cursor** skills, `.cursor/skills/<name>` is a symlink to the kit; replace 
 ## Removing the kit
 
 ```bash
-# Remove Claude symlinks, Cursor kit-managed rules, AGENTS.md, clean .gitignore
+# Remove Claude symlinks, Cursor kit-managed rules, AGENTS.md
 .agentic-kit/teardown.sh
 
 # Or remove the above AND the submodule in one step
@@ -229,8 +230,8 @@ Each skill bundles its own script. Shared scripts live in `.agentic-kit/tools/`.
 |--------|-------------|
 | `lib.sh` | Shared helpers (colors, paths, `AGENTIC_MARKER`) — sourced by `init.sh`, `update.sh`, and `teardown.sh`, not run directly |
 | `update.sh` | `git submodule update --remote` for the kit, then `exec` into `init.sh` with the same arguments you pass (optional `--no-pull` to skip the fetch) |
-| `init.sh` | IDE choice: Claude Code, Cursor, Copilot, or all; symlinks / generates rules; copies `CLAUDE.md` / `AGENTS.md` / `PROJECT.md`; updates `.gitignore` |
-| `teardown.sh` | Removes `.claude/` symlinks, `.cursor/skills/` kit symlinks, kit-managed `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`, `.gitignore` entries; `--remove-submodule` deinits git |
+| `init.sh` | IDE choice: Claude Code, Cursor, Copilot, or all; symlinks / generates rules; copies `CLAUDE.md` / `AGENTS.md` / `PROJECT.md` |
+| `teardown.sh` | Removes `.claude/` symlinks, `.cursor/skills/` kit symlinks, kit-managed `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`; `--remove-submodule` deinits git |
 
 ## Handoff protocol
 

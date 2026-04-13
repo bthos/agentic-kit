@@ -144,24 +144,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Clean .gitignore entries
-# ---------------------------------------------------------------------------
-header ".gitignore"
-GITIGNORE="$PROJECT_ROOT/.gitignore"
-
-if [ -f "$GITIGNORE" ]; then
-  # Extend this list when init.sh adds more managed ignore entries.
-  for entry in ".artefacts/"; do
-    if grep -qxF "$entry" "$GITIGNORE" 2>/dev/null; then
-      grep -v "^${entry}\$" "$GITIGNORE" > "${GITIGNORE}.tmp" && mv "${GITIGNORE}.tmp" "$GITIGNORE"
-      removed ".gitignore: $entry"
-    fi
-  done
-else
-  info ".gitignore not found"
-fi
-
-# ---------------------------------------------------------------------------
 # Optionally remove the submodule
 # ---------------------------------------------------------------------------
 if [[ "${1:-}" == "--remove-submodule" ]]; then
