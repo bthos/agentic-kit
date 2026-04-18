@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shows pipeline status for all active features in .artefacts/features/.
-# Usage: tools/feature-status.sh
+# Usage: .agentic-kit/tools/feature-status.sh  (from project root)
 # Run from project root.
 
 set -euo pipefail
@@ -31,7 +31,7 @@ suggest_next() {
 
 if [ ! -d "$FEATURES_DIR" ]; then
   echo "No active features ($FEATURES_DIR/ does not exist)."
-  echo "Start one with: /vadavik in Claude Code"
+  echo "Start one with: /vadavik"
   exit 0
 fi
 
@@ -51,7 +51,7 @@ done
 
 if [ $found -eq 0 ]; then
   echo "No active features in $FEATURES_DIR"
-  echo "Start one with: /vadavik in Claude Code"
+  echo "Start one with: /vadavik"
 fi
 
 if [ -d "$ARCHIVE_DIR" ]; then

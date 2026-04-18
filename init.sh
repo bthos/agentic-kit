@@ -1,22 +1,94 @@
 #!/usr/bin/env bash
 # Run from the target project root after adding the submodule.
-# Usage: .agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all] [--ide=claude|cursor|both]
-# Env: IDE_CHOICE=claude|cursor|both (same as --ide, for non-interactive)
+# Usage: .agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive] [--ide=claude|cursor|github|all]
+# Env: IDE_CHOICE=claude|cursor|github|all (same as --ide, for non-interactive)
 #
-# Creates symlinks for Claude Code (.claude/) and/or generates Cursor rules (.cursor/rules/*.mdc),
-# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template, symlinks tools/, updates .gitignore.
+# Creates symlinks for Claude Code (.claude/) and/or Cursor (.cursor/skills/, .cursor/rules/*.mdc),
+# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template.
 #
 # Flags:
 #   --force, --overwrite-all   Overwrite all existing kit-managed paths without prompting
-#   --skip, --skip-all         Skip every existing path without prompting (non-interactive default when stdin is not a TTY)
-#   --ide=X                    Target IDE: claude (default), cursor, or both (non-interactive; skips IDE prompt)
+#   --skip, --skip-all         Skip every existing path without prompting
+#   --non-interactive, -n      Agent / CI mode: no prompts, skip existing files, emit
+#                              [AGENT ACTION REQUIRED] instruction to fill PROJECT.md
+#                              (aliases: --yes, -y)
+#   --ide=X                    Target IDE: claude (default), cursor, or both
 #
 # Interactive conflict prompt: [s]kip this  [o]verwrite this  overwrite [a]ll  skip [r]est (this + all later conflicts)
+#
+# Agent invocation examples:
+#   .agentic-kit/init.sh --non-interactive                      # claude (default)
+#   .agentic-kit/init.sh --non-interactive --ide=cursor
+#   .agentic-kit/init.sh --non-interactive --ide=both
 
 set -euo pipefail
 
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+
+# ---------------------------------------------------------------------------
+# Help
+# ---------------------------------------------------------------------------
+show_help() {
+  cat <<'EOF'
+
+  agentic-kit / init.sh
+
+  Set up the AI development kit in the current project.
+  Run from the project root (the directory that contains .agentic-kit/).
+
+  USAGE
+    .agentic-kit/init.sh [OPTIONS]
+
+  OPTIONS
+    --ide=<target>          Which IDE to configure (default: claude)
+                              claude   — Claude Code (.claude/ symlinks, CLAUDE.md)
+                              cursor   — Cursor (.cursor/skills/, .cursor/rules/*.mdc, AGENTS.md)
+                              github   — GitHub Copilot (.github/agents/*.agent.md,
+                                         .github/instructions/*.instructions.md,
+                                         .github/copilot-instructions.md)
+                              all      — all three  (alias: both)
+                            Env var: IDE_CHOICE=claude|cursor|github|all
+
+    --non-interactive, -n   Agent / CI mode: no prompts, accept all defaults,
+                            skip existing files, and print [AGENT ACTION REQUIRED]
+                            instead of spawning a nested AI process.
+                            Aliases: --yes, -y
+
+    --skip, --skip-all      Skip every existing path without prompting
+                            (automatic when stdin is not a TTY)
+
+    --force, --overwrite-all
+                            Overwrite all existing kit-managed files without prompting
+
+    --help, -h              Show this help and exit
+
+  INTERACTIVE CONFLICT PROMPT
+    When a managed path already exists:
+      s  skip this file
+      o  overwrite this file
+      a  overwrite all remaining files
+      r  skip rest (this file and every later conflict)
+
+  AGENT INVOCATION
+    .agentic-kit/init.sh --non-interactive --ide=claude
+    .agentic-kit/init.sh --non-interactive --ide=cursor
+    .agentic-kit/init.sh --non-interactive --ide=github
+    .agentic-kit/init.sh --non-interactive --ide=all
+
+    After the script exits, read the [AGENT ACTION REQUIRED] block in the output
+    and fill in PROJECT.md yourself (inspect package.json, pyproject.toml,
+    Cargo.toml, go.mod, Makefile, etc.), then run:
+      .agentic-kit/tools/validate-config.sh
+
+  EXAMPLES
+    .agentic-kit/init.sh                          # interactive
+    .agentic-kit/init.sh --ide=github             # interactive, GitHub Copilot mode
+    .agentic-kit/init.sh --non-interactive --ide=github
+    IDE_CHOICE=all .agentic-kit/init.sh --skip
+
+EOF
+}
 
 # ---------------------------------------------------------------------------
 # Conflict resolution (init-only)
@@ -44,20 +116,34 @@ ask_conflict() {
 }
 
 MODE=""
+NON_INTERACTIVE=false
 IDE_CHOICE="${IDE_CHOICE:-}"
 
 for arg in "$@"; do
   case "$arg" in
-    --force|--overwrite-all) MODE="force" ;;
-    --skip|--skip-all)       MODE="skip" ;;
-    --ide=*)                 IDE_CHOICE="${arg#--ide=}" ;;
+    --help|-h)                       show_help; exit 0 ;;
+    --force|--overwrite-all)         MODE="force" ;;
+    --skip|--skip-all)               MODE="skip" ;;
+    --non-interactive|-n|--yes|-y)   NON_INTERACTIVE=true ;;
+    --ide=*)                         IDE_CHOICE="${arg#--ide=}" ;;
   esac
 done
 
-if [ -n "$IDE_CHOICE" ] && [[ ! "$IDE_CHOICE" =~ ^(claude|cursor|both)$ ]]; then
-  err "Invalid --ide value '$IDE_CHOICE' (use claude, cursor, or both)"
+# No args + no TTY → agent discovered the script; show help so it knows what to pass next.
+if [ $# -eq 0 ] && [ ! -t 0 ] && [ ! -t 1 ]; then
+  show_help
+  exit 0
+fi
+
+# --non-interactive implies skip-existing (safe default: don't overwrite without being asked)
+if $NON_INTERACTIVE && [ -z "$MODE" ]; then MODE="skip"; fi
+
+if [ -n "$IDE_CHOICE" ] && [[ ! "$IDE_CHOICE" =~ ^(claude|cursor|github|both|all)$ ]]; then
+  err "Invalid --ide value '$IDE_CHOICE' (use claude, cursor, github, or all)"
   exit 1
 fi
+# Normalise alias
+[ "$IDE_CHOICE" = "both" ] && IDE_CHOICE="all"
 
 if [ "$MODE" = "force" ]; then OVERWRITE_ALL=true; fi
 
@@ -220,7 +306,7 @@ install_or_update_mdc_rule() {
 }
 
 generate_mdc_rules_from_sources() {
-  local agent base out desc skill_dir skill_name skill_file
+  local agent base out desc
   for agent in "$SCRIPT_DIR/agents/"*.md; do
     [ -e "$agent" ] || continue
     base=$(basename "$agent" .md)
@@ -229,17 +315,22 @@ generate_mdc_rules_from_sources() {
     [ -n "$desc" ] || desc="Agent: $base"
     install_or_update_mdc_rule ".cursor/rules/$out" "$agent" "$out" "$desc"
   done
+}
 
-  local skill_dir skill_name skill_file
+# Cursor Agent Skills: one folder per skill with SKILL.md (see https://cursor.com/docs/context/skills).
+link_cursor_skills() {
+  header "Cursor — Skills (.cursor/skills/)"
+  mkdir -p "$PROJECT_ROOT/.cursor/skills"
+
+  local skill_dir name target link skill_file
   for skill_dir in "$SCRIPT_DIR/skills/"*/; do
     [ -d "$skill_dir" ] || continue
-    skill_name=$(basename "$skill_dir")
+    name=$(basename "$skill_dir")
     skill_file="${skill_dir}SKILL.md"
     [ -f "$skill_file" ] || continue
-    out=$(cursor_rule_out_name "$skill_file" "$skill_name")
-    desc=$(extract_yaml_field "$skill_file" "description")
-    [ -n "$desc" ] || desc="Skill: $skill_name"
-    install_or_update_mdc_rule ".cursor/rules/$out" "$skill_file" "$out" "$desc"
+    target="$PROJECT_ROOT/.cursor/skills/$name"
+    link="../../$SUBMODULE_DIR/skills/$name"
+    ensure_symlink ".cursor/skills/$name" "$target" "$link" || true
   done
 }
 
@@ -274,13 +365,6 @@ setup_agents_md() {
   write_if_kit_managed "AGENTS.md" "$dest" write_agents_md_body "$dest"
 }
 
-setup_tools_symlink() {
-  header "Tools"
-  local TOOLS_TARGET="$PROJECT_ROOT/tools"
-  local link="$SUBMODULE_DIR/tools"
-  ensure_symlink "tools/" "$TOOLS_TARGET" "$link" || true
-}
-
 setup_claude() {
   header "Claude Code — Agents"
   mkdir -p "$PROJECT_ROOT/.claude/agents"
@@ -310,12 +394,130 @@ setup_claude() {
 
 setup_cursor() {
   # Cursor-only: symlink skills so paths like .claude/skills/vadavik/new-feature.sh work.
-  # "both" already linked skills in setup_claude.
+  # "all" already linked skills via setup_claude.
   if [ "$IDE_CHOICE" = "cursor" ]; then
     link_claude_skills "Claude Code — Skills (for bundled scripts)"
   fi
+  link_cursor_skills
   setup_cursor_rules_from_sources
   setup_agents_md
+}
+
+# ---------------------------------------------------------------------------
+# GitHub Copilot helpers
+# Write .github/agents/<name>.agent.md from a kit agent source file.
+# Strips Claude-specific fields; keeps name + description; adds tools list.
+write_github_agent() {
+  local src="$1" dest="$2"
+  local name desc esc_desc
+  name=$(extract_yaml_field "$src" "name")
+  desc=$(extract_yaml_field "$src" "description")
+  esc_desc=$(escape_yaml_double "$desc")
+  mkdir -p "$(dirname "$dest")"
+  {
+    echo "---"
+    echo "name: \"$name\""
+    echo "description: \"$esc_desc\""
+    # Standard Copilot agent tools — agents can read/edit/run/search without extra config.
+    echo "tools: ['changes','codebase','editFiles','fetch','findTestFiles','problems','runCommands','runTests','search','terminalLastCommand','usages']"
+    echo "---"
+    echo ""
+    echo "$AGENTIC_MARKER"
+    echo ""
+    strip_frontmatter_body "$src"
+  } > "$dest"
+}
+
+# Write .github/instructions/<name>.instructions.md from a kit skill source file.
+write_github_instructions() {
+  local src="$1" dest="$2"
+  local name desc esc_desc
+  name=$(extract_yaml_field "$src" "name")
+  desc=$(extract_yaml_field "$src" "description")
+  esc_desc=$(escape_yaml_double "$desc")
+  mkdir -p "$(dirname "$dest")"
+  {
+    echo "---"
+    echo "name: \"$name\""
+    echo "description: \"$esc_desc\""
+    echo "applyTo: '**'"
+    echo "---"
+    echo ""
+    echo "$AGENTIC_MARKER"
+    echo ""
+    strip_frontmatter_body "$src"
+  } > "$dest"
+}
+
+setup_github() {
+  # GitHub Copilot-only: symlink skills for bundled shell scripts (same as Cursor-only).
+  if [ "$IDE_CHOICE" = "github" ]; then
+    link_claude_skills "Claude Code — Skills (for bundled scripts)"
+  fi
+
+  # .github/agents/*.agent.md
+  header "GitHub Copilot — Agents (.github/agents/)"
+  mkdir -p "$PROJECT_ROOT/.github/agents"
+  local agent base out dest
+  for agent in "$SCRIPT_DIR/agents/"*.md; do
+    [ -e "$agent" ] || continue
+    base=$(basename "$agent" .md)
+    out="${base}.agent.md"
+    dest="$PROJECT_ROOT/.github/agents/$out"
+    if [ -f "$dest" ]; then
+      if ! grep -qF "$AGENTIC_MARKER" "$dest" 2>/dev/null; then
+        skip ".github/agents/$out (not kit-managed — delete manually to replace)"
+      elif should_overwrite ".github/agents/$out"; then
+        write_github_agent "$agent" "$dest"
+        success ".github/agents/$out (overwritten)"
+      fi
+    else
+      write_github_agent "$agent" "$dest"
+      success ".github/agents/$out"
+    fi
+  done
+
+  # .github/instructions/*.instructions.md
+  header "GitHub Copilot — Instructions (.github/instructions/)"
+  mkdir -p "$PROJECT_ROOT/.github/instructions"
+  local skill_dir skill_name skill_file
+  for skill_dir in "$SCRIPT_DIR/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    skill_file="${skill_dir}SKILL.md"
+    [ -f "$skill_file" ] || continue
+    out="${skill_name}.instructions.md"
+    dest="$PROJECT_ROOT/.github/instructions/$out"
+    if [ -f "$dest" ]; then
+      if ! grep -qF "$AGENTIC_MARKER" "$dest" 2>/dev/null; then
+        skip ".github/instructions/$out (not kit-managed — delete manually to replace)"
+      elif should_overwrite ".github/instructions/$out"; then
+        write_github_instructions "$skill_file" "$dest"
+        success ".github/instructions/$out (overwritten)"
+      fi
+    else
+      write_github_instructions "$skill_file" "$dest"
+      success ".github/instructions/$out"
+    fi
+  done
+
+  # .github/copilot-instructions.md (global always-on instructions)
+  header "GitHub Copilot — copilot-instructions.md"
+  local ci_dest="$PROJECT_ROOT/.github/copilot-instructions.md"
+  local ci_body
+  ci_body=$(grep -v '^@PROJECT.md$' "$SCRIPT_DIR/PIPELINE.md.template")
+  if [ -f "$ci_dest" ]; then
+    if ! grep -qF "$AGENTIC_MARKER" "$ci_dest" 2>/dev/null; then
+      skip ".github/copilot-instructions.md (not kit-managed — merge manually)"
+    elif should_overwrite ".github/copilot-instructions.md"; then
+      { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } > "$ci_dest"
+      success ".github/copilot-instructions.md (overwritten)"
+    fi
+  else
+    mkdir -p "$PROJECT_ROOT/.github"
+    { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } > "$ci_dest"
+    success ".github/copilot-instructions.md"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -327,12 +529,13 @@ info "kit location: $SUBMODULE_DIR/"
 
 if [ -z "$IDE_CHOICE" ]; then
   if [ -t 0 ] && [ -t 1 ]; then
-    printf "\n  Target IDE? [${BOLD}c${RESET}]laude  c${BOLD}[u]${RESET}rsor  [${BOLD}b${RESET}]oth  (default: claude) "
+    printf "\n  Target IDE? [${BOLD}c${RESET}]laude  c${BOLD}[u]${RESET}rsor  co${BOLD}[p]${RESET}ilot  [${BOLD}a${RESET}]ll  (default: claude) "
     read -r -n1 ide_key
     printf '\n'
     case "$ide_key" in
       u|U) IDE_CHOICE="cursor" ;;
-      b|B) IDE_CHOICE="both" ;;
+      p|P) IDE_CHOICE="github" ;;
+      a|A|b|B) IDE_CHOICE="all" ;;
       *)   IDE_CHOICE="claude" ;;
     esac
   else
@@ -352,17 +555,19 @@ case "$IDE_CHOICE" in
   cursor)
     setup_cursor
     ;;
-  both)
+  github)
+    setup_github
+    ;;
+  all)
     setup_claude
     setup_cursor
+    setup_github
     ;;
   *)
-    err "Invalid IDE mode '$IDE_CHOICE' (use claude, cursor, or both)"
+    err "Invalid IDE mode '$IDE_CHOICE' (use claude, cursor, github, or all)"
     exit 1
     ;;
 esac
-
-setup_tools_symlink
 
 # ---------------------------------------------------------------------------
 # PROJECT.md (shared)
@@ -426,7 +631,8 @@ if [ "$fresh_project_md_from_template" = true ]; then
         fill_label="Cursor Agent"
       fi
       ;;
-    both)
+    github|all)
+      # For github/all: prefer claude CLI, then cursor agent CLI
       if command -v claude &>/dev/null; then
         fill_cli="claude"
         fill_label="Claude"
@@ -440,26 +646,32 @@ if [ "$fresh_project_md_from_template" = true ]; then
       ;;
   esac
 
-  # Prompt on stdin, or /dev/tty when stdin is piped but a real terminal exists (IDEs / CI sometimes leave stdin non-TTY).
-  project_md_can_prompt=false
-  if [ -t 0 ]; then
-    project_md_can_prompt=true
-  elif { : >/dev/tty; } 2>/dev/null; then
-    # Require a working /dev/tty for read+write; -r alone can pass on Git Bash while redirects fail.
-    project_md_can_prompt=true
-  fi
-
-  if [ -n "$fill_cli" ] && [ "$project_md_can_prompt" = true ]; then
-    printf '\n'
-    if [ -t 0 ]; then
-      printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] "
-      read -r yn
-    else
-      printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] " > /dev/tty
-      read -r yn < /dev/tty
+  if $NON_INTERACTIVE; then
+    # Agent / CI mode: do NOT spawn a nested agent process — the agent that invoked this
+    # script should fill PROJECT.md itself using its own tools after init completes.
+    printf "\n${BOLD}  [AGENT ACTION REQUIRED]${RESET} Fill in PROJECT.md\n"
+    printf "  Inspect the project files (package.json, pyproject.toml, Cargo.toml, go.mod,\n"
+    printf "  Makefile, etc.) to infer the test command, build command, and version files.\n"
+    printf "  Replace every <placeholder> in PROJECT.md with the correct value.\n"
+    printf "  Then run: ${SUBMODULE_DIR}/tools/validate-config.sh\n\n"
+  else
+    run_fill=false
+    if [ -n "$fill_cli" ]; then
+      if [ -t 0 ]; then
+        printf '\n'
+        printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] "
+        read -r yn; yn="${yn:-Y}"
+        [[ "$yn" =~ ^[Yy]$ ]] && run_fill=true
+      elif { : >/dev/tty; } 2>/dev/null; then
+        # Require a writable /dev/tty; -r alone can pass on Git Bash while redirects fail.
+        printf '\n'
+        printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] " > /dev/tty
+        read -r yn < /dev/tty; yn="${yn:-Y}"
+        [[ "$yn" =~ ^[Yy]$ ]] && run_fill=true
+      fi
     fi
-    yn="${yn:-Y}"
-    if [[ "$yn" =~ ^[Yy]$ ]]; then
+
+    if $run_fill; then
       info "Running ${fill_label}..."
       case "$fill_cli" in
         claude)
@@ -472,53 +684,37 @@ if [ "$fresh_project_md_from_template" = true ]; then
       success "PROJECT.md filled in"
       info "Run ${SUBMODULE_DIR}/tools/validate-config.sh to verify."
     else
-      info "Edit PROJECT.md manually, then run: ${SUBMODULE_DIR}/tools/validate-config.sh"
+      if [ -n "$fill_cli" ] && [ ! -t 0 ]; then
+        info "PROJECT.md auto-fill skipped (no TTY). Pass --non-interactive for agent/CI mode, or edit PROJECT.md manually."
+      fi
+      if [ -z "$fill_cli" ]; then
+        case "$IDE_CHOICE" in
+          claude)
+            info "Claude CLI (\`claude\`) not on PATH — install Claude Code or fill PROJECT.md manually."
+            ;;
+          cursor)
+            info "Cursor Agent CLI (\`agent\`) not on PATH — https://cursor.com/docs/cli/installation"
+            info "(the desktop \`cursor\` launcher is Electron — not the same binary)."
+            ;;
+          github|all)
+            info "Neither \`claude\` nor \`agent\` (Cursor Agent CLI) on PATH — install one or fill PROJECT.md manually."
+            ;;
+        esac
+      fi
+      info "Edit PROJECT.md → Project-Specific Configuration, then run:"
+      info "${SUBMODULE_DIR}/tools/validate-config.sh"
     fi
-  else
-    if [ -n "$fill_cli" ] && [ "$project_md_can_prompt" = false ]; then
-      info "PROJECT.md auto-fill skipped (no TTY for Y/n — stdin is not a terminal and /dev/tty is unavailable). Edit PROJECT.md manually or run your IDE CLI from the project root with the same task."
-    fi
-    if [ -z "$fill_cli" ]; then
-      case "$IDE_CHOICE" in
-        claude)
-          info "Claude CLI (\`claude\`) not on PATH — install Claude Code or edit PROJECT.md manually."
-          ;;
-        cursor)
-          info "Cursor Agent CLI (\`agent\`) not on PATH — https://cursor.com/docs/cli/installation (the desktop \`cursor\` command is the editor, not this CLI)."
-          ;;
-        both)
-          info "Neither \`claude\` nor \`agent\` (Cursor Agent CLI) on PATH — install one or edit PROJECT.md manually."
-          ;;
-      esac
-    fi
-    info "Edit PROJECT.md → Project-Specific Configuration, then run:"
-    info "${SUBMODULE_DIR}/tools/validate-config.sh"
   fi
 fi
-
-# ---------------------------------------------------------------------------
-# .gitignore
-# ---------------------------------------------------------------------------
-header ".gitignore"
-GITIGNORE="$PROJECT_ROOT/.gitignore"
-
-# Add more entries here alongside teardown.sh's removal loop.
-for entry in ".artefacts/"; do
-  if [ ! -f "$GITIGNORE" ] || ! grep -qxF "$entry" "$GITIGNORE"; then
-    printf '%s\n' "$entry" >> "$GITIGNORE"
-    success ".gitignore ← $entry"
-  else
-    info "$entry already in .gitignore"
-  fi
-done
 
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${GREEN}  Done.${RESET}\n"
 case "$IDE_CHOICE" in
-  claude)  info "Claude Code: start a feature with /vadavik" ;;
-  cursor)  info "Cursor: .mdc rules generated — re-run init after submodule update" ;;
-  both)    info "Claude Code: /vadavik  |  Cursor: rules in .cursor/rules/" ;;
+  claude)   info "Claude Code: start a feature with /vadavik" ;;
+  cursor)   info "Cursor: .cursor/skills/ + .cursor/rules/ — re-run init after submodule update" ;;
+  github)   info "GitHub Copilot: agents in .github/agents/, instructions in .github/instructions/ — re-run init after submodule update" ;;
+  all)      info "Claude Code: /vadavik  |  Cursor: .cursor/rules/  |  GitHub Copilot: .github/agents/ + .github/instructions/" ;;
 esac
 printf '\n'

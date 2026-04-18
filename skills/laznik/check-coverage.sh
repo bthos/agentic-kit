@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs the project test command and extracts a coverage summary for the handoff to Bahnik.
-# Usage: .claude/skills/laznik/check-coverage.sh [feature-path]
+# Runs the project test command and extracts a coverage summary for the handoff to Bagnik.
+# Usage: /skills/laznik/check-coverage.sh [feature-path]
 # Run from project root.
 
 set -euo pipefail
@@ -36,7 +36,7 @@ if [ -n "$FEATURE_PATH" ] && [ -d "$FEATURE_PATH" ]; then
   LOG="$FEATURE_PATH/handoff-log.md"
   {
     echo ""
-    echo "## $TIMESTAMP Laznik → Bahnik [test gate]"
+    echo "## $TIMESTAMP Laznik → Bagnik [test gate]"
     echo "Exit code: $EXIT_CODE"
     # Try to extract a summary line (works for Jest, pytest, vitest, go test)
     SUMMARY=$(echo "$OUTPUT" | grep -Ei '(tests?|specs?|pass|fail|error|ok)[^$]*$' | tail -3 || true)
@@ -51,9 +51,9 @@ fi
 
 if [ $EXIT_CODE -ne 0 ]; then
   echo ""
-  echo "Tests FAILED (exit $EXIT_CODE). Do not hand off to Bahnik yet — fix failures first."
+  echo "Tests FAILED (exit $EXIT_CODE). Do not hand off to Bagnik yet — fix failures first."
   exit $EXIT_CODE
 else
   echo ""
-  echo "Tests PASSED. Safe to hand off to Bahnik."
+  echo "Tests PASSED. Safe to hand off to Bagnik."
 fi

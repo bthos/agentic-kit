@@ -46,9 +46,24 @@ for skill_dir in "$SCRIPT_DIR/skills/"*/; do
 done
 
 # ---------------------------------------------------------------------------
-# Remove Cursor-generated rules and AGENTS.md
+# Remove Cursor skills symlinks, generated rules, and AGENTS.md
 # ---------------------------------------------------------------------------
 header "Cursor"
+
+for skill_dir in "$SCRIPT_DIR/skills/"*/; do
+  [ -d "$skill_dir" ] || continue
+  name=$(basename "$skill_dir")
+  target="$PROJECT_ROOT/.cursor/skills/$name"
+  if [ -L "$target" ]; then
+    rm "$target"
+    removed ".cursor/skills/$name"
+  elif [ -e "$target" ]; then
+    skip ".cursor/skills/$name (local override — delete manually)"
+  fi
+done
+if [ -d "$PROJECT_ROOT/.cursor/skills" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/skills" 2>/dev/null)" ]; then
+  rmdir "$PROJECT_ROOT/.cursor/skills" 2>/dev/null && removed ".cursor/skills/ (empty dir)" || true
+fi
 
 if [ -d "$PROJECT_ROOT/.cursor/rules" ]; then
   for mdc in "$PROJECT_ROOT/.cursor/rules/"*.mdc; do
@@ -80,36 +95,52 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Remove tools/ symlink
+# Remove GitHub Copilot generated files
 # ---------------------------------------------------------------------------
-header "Tools"
-TOOLS_TARGET="$PROJECT_ROOT/tools"
+header "GitHub Copilot"
 
-if [ -L "$TOOLS_TARGET" ]; then
-  rm "$TOOLS_TARGET"
-  removed "tools/"
-elif [ -e "$TOOLS_TARGET" ]; then
-  skip "tools/ (not a symlink — delete manually)"
-else
-  info "tools/ not present"
-fi
+GITHUB_DIR="$PROJECT_ROOT/.github"
 
-# ---------------------------------------------------------------------------
-# Clean .gitignore entries
-# ---------------------------------------------------------------------------
-header ".gitignore"
-GITIGNORE="$PROJECT_ROOT/.gitignore"
-
-if [ -f "$GITIGNORE" ]; then
-  # Extend this list when init.sh adds more managed ignore entries.
-  for entry in ".artefacts/"; do
-    if grep -qxF "$entry" "$GITIGNORE" 2>/dev/null; then
-      grep -v "^${entry}\$" "$GITIGNORE" > "${GITIGNORE}.tmp" && mv "${GITIGNORE}.tmp" "$GITIGNORE"
-      removed ".gitignore: $entry"
+if [ -d "$GITHUB_DIR/agents" ]; then
+  for f in "$GITHUB_DIR/agents/"*.agent.md; do
+    [ -e "$f" ] || continue
+    if grep -qF "$AGENTIC_MARKER" "$f" 2>/dev/null; then
+      rm "$f"
+      removed ".github/agents/$(basename "$f")"
+    else
+      skip ".github/agents/$(basename "$f") (not kit-managed)"
     fi
   done
+  [ -z "$(ls -A "$GITHUB_DIR/agents" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/agents" 2>/dev/null && removed ".github/agents/ (empty dir)" || true
 else
-  info ".gitignore not found"
+  info ".github/agents/ not present"
+fi
+
+if [ -d "$GITHUB_DIR/instructions" ]; then
+  for f in "$GITHUB_DIR/instructions/"*.instructions.md; do
+    [ -e "$f" ] || continue
+    if grep -qF "$AGENTIC_MARKER" "$f" 2>/dev/null; then
+      rm "$f"
+      removed ".github/instructions/$(basename "$f")"
+    else
+      skip ".github/instructions/$(basename "$f") (not kit-managed)"
+    fi
+  done
+  [ -z "$(ls -A "$GITHUB_DIR/instructions" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/instructions" 2>/dev/null && removed ".github/instructions/ (empty dir)" || true
+else
+  info ".github/instructions/ not present"
+fi
+
+CI_FILE="$GITHUB_DIR/copilot-instructions.md"
+if [ -f "$CI_FILE" ]; then
+  if grep -qF "$AGENTIC_MARKER" "$CI_FILE" 2>/dev/null; then
+    rm "$CI_FILE"
+    removed ".github/copilot-instructions.md"
+  else
+    skip ".github/copilot-instructions.md (not kit-managed)"
+  fi
+else
+  info ".github/copilot-instructions.md not present"
 fi
 
 # ---------------------------------------------------------------------------

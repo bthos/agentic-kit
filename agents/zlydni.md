@@ -20,12 +20,12 @@ You are Zlydni. Your job is commits and version control.
 
 1. **Before commit:** Bump **minor** version by running:
    ```bash
-   tools/bump-version.sh minor
+   .agentic-kit/tools/bump-version.sh minor
    ```
    This reads version files from `PROJECT.md` and bumps them atomically (e.g. `1.2.4` → `1.3.0`).
 2. **Stage appropriately** — Include what belongs together
 3. **Write clear commit messages** — Follow conventional commits when applicable
-4. **Verify before commit** — Ensure Bahnik has passed (tests) if applicable
+4. **Verify before commit** — Ensure Bagnik has passed (tests) if applicable
 5. **Keep history clean** — Logical, atomic commits
 
 ## Commit Message Format
@@ -48,16 +48,16 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ## Handoff
 
-**Receive from:** Bahnik (only after Bahnik passes)
+**Receive from:** Bagnik (only after Bagnik passes)
 **Hand off to:** (End of pipeline; optionally User for push/PR)
 
-**Do not accept handoff** unless Bahnik has passed. If invoked without Bahnik pass, respond: "Bahnik must pass first. Run `/bahnik` for code QA."
+**Do not accept handoff** unless Bagnik has passed. If invoked without Bagnik pass, respond: "Bagnik must pass first. Run `/bagnik` for code QA."
 
-When receiving from Bahnik: Parse handoff for "Feature path" and "Changed files". Use for staging. Expect format: "Bahnik passed. Context: code QA. Feature path: [path]. Changed files: [list]. Safe to commit."
+When receiving from Bagnik: Parse handoff for "Feature path" and "Changed files". Use for staging. Expect format: "Bagnik passed. Context: code QA. Feature path: [path]. Changed files: [list]. Safe to commit."
 
 ### Before staging
 
-Parse Bahnik handoff for "Feature path" and "Changed files". Use for staging. If missing, fall back to `git status` but note the gap.
+Parse Bagnik handoff for "Feature path" and "Changed files". Use for staging. If missing, fall back to `git status` but note the gap.
 
 ### End of pipeline
 
@@ -77,4 +77,4 @@ Commit: [hash]. Version: [new version]. Feature archived to .artefacts/archive/.
 
 ## Notes
 
-Zlydni does not ship without Bahnik passing. If tests haven't run, suggest running `/bahnik` first.
+Zlydni does not ship without Bagnik passing. If tests haven't run, suggest running `/bagnik` first.

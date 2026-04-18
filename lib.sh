@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared helpers for agentic-kit shell scripts.
-# Source from init.sh / teardown.sh:  source "$(dirname "$0")/lib.sh"
+# Source from init.sh / update.sh / teardown.sh:  source "$(dirname "$0")/lib.sh"
 # shellcheck shell=bash
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bumps the version in all files listed in PROJECT.md → Project-Specific Configuration → Version files.
-# Usage: tools/bump-version.sh [patch|minor]
+# Usage: .agentic-kit/tools/bump-version.sh [patch|minor]  (from project root)
 #   patch — increments Z in X.Y.Z  (Cmok agent calls before each build)
 #   minor — increments Y, resets Z  (Zlydni agent calls before commit)
 # Run from project root.
