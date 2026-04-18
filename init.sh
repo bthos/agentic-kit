@@ -444,7 +444,8 @@ if [ "$fresh_project_md_from_template" = true ]; then
   project_md_can_prompt=false
   if [ -t 0 ]; then
     project_md_can_prompt=true
-  elif [ -r /dev/tty ] 2>/dev/null; then
+  elif { : >/dev/tty; } 2>/dev/null; then
+    # Require a working /dev/tty for read+write; -r alone can pass on Git Bash while redirects fail.
     project_md_can_prompt=true
   fi
 
