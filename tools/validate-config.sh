@@ -27,11 +27,29 @@ check_field() {
   fi
 }
 
+warn_field() {
+  local label="$1"
+  local value
+  value=$(grep -m1 "$label" "$PROJECT_MD" | sed "s/.*${label}[[:space:]]*//" | tr -d '`*' | xargs)
+
+  if [ -z "$value" ] || [[ "$value" == *"<"* ]]; then
+    echo "  WARN     $label  (still a placeholder — agents will have less context)"
+  else
+    echo "  OK       $label  → $value"
+  fi
+}
+
 echo "Validating $PROJECT_MD..."
 echo ""
+echo "Required fields:"
 check_field "Test command:"
 check_field "Build command:"
 check_field "Version files:"
+echo ""
+echo "Optional fields (warn only):"
+warn_field "What it is:"
+warn_field "Tech stack:"
+warn_field "Key conventions:"
 echo ""
 
 if [ $errors -gt 0 ]; then

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Removes agentic-kit symlinks from .claude/ in the target project.
-# Usage: .agentic-kit/teardown.sh [--remove-submodule]
+# Usage: .agentic-kit/teardown.sh [--remove-submodule] [--full-clean]
+#   --full-clean   Also offer to remove CLAUDE.md and PROJECT.md (with confirmation)
 # Run from the project root (parent of the submodule directory).
 
 set -euo pipefail
@@ -143,10 +144,19 @@ else
   info ".github/copilot-instructions.md not present"
 fi
 
+REMOVE_SUBMODULE=false
+FULL_CLEAN=false
+for _arg in "$@"; do
+  case "$_arg" in
+    --remove-submodule) REMOVE_SUBMODULE=true ;;
+    --full-clean)       FULL_CLEAN=true ;;
+  esac
+done
+
 # ---------------------------------------------------------------------------
 # Optionally remove the submodule
 # ---------------------------------------------------------------------------
-if [[ "${1:-}" == "--remove-submodule" ]]; then
+if $REMOVE_SUBMODULE; then
   header "Submodule"
   cd "$PROJECT_ROOT"
   git submodule deinit -f "$SUBMODULE_DIR" 2>/dev/null || true
@@ -156,11 +166,43 @@ if [[ "${1:-}" == "--remove-submodule" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Optionally remove CLAUDE.md and PROJECT.md (--full-clean)
+# ---------------------------------------------------------------------------
+if $FULL_CLEAN; then
+  header "Full clean — CLAUDE.md and PROJECT.md"
+  _confirm_remove() {
+    local file="$1"
+    if [ ! -f "$PROJECT_ROOT/$file" ]; then
+      info "$file not present"
+      return
+    fi
+    if [ -t 0 ]; then
+      printf "  ${YELLOW}remove${RESET} ${BOLD}%s${RESET}? [y/N] " "$file"
+      read -r -n1 _yn; printf '\n'
+    elif { : >/dev/tty; } 2>/dev/null; then
+      printf "  ${YELLOW}remove${RESET} ${BOLD}%s${RESET}? [y/N] " "$file" >/dev/tty
+      read -r _yn </dev/tty
+    else
+      info "$file kept (no TTY — pass --non-interactive to skip prompt, or delete manually)"
+      return
+    fi
+    if [[ "${_yn:-N}" =~ ^[Yy]$ ]]; then
+      rm "$PROJECT_ROOT/$file"
+      removed "$file"
+    else
+      skip "$file (kept)"
+    fi
+  }
+  _confirm_remove "CLAUDE.md"
+  _confirm_remove "PROJECT.md"
+fi
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${GREEN}  Done.${RESET} "
 info "CLAUDE.md and PROJECT.md kept — edit or delete manually (AGENTS.md removed if kit-managed)."
-if [[ "${1:-}" != "--remove-submodule" ]]; then
+if ! $REMOVE_SUBMODULE; then
   info "To also remove the submodule: $SUBMODULE_DIR/teardown.sh --remove-submodule"
 fi
 printf '\n'

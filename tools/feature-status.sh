@@ -29,6 +29,14 @@ suggest_next() {
   echo "  → Check handoff-log.md for current state"
 }
 
+last_activity() {
+  local log="$1/handoff-log.md"
+  [ -f "$log" ] || return
+  local last_line
+  last_line=$(grep '^## ' "$log" 2>/dev/null | tail -1 || true)
+  [ -n "$last_line" ] && echo "  last: $last_line"
+}
+
 if [ ! -d "$FEATURES_DIR" ]; then
   echo "No active features ($FEATURES_DIR/ does not exist)."
   echo "Start one with: /vadavik"
@@ -45,6 +53,7 @@ for feature_dir in "$FEATURES_DIR"/*/; do
   check "ux-design.md"    "$feature_dir/ux-design.md"
   check "tech-plan.md"    "$feature_dir/tech-plan.md"
   check "handoff-log.md"  "$feature_dir/handoff-log.md"
+  last_activity "$feature_dir"
   suggest_next "$feature_dir"
   echo ""
 done

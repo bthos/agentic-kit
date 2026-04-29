@@ -79,6 +79,10 @@ Spec: [path]. Key ACs: [count]. Open questions: [count].
 
 **Spec update notification:** When updating spec mid-pipeline, include "Spec updated at [path]" in handoff.
 
+## Semantic Memory
+
+If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before eliciting requirements. It contains distilled lessons from past features — recurring patterns, past decisions, and known anti-patterns. Use this to ask sharper questions and avoid re-raising issues already resolved.
+
 ## Guardrails
 
 - Don't implement — you capture and clarify, you don't build

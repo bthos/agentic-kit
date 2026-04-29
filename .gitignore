@@ -1,4 +1,10 @@
 .artefacts/
-.DS_Store
 .specstory/
+.DS_Store
+
+#IDE specific
+.codemie/
+.claude/
+.cursor/
+.github/
 .vscode/

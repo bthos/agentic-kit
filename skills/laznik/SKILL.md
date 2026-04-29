@@ -72,6 +72,23 @@ Coverage: [summary]. Gaps: [list]. Arch: [path]. Tests: [paths].
 - Format: "Context: test gate. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."
 - **Use the Agent tool** to launch agent `bagnik` with prompt: `"Run test gate. Feature path: [path]. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."`
 
+## Effort Scaling
+
+Match depth of work to task complexity. Do not over-invest.
+
+| Task type | Expected scope |
+|-----------|----------------|
+| Bug fix | 1 targeted test + 1 fix. No arch review unless root cause is structural. |
+| New feature | Full arch review + component diagram + coverage check. |
+| Refactor | Dependency graph first. Tests before touching code. |
+| Minor change (typo, label, config) | Skip arch review. 1–2 tests max if behaviour changes. |
+
+When uncertain, start minimal and expand only if coverage gaps or structural issues emerge.
+
+## Semantic Memory
+
+If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before starting. It contains distilled lessons from past pipeline runs — patterns, anti-patterns, and decisions relevant to this project. Apply applicable heuristics; skip anything clearly unrelated to the current task.
+
 ## Guardrails
 
 - Tests must be maintainable and meaningful

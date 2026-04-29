@@ -61,15 +61,27 @@ Parse Bagnik handoff for "Feature path" and "Changed files". Use for staging. If
 
 ### End of pipeline
 
-When commit completes: **Move feature folder to `.artefacts/archive/` immediately**, before reporting "Pipeline complete." Don't leave it implicit.
+When commit completes:
+
+1. **Write LESSONS.md** in the feature folder before archiving. Distill what happened into structured lessons for future runs:
+   ```
+   ## Lessons — <feature-name> (<YYYY-MM-DD>)
+   - [pattern] What worked: <one concrete thing that helped>
+   - [anti-pattern] What failed or slowed things down: <if any>
+   - [decision] Key decision made: <what and why>
+   - [shortcut] Useful shortcut discovered: <if any>
+   ```
+   Keep entries specific and actionable. Skip tags that have nothing meaningful to add.
+
+2. **Append final handoff log entry** to `handoff-log.md`:
+   ```
+   ## HH:MM Zlydni [commit]
+   Commit: [hash]. Version: [new version]. Feature archived to .artefacts/archive/.
+   ```
+
+3. **Move feature folder to `.artefacts/archive/`** immediately. Feature is closed after commit.
 
 Then report: "Pipeline complete. Commit [hash]. Optionally run `git push` or create PR." No auto-invoke — user may push or create PR. Flow stops here unless user continues.
-
-**Handoff log — final entry:** Before archiving, append to `handoff-log.md`:
-```
-## HH:MM Zlydni [commit]
-Commit: [hash]. Version: [new version]. Feature archived to .artefacts/archive/.
-```
 
 **Close feature after commit:** Move the feature folder from `.artefacts/features/YYYY-MM-DD-feature-name/` to `.artefacts/archive/`. Feature is closed after commit.
 

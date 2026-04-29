@@ -71,11 +71,55 @@ bump_json_file() {
   echo "  $file: $current → $new_version"
 }
 
+# Handles TOML files (pyproject.toml, Cargo.toml): version = "X.Y.Z"
+bump_toml_file() {
+  local file
+  file=$(echo "$1" | tr -d ' ')
+  local bump_type="$2"
+
+  if [ ! -f "$file" ]; then
+    echo "  SKIP $file — file not found"
+    return
+  fi
+
+  local current
+  current=$(grep -m1 '^version\s*=' "$file" | grep -o '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' || true)
+
+  if [ -z "$current" ]; then
+    echo "  SKIP $file — no version field found"
+    return
+  fi
+
+  local major minor patch
+  IFS='.' read -r major minor patch <<< "$current"
+
+  local new_version
+  if [[ "$bump_type" == "patch" ]]; then
+    new_version="$major.$minor.$((patch + 1))"
+  else
+    new_version="$major.$((minor + 1)).0"
+  fi
+
+  sed -i.bak "s/^version\s*=\s*\"$current\"/version = \"$new_version\"/" "$file"
+  rm -f "${file}.bak"
+
+  echo "  $file: $current → $new_version"
+}
+
+bump_file() {
+  local file bump_type="$2"
+  file=$(echo "$1" | tr -d ' ')
+  case "$file" in
+    *.toml) bump_toml_file "$file" "$bump_type" ;;
+    *)      bump_json_file "$file" "$bump_type" ;;
+  esac
+}
+
 echo "Bumping $TYPE version..."
 
 IFS=',' read -ra FILES <<< "$VERSION_LINE"
 for f in "${FILES[@]}"; do
-  bump_json_file "$f" "$TYPE"
+  bump_file "$f" "$TYPE"
 done
 
 echo "Done."

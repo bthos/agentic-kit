@@ -20,13 +20,27 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 PULL=true
+has_ide_arg=false
 forward_args=()
 for arg in "$@"; do
   case "$arg" in
     --no-pull) PULL=false ;;
+    --ide=*) has_ide_arg=true; forward_args+=("$arg") ;;
     *) forward_args+=("$arg") ;;
   esac
 done
+
+# Read saved IDE from .agentic-kit.cfg if --ide not explicitly passed.
+if ! $has_ide_arg; then
+  _cfg="$PROJECT_ROOT/.agentic-kit.cfg"
+  if [ -f "$_cfg" ]; then
+    _saved_ide=$(grep '^IDE=' "$_cfg" 2>/dev/null | cut -d= -f2- || true)
+    if [ -n "$_saved_ide" ]; then
+      forward_args+=("--ide=$_saved_ide")
+      info "Using saved IDE from .agentic-kit.cfg: $_saved_ide"
+    fi
+  fi
+fi
 
 printf "\n${BOLD}${CYAN}  agentic-kit${RESET} ${DIM}update${RESET}\n"
 info "project root: $PROJECT_ROOT"

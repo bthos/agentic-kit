@@ -214,6 +214,19 @@ write_mdc() {
   } > "$dest"
 }
 
+# Remove dangling symlinks from a directory (stale after submodule update).
+clean_stale_symlinks() {
+  local dir="$1"
+  [ -d "$dir" ] || return 0
+  local link
+  for link in "$dir"/*; do
+    [ -L "$link" ] || continue
+    [ -e "$link" ] && continue
+    rm "$link"
+    removed "$(basename "$dir")/$(basename "$link") (stale symlink)"
+  done
+}
+
 # ensure_symlink <label> <target_path> <link_value>
 # Returns 0 if linked/already linked/overwritten, 1 if skipped
 ensure_symlink() {
@@ -321,6 +334,7 @@ generate_mdc_rules_from_sources() {
 link_cursor_skills() {
   header "Cursor — Skills (.cursor/skills/)"
   mkdir -p "$PROJECT_ROOT/.cursor/skills"
+  clean_stale_symlinks "$PROJECT_ROOT/.cursor/skills"
 
   local skill_dir name target link skill_file
   for skill_dir in "$SCRIPT_DIR/skills/"*/; do
@@ -338,6 +352,7 @@ link_cursor_skills() {
 link_claude_skills() {
   header "${1:-Claude Code — Skills}"
   mkdir -p "$PROJECT_ROOT/.claude/skills"
+  clean_stale_symlinks "$PROJECT_ROOT/.claude/skills"
 
   local skill_dir name target link
   for skill_dir in "$SCRIPT_DIR/skills/"*/; do
@@ -368,6 +383,7 @@ setup_agents_md() {
 setup_claude() {
   header "Claude Code — Agents"
   mkdir -p "$PROJECT_ROOT/.claude/agents"
+  clean_stale_symlinks "$PROJECT_ROOT/.claude/agents"
 
   local agent name target link
   for agent in "$SCRIPT_DIR/agents/"*.md; do
@@ -545,6 +561,24 @@ fi
 
 info "IDE mode: $IDE_CHOICE"
 
+# Template drift detection: warn if PIPELINE.md.template changed since last init.
+_cfg_file="$PROJECT_ROOT/.agentic-kit.cfg"
+if [ -f "$_cfg_file" ]; then
+  _saved_sha=$(grep '^PIPELINE_SHA=' "$_cfg_file" 2>/dev/null | cut -d= -f2- || true)
+  if [ -n "$_saved_sha" ]; then
+    _current_sha=""
+    if command -v sha256sum &>/dev/null; then
+      _current_sha=$(sha256sum "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+    elif command -v shasum &>/dev/null; then
+      _current_sha=$(shasum -a 256 "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+    fi
+    if [ -n "$_current_sha" ] && [ "$_current_sha" != "$_saved_sha" ]; then
+      warn "PIPELINE.md.template has changed since last init."
+      info "Review: diff $PROJECT_ROOT/CLAUDE.md $SCRIPT_DIR/PIPELINE.md.template"
+    fi
+  fi
+fi
+
 # ---------------------------------------------------------------------------
 # Run setups
 # ---------------------------------------------------------------------------
@@ -706,6 +740,24 @@ if [ "$fresh_project_md_from_template" = true ]; then
     fi
   fi
 fi
+
+# ---------------------------------------------------------------------------
+# Write .agentic-kit.cfg (persist IDE choice + template sha for drift detection)
+# ---------------------------------------------------------------------------
+_pipeline_sha=""
+if command -v sha256sum &>/dev/null; then
+  _pipeline_sha=$(sha256sum "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+elif command -v shasum &>/dev/null; then
+  _pipeline_sha=$(shasum -a 256 "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+fi
+_kit_version=""
+_kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || true)
+{
+  printf 'IDE=%s\n' "$IDE_CHOICE"
+  printf 'INIT_DATE=%s\n' "$(date +%Y-%m-%d)"
+  printf 'KIT_VERSION=%s\n' "$_kit_version"
+  printf 'PIPELINE_SHA=%s\n' "$_pipeline_sha"
+} > "$PROJECT_ROOT/.agentic-kit.cfg"
 
 # ---------------------------------------------------------------------------
 # Done
