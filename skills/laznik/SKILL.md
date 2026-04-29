@@ -45,7 +45,7 @@ When Bagnik fails the test gate and hands off to Laznik:
 
 1. **Analyze failures** — Read error output and stack traces from the handoff
 2. **Fix tests or arch** — Fix broken tests, adjust architecture, add missing coverage
-3. **Re-invoke Bagnik** — When done, auto-invoke Bagnik (`@bagnik`) via the Agent tool with handoff package (fixed file paths, what was changed)
+3. **Re-invoke Bagnik** — When done, use the **Agent tool** to launch agent `bagnik` with prompt: `"Fix complete. Feature path: [path]. Fixed files: [list]. What changed: [summary]. Re-run test gate. Block if fail."`
 
 **Loop until Bagnik passes.** If Bagnik fails again, receive the next handoff and fix again. No iteration limit. Do not give up.
 
@@ -70,7 +70,7 @@ Coverage: [summary]. Gaps: [list]. Arch: [path]. Tests: [paths].
 
 - **Always include:** "Coverage summary: [what tests cover]. Known gaps: [what's not yet tested]."
 - Format: "Context: test gate. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."
-- Suggest: `/bagnik` — "Run test gate. Arch at [path], tests in [paths]. Block if fail."
+- **Use the Agent tool** to launch agent `bagnik` with prompt: `"Run test gate. Feature path: [path]. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."`
 
 ## Guardrails
 

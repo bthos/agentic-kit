@@ -55,19 +55,21 @@ When a handoff already specifies a feature path, use it instead of creating a ne
 **Receive from:** Idea/User
 **Hand off to:** Lojma (with spec); optionally Veles in parallel
 
-When handing off to Lojma:
-- Include spec/requirements artifact (path or content)
-- List key decisions and acceptance criteria
-- Note constraints and open questions
-- Suggest: `lojma` — "Design UX for [feature] based on spec at [path]"
+When spec is ready, **use the Agent tool** to launch agent `lojma` with prompt:
+```
+Design UX for [feature] based on spec at [path]. Key decisions: [list]. Acceptance criteria: [list]. Open questions: [list]. Feature path: [path].
+```
 
-**Handoff checklist (before handing to Lojma):**
+When spec is substantial (has user-facing flows), **also use the Agent tool** to launch agent `veles` in parallel with prompt:
+```
+Feature path: [path]. Spec path: [path]. Document: [user guide | API | both]. Key flows: [list from spec].
+```
+
+**Handoff checklist (before invoking Lojma):**
 - [ ] Open questions listed?
 - [ ] Deferred decisions documented?
 - [ ] Feature path included?
 - [ ] Architecture implications noted (if relevant)?
-
-**Explicit Veles invoke:** When spec is substantial, invoke Veles in parallel with Lojma: "Spec at [path]. Document: [scope]."
 
 **Handoff log:** After creating the feature folder (which includes a `handoff-log.md`), append the first entry:
 ```

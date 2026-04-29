@@ -59,16 +59,19 @@ When handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-n
 **Receive from:** Vadavik (spec)
 **Hand off to:** Cmok (mockups), Veles (parallel docs)
 
-When handing off to Cmok:
-- Include UX artifacts (wireframes, flows, component hierarchy)
-- Note design decisions and accessibility considerations
-- Include "States to implement: [list from states matrix]. Key decisions: [list]. Accessibility: [notes]."
-- Suggest: `/cmok` — "Create mockups from UX at [path]. Key decisions: [list]"
+When UX design is complete, **use the Agent tool** to launch:
 
-When handing off to Veles (parallel):
-- Always pass ux-design.md path and "Key flows to document"
-- Template: "Feature path: [path]. Spec: [path]. UX: [path]. Document: [user guide | API | both]. Key flows to document: [list from ux-design.md]."
-- Suggest: `/veles` — "Document [feature] from spec [path] and UX [path]"
+1. **Cmok** (skill/mockups) — launch agent `cmok` with prompt:
+   ```
+   Create mockups from UX design at [path]. Feature path: [path]. States to implement: [list from states matrix]. Key decisions: [list]. Accessibility: [notes].
+   ```
+
+2. **Veles** (parallel docs) — launch agent `veles` in parallel with prompt:
+   ```
+   Feature path: [path]. Spec: [path]. UX: [path]. Document: [user guide | API | both]. Key flows to document: [list from ux-design.md].
+   ```
+
+Launch both using the Agent tool. Do not wait for user confirmation.
 
 ## Guardrails
 
