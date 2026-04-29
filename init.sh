@@ -562,7 +562,7 @@ fi
 info "IDE mode: $IDE_CHOICE"
 
 # Template drift detection: warn if PIPELINE.md.template changed since last init.
-_cfg_file="$PROJECT_ROOT/.agentic-kit.cfg"
+_cfg_file="$KIT_CFG"
 if [ -f "$_cfg_file" ]; then
   _saved_sha=$(grep '^PIPELINE_SHA=' "$_cfg_file" 2>/dev/null | cut -d= -f2- || true)
   if [ -n "$_saved_sha" ]; then

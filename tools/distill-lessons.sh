@@ -12,7 +12,7 @@ set -euo pipefail
 
 ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
 ARCHIVE_DIR="$ARTEFACTS/archive"
-MEMORY_FILE=".artefacts/SEMANTIC_MEMORY.md"
+MEMORY_FILE="$ARTEFACTS/SEMANTIC_MEMORY.md"
 
 if [ ! -d "$ARCHIVE_DIR" ]; then
   echo "No archive directory found ($ARCHIVE_DIR). Run the pipeline first."

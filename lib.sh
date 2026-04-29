@@ -34,3 +34,4 @@ AGENTIC_MARKER='<!-- agentic-kit managed -->'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
+KIT_CFG="$PROJECT_ROOT/.agentic-kit.cfg"

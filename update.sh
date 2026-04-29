@@ -32,7 +32,7 @@ done
 
 # Read saved IDE from .agentic-kit.cfg if --ide not explicitly passed.
 if ! $has_ide_arg; then
-  _cfg="$PROJECT_ROOT/.agentic-kit.cfg"
+  _cfg="$KIT_CFG"
   if [ -f "$_cfg" ]; then
     _saved_ide=$(grep '^IDE=' "$_cfg" 2>/dev/null | cut -d= -f2- || true)
     if [ -n "$_saved_ide" ]; then

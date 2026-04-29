@@ -53,6 +53,7 @@ for feature_dir in "$FEATURES_DIR"/*/; do
   check "ux-design.md"    "$feature_dir/ux-design.md"
   check "tech-plan.md"    "$feature_dir/tech-plan.md"
   check "handoff-log.md"  "$feature_dir/handoff-log.md"
+  check "LESSONS.md"      "$feature_dir/LESSONS.md"
   last_activity "$feature_dir"
   suggest_next "$feature_dir"
   echo ""
