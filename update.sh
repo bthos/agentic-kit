@@ -42,7 +42,9 @@ if ! $has_ide_arg; then
   fi
 fi
 
-printf "\n${BOLD}${CYAN}  agentic-kit${RESET} ${DIM}update${RESET}\n"
+printf "\n${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
+printf "${BOLD}${CYAN}  │     agentic-kit update      │${RESET}\n"
+printf "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
 info "project root: $PROJECT_ROOT"
 info "submodule:    $SUBMODULE_DIR/"
 

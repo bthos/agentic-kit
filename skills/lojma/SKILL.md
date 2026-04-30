@@ -73,6 +73,12 @@ When UX design is complete, **use the Agent tool** to launch:
 
 Launch both using the Agent tool. Do not wait for user confirmation.
 
+## Semantic Memory
+
+If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before designing.
+
+**HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior features. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Use to surface past UX decisions and avoid re-raising issues already resolved.
+
 ## Guardrails
 
 - Don't implement — you design, you don't build

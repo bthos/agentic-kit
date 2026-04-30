@@ -41,6 +41,12 @@ After mockups are complete:
 - State coverage confirmation: "States implemented: [list]"
 - UAT prompt for user
 
+## Semantic Memory
+
+If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before creating mockups.
+
+**HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior features. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Use to avoid re-implementing patterns already found to work or fail.
+
 ## Guardrails
 
 - Do NOT implement application code — mockups only

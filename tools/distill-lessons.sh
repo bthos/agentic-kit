@@ -79,7 +79,7 @@ if ! command -v claude &>/dev/null; then
 fi
 
 echo "Distilling with Claude..."
-mkdir -p ".artefacts"
+mkdir -p "$ARTEFACTS"
 new_section=$(claude -p --allowedTools '' "$distill_prompt" 2>/dev/null)
 
 if [ -z "$new_section" ]; then
