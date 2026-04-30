@@ -6,18 +6,18 @@
 
 ## Kit Setup (for agents)
 
-To set up agentic-kit in a project, run from the **project root** (the directory that contains `.agentic-kit/`):
+To set up agentic-kit in a project, run from the **project root** (the directory that contains `agentic-kit/`):
 
 ```bash
-.agentic-kit/init.sh --non-interactive --ide=claude    # Claude Code: .claude/, CLAUDE.md
-.agentic-kit/init.sh --non-interactive --ide=cursor   # Cursor: .cursor/skills/, .cursor/rules/*.mdc, AGENTS.md
-.agentic-kit/init.sh --non-interactive --ide=github  # Copilot: .github/agents/, .github/instructions/
-.agentic-kit/init.sh --non-interactive --ide=all      # all three (alias: --ide=both)
+agentic-kit/init.sh --non-interactive --ide=claude    # Claude Code: .claude/, CLAUDE.md
+agentic-kit/init.sh --non-interactive --ide=cursor   # Cursor: .cursor/skills/, .cursor/rules/*.mdc, AGENTS.md
+agentic-kit/init.sh --non-interactive --ide=github  # Copilot: .github/agents/, .github/instructions/
+agentic-kit/init.sh --non-interactive --ide=all      # all three (alias: --ide=both)
 ```
 
 Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script prints a **`[AGENT ACTION REQUIRED]`** block instead of spawning a nested CLI to edit `PROJECT.md`.
 
-**After the script exits, fill in `PROJECT.md` yourself:** inspect the project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, version files, etc.) and replace every `<placeholder>` with the correct value. Then run `.agentic-kit/tools/validate-config.sh` to confirm all placeholders are resolved.
+**After the script exits, fill in `PROJECT.md` yourself:** inspect the project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, version files, etc.) and replace every `<placeholder>` with the correct value. Then run `agentic-kit/tools/validate-config.sh` to confirm all placeholders are resolved.
 
 **What each `--ide` produces (high level):**
 
@@ -197,7 +197,7 @@ Key decisions: ...
 Artifacts: ...
 ```
 
-This gives any agent a full chain of custody when context is lost, especially across Bagnik-Cmok fix loop iterations. `.agentic-kit/tools/feature-status.sh` checks whether the log exists.
+This gives any agent a full chain of custody when context is lost, especially across Bagnik-Cmok fix loop iterations. `agentic-kit/tools/feature-status.sh` checks whether the log exists.
 
 ### Best Practices
 

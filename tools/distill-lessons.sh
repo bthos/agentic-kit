@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Distills LESSONS.md files from archived features into .claude/SEMANTIC_MEMORY.md.
-# Usage: .agentic-kit/tools/distill-lessons.sh  (from project root)
+# Usage: agentic-kit/tools/distill-lessons.sh  (from project root)
 #
 # Reads all .artefacts/archive/*/LESSONS.md files and uses the Claude CLI to
 # produce deduplicated, ranked heuristics appended to .claude/SEMANTIC_MEMORY.md.

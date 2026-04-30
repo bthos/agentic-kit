@@ -20,7 +20,7 @@ You are Cmok. Your job is to implement the design.
 
 1. **Before build:** Bump **patch** version by running:
    ```bash
-   .agentic-kit/tools/bump-version.sh patch
+   agentic-kit/tools/bump-version.sh patch
    ```
    This reads version files from `PROJECT.md` and bumps them atomically.
 2. **Build** — Write clean, maintainable code; implement the design from spec, UX, and tech plan

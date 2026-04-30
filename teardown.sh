@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Removes agentic-kit symlinks from .claude/ in the target project.
-# Usage: .agentic-kit/teardown.sh [--remove-submodule] [--full-clean] [--yes] [--dry-run]
+# Usage: agentic-kit/teardown.sh [--remove-submodule] [--full-clean] [--yes] [--dry-run]
 #   --full-clean   Also offer to remove CLAUDE.md and PROJECT.md
 #   --yes, -y      Skip all confirmation prompts (auto-confirm)
 #   --dry-run      Show what would be removed without doing it

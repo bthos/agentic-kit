@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run from the target project root after adding the submodule.
-# Usage: .agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive] [--ide=claude|cursor|github|all]
+# Usage: agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive] [--ide=claude|cursor|github|all]
 # Env: IDE_CHOICE=claude|cursor|github|all (same as --ide, for non-interactive)
 #
 # Creates symlinks for Claude Code (.claude/) and/or Cursor (.cursor/skills/, .cursor/rules/*.mdc),
@@ -17,9 +17,9 @@
 # Interactive conflict prompt: [s]kip this  [o]verwrite this  overwrite [a]ll  skip [r]est (this + all later conflicts)
 #
 # Agent invocation examples:
-#   .agentic-kit/init.sh --non-interactive                      # claude (default)
-#   .agentic-kit/init.sh --non-interactive --ide=cursor
-#   .agentic-kit/init.sh --non-interactive --ide=both
+#   agentic-kit/init.sh --non-interactive                      # claude (default)
+#   agentic-kit/init.sh --non-interactive --ide=cursor
+#   agentic-kit/init.sh --non-interactive --ide=both
 
 set -euo pipefail
 
@@ -35,10 +35,10 @@ show_help() {
   agentic-kit / init.sh
 
   Set up the AI development kit in the current project.
-  Run from the project root (the directory that contains .agentic-kit/).
+  Run from the project root (the directory that contains agentic-kit/).
 
   USAGE
-    .agentic-kit/init.sh [OPTIONS]
+    agentic-kit/init.sh [OPTIONS]
 
   OPTIONS
     --ide=<target>          Which IDE to configure (default: claude)
@@ -71,21 +71,21 @@ show_help() {
       r  skip rest (this file and every later conflict)
 
   AGENT INVOCATION
-    .agentic-kit/init.sh --non-interactive --ide=claude
-    .agentic-kit/init.sh --non-interactive --ide=cursor
-    .agentic-kit/init.sh --non-interactive --ide=github
-    .agentic-kit/init.sh --non-interactive --ide=all
+    agentic-kit/init.sh --non-interactive --ide=claude
+    agentic-kit/init.sh --non-interactive --ide=cursor
+    agentic-kit/init.sh --non-interactive --ide=github
+    agentic-kit/init.sh --non-interactive --ide=all
 
     After the script exits, read the [AGENT ACTION REQUIRED] block in the output
     and fill in PROJECT.md yourself (inspect package.json, pyproject.toml,
     Cargo.toml, go.mod, Makefile, etc.), then run:
-      .agentic-kit/tools/validate-config.sh
+      agentic-kit/tools/validate-config.sh
 
   EXAMPLES
-    .agentic-kit/init.sh                          # interactive
-    .agentic-kit/init.sh --ide=github             # interactive, GitHub Copilot mode
-    .agentic-kit/init.sh --non-interactive --ide=github
-    IDE_CHOICE=all .agentic-kit/init.sh --skip
+    agentic-kit/init.sh                          # interactive
+    agentic-kit/init.sh --ide=github             # interactive, GitHub Copilot mode
+    agentic-kit/init.sh --non-interactive --ide=github
+    IDE_CHOICE=all agentic-kit/init.sh --skip
 
 EOF
 }

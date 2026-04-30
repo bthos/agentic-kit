@@ -38,26 +38,26 @@ Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
 
 ```bash
 cd your-project
-git submodule add https://github.com/bthos/agentic-kit .agentic-kit
-.agentic-kit/init.sh
+git submodule add https://github.com/bthos/agentic-kit agentic-kit
+agentic-kit/init.sh
 ```
 
 `init.sh` asks which IDE to target (**Claude Code**, **Cursor**, **GitHub Copilot**, or **all**). Non-interactive / CI:
 
 ```bash
-.agentic-kit/init.sh --ide=claude    # default behavior
-.agentic-kit/init.sh --ide=cursor
-.agentic-kit/init.sh --ide=github
-.agentic-kit/init.sh --ide=all       # all three  (alias: --ide=both)
+agentic-kit/init.sh --ide=claude    # default behavior
+agentic-kit/init.sh --ide=cursor
+agentic-kit/init.sh --ide=github
+agentic-kit/init.sh --ide=all       # all three  (alias: --ide=both)
 
 # Agent / CI — no prompts at all:
-.agentic-kit/init.sh --non-interactive                  # claude (default)
-.agentic-kit/init.sh --non-interactive --ide=github
-.agentic-kit/init.sh -n --ide=all                       # short alias
+agentic-kit/init.sh --non-interactive                  # claude (default)
+agentic-kit/init.sh --non-interactive --ide=github
+agentic-kit/init.sh -n --ide=all                       # short alias
 
 # Other non-interactive bulk choices:
-.agentic-kit/init.sh --skip-all       # keep all existing kit paths, no prompts
-.agentic-kit/init.sh --overwrite-all  # replace all kit-managed files, no prompts
+agentic-kit/init.sh --skip-all       # keep all existing kit paths, no prompts
+agentic-kit/init.sh --overwrite-all  # replace all kit-managed files, no prompts
 ```
 
 When a path already exists, the interactive prompt is: **s**kip this file, **o**verwrite this file, overwrite **a**ll remaining, or skip **r**est (this file and every later conflict).
@@ -88,7 +88,7 @@ That's it.
 
 The kit does **not** modify `.gitignore` for `.artefacts/` — add an ignore rule yourself if you want that directory untracked.
 
-Shared scripts live only under **`.agentic-kit/tools/`** — run them from the **project root**, for example `.agentic-kit/tools/validate-config.sh`.
+Shared scripts live only under **`agentic-kit/tools/`** — run them from the **project root**, for example `agentic-kit/tools/validate-config.sh`.
 
 **Claude Code (`claude` or `all`):**
 
@@ -118,24 +118,24 @@ The script is **idempotent** — existing kit-managed files prompt for overwrite
 One command (pulls the submodule’s **remote** tracking branch, then runs `init.sh` with your usual flags):
 
 ```bash
-.agentic-kit/update.sh --ide=cursor --skip          # example: match how you first ran init
-.agentic-kit/update.sh --non-interactive --ide=all
-.agentic-kit/update.sh --no-pull --ide=github --skip   # submodule already updated; only re-run init
+agentic-kit/update.sh --ide=cursor --skip          # example: match how you first ran init
+agentic-kit/update.sh --non-interactive --ide=all
+agentic-kit/update.sh --no-pull --ide=github --skip   # submodule already updated; only re-run init
 ```
 
 Equivalent manual steps:
 
 ```bash
-git submodule update --remote .agentic-kit
-.agentic-kit/init.sh   # same --ide= / --skip / etc. as before
+git submodule update --remote agentic-kit
+agentic-kit/init.sh   # same --ide= / --skip / etc. as before
 
-git add .agentic-kit
+git add agentic-kit
 git commit -m "chore: update agentic-kit"
 ```
 
 **What updates automatically:**
 - New agents and skills — `init.sh` creates missing symlinks; existing symlinks are untouched
-- Scripts under `.agentic-kit/tools/` — they ship with the submodule; `git submodule update` brings new versions
+- Scripts under `agentic-kit/tools/` — they ship with the submodule; `git submodule update` brings new versions
 
 **Cursor:** `.cursor/skills/` symlinks and `.cursor/rules/*.mdc` copies — after updating the submodule, run `init.sh` again (same `--ide=` as before) to refresh them from the new kit sources.
 
@@ -144,7 +144,7 @@ git commit -m "chore: update agentic-kit"
 **What does NOT update automatically:**
 - `CLAUDE.md` — your project's copy is never overwritten. To pick up protocol changes, diff it against the new template:
   ```bash
-  diff CLAUDE.md .agentic-kit/PIPELINE.md.template
+  diff CLAUDE.md agentic-kit/PIPELINE.md.template
   ```
 - `AGENTS.md` — same as `CLAUDE.md` for Cursor users; re-copy from template manually or delete and re-run `init.sh --ide=cursor`
 - `PROJECT.md` — project-specific config, never touched
@@ -158,7 +158,7 @@ To customize an agent for your project, replace its symlink with a local file:
 
 ```bash
 rm .claude/agents/bagnik.md
-cp .agentic-kit/agents/bagnik.md .claude/agents/bagnik.md
+cp agentic-kit/agents/bagnik.md .claude/agents/bagnik.md
 # Edit .claude/agents/bagnik.md to your needs
 ```
 
@@ -170,10 +170,10 @@ For **Cursor** skills, `.cursor/skills/<name>` is a symlink to the kit; replace 
 
 ```bash
 # Remove Claude symlinks, Cursor kit-managed rules, AGENTS.md
-.agentic-kit/teardown.sh
+agentic-kit/teardown.sh
 
 # Or remove the above AND the submodule in one step
-.agentic-kit/teardown.sh --remove-submodule
+agentic-kit/teardown.sh --remove-submodule
 ```
 
 `teardown.sh` removes kit skill symlinks under `.cursor/skills/`, then only files that contain the kit marker (`<!-- agentic-kit managed -->`): `.cursor/rules/*.mdc`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/copilot-instructions.md`. Files you added yourself are left alone.
@@ -207,7 +207,7 @@ Vadavik creates the feature folder automatically when starting a new spec.
 
 ## Scripts
 
-Each skill bundles its own script. Shared scripts live in `.agentic-kit/tools/`. Run them from the **project root** so paths like `PROJECT.md` and `.artefacts/` resolve correctly.
+Each skill bundles its own script. Shared scripts live in `agentic-kit/tools/`. Run them from the **project root** so paths like `PROJECT.md` and `.artefacts/` resolve correctly.
 
 ### Skill scripts (bundled, symlinked automatically)
 
@@ -220,9 +220,9 @@ Each skill bundles its own script. Shared scripts live in `.agentic-kit/tools/`.
 
 | Script | What it does |
 |--------|-------------|
-| `.agentic-kit/tools/bump-version.sh patch\|minor` | Bumps version in all files listed in `PROJECT.md` (Cmok uses `patch`, Zlydni uses `minor`) — run from project root |
-| `.agentic-kit/tools/validate-config.sh` | Checks `PROJECT.md` for unfilled `<placeholder>` values — run after `init.sh` |
-| `.agentic-kit/tools/feature-status.sh` | Shows pipeline status for active features in `.artefacts/features/` |
+| `agentic-kit/tools/bump-version.sh patch\|minor` | Bumps version in all files listed in `PROJECT.md` (Cmok uses `patch`, Zlydni uses `minor`) — run from project root |
+| `agentic-kit/tools/validate-config.sh` | Checks `PROJECT.md` for unfilled `<placeholder>` values — run after `init.sh` |
+| `agentic-kit/tools/feature-status.sh` | Shows pipeline status for active features in `.artefacts/features/` |
 
 ### Lifecycle scripts
 
@@ -242,7 +242,7 @@ See `CLAUDE.md` or `AGENTS.md` (Handoff Protocol section) for the full structure
 Commit the submodule reference so the whole team shares the same pipeline version:
 
 ```bash
-git add .agentic-kit .gitmodules
+git add agentic-kit .gitmodules
 git commit -m "chore: add agentic-kit submodule"
 ```
 

@@ -20,7 +20,7 @@ You are Zlydni. Your job is commits and version control.
 
 1. **Before commit:** Bump **minor** version by running:
    ```bash
-   .agentic-kit/tools/bump-version.sh minor
+   agentic-kit/tools/bump-version.sh minor
    ```
    This reads version files from `PROJECT.md` and bumps them atomically (e.g. `1.2.4` → `1.3.0`).
 2. **Stage appropriately** — Include what belongs together

@@ -2,9 +2,9 @@
 # Pull the latest agentic-kit submodule revision, then re-run init with the same flags you use day-to-day.
 #
 # Usage (from project root):
-#   .agentic-kit/update.sh
-#   .agentic-kit/update.sh --ide=cursor --skip
-#   .agentic-kit/update.sh --non-interactive --ide=all
+#   agentic-kit/update.sh
+#   agentic-kit/update.sh --ide=cursor --skip
+#   agentic-kit/update.sh --non-interactive --ide=all
 #
 # Flags:
 #   --no-pull   Skip `git submodule update --remote` (only run init.sh — e.g. submodule already updated)
@@ -12,7 +12,7 @@
 # Any other arguments are passed through to init.sh unchanged.
 #
 # After this script, commit the new submodule pointer if you want the team on the same kit version:
-#   git add .agentic-kit && git commit -m "chore: update agentic-kit"
+#   git add agentic-kit && git commit -m "chore: update agentic-kit"
 
 set -euo pipefail
 
@@ -42,9 +42,11 @@ if ! $has_ide_arg; then
   fi
 fi
 
-printf "\n${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
+printf "\n"
+printf "${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
 printf "${BOLD}${CYAN}  │     agentic-kit update      │${RESET}\n"
 printf "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
+printf "\n"
 info "project root: $PROJECT_ROOT"
 info "submodule:    $SUBMODULE_DIR/"
 
