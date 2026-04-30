@@ -539,7 +539,9 @@ setup_github() {
 # ---------------------------------------------------------------------------
 # IDE choice
 # ---------------------------------------------------------------------------
-printf "\n${BOLD}${CYAN}  agentic-kit${RESET}\n"
+printf "\n${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
+printf "${BOLD}${CYAN}  │       agentic-kit           │${RESET}\n"
+printf "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
 info "project root: $PROJECT_ROOT"
 info "kit location: $SUBMODULE_DIR/"
 
@@ -762,11 +764,29 @@ _kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || tru
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
-printf "\n${BOLD}${GREEN}  Done.${RESET}\n"
+printf "\n${BOLD}${GREEN}  ✓ Done.${RESET}\n\n"
+printf "  ${BOLD}Next steps${RESET}\n"
 case "$IDE_CHOICE" in
-  claude)   info "Claude Code: start a feature with /vadavik" ;;
-  cursor)   info "Cursor: .cursor/skills/ + .cursor/rules/ — re-run init after submodule update" ;;
-  github)   info "GitHub Copilot: agents in .github/agents/, instructions in .github/instructions/ — re-run init after submodule update" ;;
-  all)      info "Claude Code: /vadavik  |  Cursor: .cursor/rules/  |  GitHub Copilot: .github/agents/ + .github/instructions/" ;;
+  claude)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Start a feature:" "${CYAN}/vadavik${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Check feature status:" "${CYAN}${SUBMODULE_DIR}/tools/feature-status.sh${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Validate config:" "${CYAN}${SUBMODULE_DIR}/tools/validate-config.sh${RESET}"
+    ;;
+  cursor)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Skills installed:" "${CYAN}.cursor/skills/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Rules installed:" "${CYAN}.cursor/rules/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
+    ;;
+  github)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Agents installed:" "${CYAN}.github/agents/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Instructions installed:" "${CYAN}.github/instructions/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
+    ;;
+  all)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Claude Code — start a feature:" "${CYAN}/vadavik${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Cursor rules:" "${CYAN}.cursor/rules/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Copilot agents:" "${CYAN}.github/agents/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
+    ;;
 esac
 printf '\n'

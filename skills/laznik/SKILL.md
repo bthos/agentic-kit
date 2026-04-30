@@ -87,7 +87,9 @@ When uncertain, start minimal and expand only if coverage gaps or structural iss
 
 ## Semantic Memory
 
-If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before starting. It contains distilled lessons from past pipeline runs — patterns, anti-patterns, and decisions relevant to this project. Apply applicable heuristics; skip anything clearly unrelated to the current task.
+If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before starting.
+
+**HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior pipeline runs. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Skip anything unrelated to the current task.
 
 ## Guardrails
 

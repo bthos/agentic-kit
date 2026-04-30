@@ -18,13 +18,13 @@ else
   BOLD='' DIM='' CYAN='' GREEN='' YELLOW='' RED='' RESET=''
 fi
 
-info()    { printf "  ${DIM}%s${RESET}\n" "$*"; }
-success() { printf "  ${GREEN}+${RESET} %s\n" "$*"; }
-skip()    { printf "  ${YELLOW}skip${RESET} %s\n" "$*"; }
-warn()    { printf "  ${YELLOW}!${RESET} %s\n" "$*"; }
-err()     { printf "  ${RED}error${RESET} %s\n" "$*"; }
-header()  { printf "\n${BOLD}${CYAN}%s${RESET}\n" "$*"; }
-removed() { printf "  ${RED}-${RESET} %s\n" "$*"; }
+info()    { printf "  ${DIM}○ %s${RESET}\n" "$*"; }
+success() { printf "  ${GREEN}✓${RESET} %s\n" "$*"; }
+skip()    { printf "  ${YELLOW}→${RESET} ${DIM}%s${RESET}\n" "$*"; }
+warn()    { printf "  ${YELLOW}⚠${RESET} %s\n" "$*"; }
+err()     { printf "  ${RED}✗${RESET} %s\n" "$*"; }
+header()  { printf "\n${BOLD}${CYAN}  %s${RESET}\n" "$*"; }
+removed() { printf "  ${RED}✗${RESET} %s\n" "$*"; }
 
 # ---------------------------------------------------------------------------
 # Kit paths & marker (kit directory = directory containing this file)

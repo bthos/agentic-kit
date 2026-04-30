@@ -81,7 +81,9 @@ Spec: [path]. Key ACs: [count]. Open questions: [count].
 
 ## Semantic Memory
 
-If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before eliciting requirements. It contains distilled lessons from past features — recurring patterns, past decisions, and known anti-patterns. Use this to ask sharper questions and avoid re-raising issues already resolved.
+If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before eliciting requirements.
+
+**HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior features. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Use to ask sharper questions and avoid re-raising issues already resolved.
 
 ## Guardrails
 
