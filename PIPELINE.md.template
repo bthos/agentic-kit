@@ -10,7 +10,7 @@ To set up agentic-kit in a project, run from the **project root** (the directory
 
 ```bash
 agentic-kit/init.sh --non-interactive --ide=claude    # Claude Code: .claude/, CLAUDE.md
-agentic-kit/init.sh --non-interactive --ide=cursor   # Cursor: .cursor/skills/, .cursor/rules/*.mdc, AGENTS.md
+agentic-kit/init.sh --non-interactive --ide=cursor   # Cursor: .cursor/skills/, .cursor/agents/*.md, AGENTS.md
 agentic-kit/init.sh --non-interactive --ide=github  # Copilot: .github/agents/, .github/instructions/
 agentic-kit/init.sh --non-interactive --ide=all      # all three (alias: --ide=both)
 ```
@@ -21,10 +21,10 @@ Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script p
 
 **What each `--ide` produces (high level):**
 
-| Target | Skills | Agents / rules | Pipeline doc |
-|--------|--------|----------------|----------------|
-| `claude` | Symlinks → `.claude/skills/` | Symlinks → `.claude/agents/` | `CLAUDE.md` (copy of this template) |
-| `cursor` | Symlinks → `.cursor/skills/` (and `.claude/skills/` for bundled shell scripts) | Generated `.cursor/rules/*.mdc` (agents + `pipeline.mdc`) | `AGENTS.md` |
+| Target | Skills | Agents | Pipeline doc |
+|--------|--------|--------|--------------|
+| `claude` | Copies → `.claude/skills/` | Copies → `.claude/agents/` | `CLAUDE.md` (copy of this template) |
+| `cursor` | Copies → `.cursor/skills/` (and `.claude/skills/` for bundled shell scripts) | Generated `.cursor/agents/*.md` ([subagents](https://cursor.com/docs/context/subagents)) | `AGENTS.md` |
 | `github` | `.github/instructions/*.instructions.md` | `.github/agents/*.agent.md` | `.github/copilot-instructions.md` |
 | `all` | All of the above | All of the above | All of the above |
 
@@ -35,21 +35,22 @@ Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script p
 A self-organizing team of agents. Each agent knows who to hand off to next based on the context it receives. Nothing ships without passing Bagnik.
 
 ```
-Idea → Vadavik (spec) → Lojma (UX) + Veles (docs, parallel)
+Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
      → Cmok /skill/ (mockups) → User UAT
      → Laznik (arch + tests) → Bagnik (test gate)
-     → Cmok /agent/ (build) + Veles (docs, parallel) → Bagnik (code QA)
+     → Cmok /agent/ (build) + Mokash (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
 ```
 
 ### Agents
 
-| Agent   | Role                        | Model  |
-|---------|-----------------------------|--------|
-| Bagnik  | Test gate & code QA         | Opus   |
-| Cmok    | Build                       | Sonnet |
-| Veles  | Documentation               | Sonnet |
-| Zlydni  | Commits & version control   | Haiku  |
+| Agent | Беларуская | Role | Model | Mythology |
+|-------|-----------|------|-------|-----------|
+| Bagnik | **Багнік** | Test gate & code QA | Opus | Болотный дух — ничего не пропускает; к нему всё само приходит. |
+| Cmok | **Цмок** | Build | Sonnet | Белорусский дракон — справедливый строитель сокровищ. |
+| Mokash | **Мокаш** | Documentation | Sonnet | Богиня прядения — ткёт нити знаний. |
+| Veles | **Вялес** | AutoResearch ratchet (self-improve) | Sonnet | Хозяин Яви/Нави/Прави — ratchet loop в трёх мирах. |
+| Zlydni | **Злыдні** | Commits & version control | Haiku | Духи дома — тихо делают неизбежную работу. |
 
 ### Skills
 
@@ -69,17 +70,17 @@ The kit uses the **same role names** in every IDE. What changes is only the **co
 | Kind | Names |
 |------|--------|
 | **Skills** | `vadavik`, `lojma`, `laznik`, `cmok` (mockups only for `cmok`) |
-| **Agents** | `bagnik`, `cmok` (implementation after gates), `veles`, `zlydni` |
+| **Agents** | `bagnik`, `cmok` (implementation after gates), `mokash`, `veles` (autoresearch), `zlydni` |
 
-**Mockups vs Cmok build:** the **skill** `cmok` is mockups only. **Implementation** after Bagnik is the **agent** `cmok` in Claude/Copilot; in Cursor that agent is exposed as the rule **`cmok-build`** so it does not clash with the **`cmok`** skill.
+**Mockups vs Cmok build:** the **skill** `cmok` is mockups only. **Implementation** after Bagnik is the **agent** `cmok` in Claude/Copilot; in Cursor that agent is the subagent **`/cmok-build`** (stem from `cursor_rule_name` / `cursor_subagent_name`) so it does not clash with the **`cmok`** skill.
 
 **How to invoke (by IDE)**
 
 | IDE | Skills | Agents |
 |-----|--------|--------|
-| **Claude Code** | Slash in chat: **`/vadavik`**, **`/lojma`**, **`/laznik`**, **`/cmok`** | **`@bagnik`**, **`@cmok`**, **`@veles`**, **`@zlydni`**, or the Agent / subagent flow with those names |
-| **Cursor** | In **Agent** chat, type **`/`** and pick the skill by name (discovered automatically; see [Agent Skills](https://cursor.com/docs/context/skills)). Optional: type **`/vadavik`**-style if your build resolves it the same way. | [Project rules](https://cursor.com/docs/context/rules): type **`@`** + rule basename to attach a rule explicitly, e.g. **`@bagnik`**, **`@cmok-build`**, **`@veles`**, **`@zlydni`**; kit agent rules use **Apply Intelligently** (`alwaysApply: false`), so the Agent can also include them **by relevance** from each rule’s description. Baseline protocol: root **`AGENTS.md`** plus the always-on **pipeline** rule. |
-| **GitHub Copilot** (VS Code) | No Claude-style slash; workspace instructions apply broadly—refer to **Vadavik / Lojma / Laznik / Cmok** by name in the prompt. | Open the **agents** control in Copilot Chat and choose the workspace agent (**bagnik**, **cmok**, **veles**, **zlydni**); labels match each agent file’s `name:` field (see [Custom agents in VS Code](https://code.visualstudio.com/docs/copilot/customization/custom-chat-modes)). If your build offers **`@`** participants for those agents, you can use the same names there. |
+| **Claude Code** | Slash in chat: **`/vadavik`**, **`/lojma`**, **`/laznik`**, **`/cmok`** | **`@bagnik`**, **`@cmok`**, **`@mokash`**, **`@zlydni`**, or the Agent / subagent flow with those names |
+| **Cursor** | In **Agent** chat, type **`/`** and pick the skill by name (discovered automatically; see [Agent Skills](https://cursor.com/docs/context/skills)). Optional: type **`/vadavik`**-style if your build resolves it the same way. | [Custom subagents](https://cursor.com/docs/context/subagents): **`/bagnik`**, **`/cmok-build`**, **`/mokash`**, **`/zlydni`**, or ask Agent to delegate. Handoff protocol: root **`AGENTS.md`**. |
+| **GitHub Copilot** (VS Code) | No Claude-style slash; workspace instructions apply broadly—refer to **Vadavik / Lojma / Laznik / Cmok** by name in the prompt. | Open the **agents** control in Copilot Chat and choose the workspace agent (**bagnik**, **cmok**, **mokash**, **zlydni**); labels match each agent file’s `name:` field (see [Custom agents in VS Code](https://code.visualstudio.com/docs/copilot/customization/custom-chat-modes)). If your build offers **`@`** participants for those agents, you can use the same names there. |
 
 The **Handoff Map** below uses **`/…`** and **`@…`** as **short labels** for those same roles (Claude-style). Translate using the table above.
 
@@ -89,7 +90,7 @@ The **Handoff Map** below uses **`/…`** and **`@…`** as **short labels** for
 
 Structured handoff format for agent-to-agent transitions. Explicit handoffs reduce context loss.
 
-*Agents: Vadavik, Lojma, Laznik, Cmok, Bagnik, Zlydni, Veles.*
+*Agents: Vadavik, Lojma, Laznik, Cmok, Bagnik, Zlydni, Mokash, Veles.*
 
 ### Autonomous Flow
 
@@ -98,18 +99,18 @@ Agents hand off to each other without user intervention where possible. Flow sto
 | Transition | Auto? | User stop? |
 |------------|-------|------------|
 | Vadavik → Lojma | yes | — |
-| Lojma → Veles + Cmok mockup | yes | — |
+| Lojma → Mokash + Cmok mockup | yes | — |
 | Cmok mockup → User UAT | — | **Yes** — user must approve mockups |
 | User UAT → Laznik | — | **Yes** — user confirms to proceed |
 | Laznik → Bagnik | yes | — |
 | Bagnik (test gate pass) → Cmok build | yes | — |
-| Cmok build → Bagnik + Veles | yes | — |
+| Cmok build → Bagnik + Mokash | yes | — |
 | Bagnik (code QA pass) → Zlydni | yes | — |
 | Bagnik (test gate fail) → Laznik | yes | — |
 | Bagnik (code QA fail) → Cmok | yes | — |
 | Zlydni → End | — | Optional — user may push |
 
-**Parallel docs (Veles):** In Claude Code, Veles is often launched with `background: true` so it runs alongside Lojma or Cmok. In Cursor / Copilot, still pass the same handoff context to Veles in parallel when the flow calls for docs + design or docs + build — your UI may not expose “background” the same way.
+**Parallel docs (Mokash):** In Claude Code, Mokash is often launched with `background: true` so it runs alongside Lojma or Cmok. In Cursor / Copilot, still pass the same handoff context to Mokash in parallel when the flow calls for docs + design or docs + build — your UI may not expose “background” the same way.
 
 ### Principles
 
@@ -140,7 +141,7 @@ When handing off to another agent, include:
 - **Blockers:** [None | List if any]
 
 ### Next Agent
-**Invoke:** name the next **role** from the Handoff Map (e.g. `/vadavik`, `/laznik`, `@bagnik`, `@cmok` for build, `@veles`, `@zlydni`) — those tokens are Claude shortcuts; use the **How to invoke** table for Cursor and Copilot.
+**Invoke:** name the next **role** from the Handoff Map (e.g. `/vadavik`, `/laznik`, `@bagnik`, `@cmok` for build, `@mokash`, `@zlydni`) — those tokens are Claude shortcuts; use the **How to invoke** table for Cursor and Copilot.
 **Why:** [One-line justification for this agent]
 **Prompt:** [Suggested prompt for next agent]
 ```
@@ -151,10 +152,10 @@ When handing off to another agent, include:
 
 **Vadavik → Lojma:** Open questions listed? Deferred decisions documented? Feature path included?
 **Lojma → Cmok:** States matrix for each screen? UX path? Key decisions?
-**Lojma → Veles:** UX path? Key flows to document?
+**Lojma → Mokash:** UX path? Key flows to document?
 **Laznik → Bagnik:** Coverage summary? Known gaps? Arch path? Test paths?
 **Cmok → Bagnik:** Feature path? What was built? Changed files? New storage/API?
-**Cmok → Veles:** What was built? Feature path? Spec/UX/tech plan paths?
+**Cmok → Mokash:** What was built? Feature path? Spec/UX/tech plan paths?
 **Bagnik → Zlydni:** Bagnik passed. Feature path. Changed files. Safe to commit.
 
 ### Handoff Map
@@ -163,20 +164,20 @@ When handing off to another agent, include:
 |------|-----|------------|-------|
 | Idea/User | Vadavik | `/vadavik` | — |
 | Vadavik | Lojma | `/lojma` | yes |
-| Lojma | Veles (parallel) | `@veles` | yes |
+| Lojma | Mokash (parallel) | `@mokash` | yes |
 | Lojma | Cmok | `/cmok` (mockups) | yes |
 | Cmok mockup | User UAT | — | **STOP** |
 | User UAT | Laznik | `/laznik` | **STOP** |
 | Laznik | Bagnik | `@bagnik` (test gate) | yes |
 | Bagnik (test gate pass) | Cmok | `@cmok` (build) | yes |
-| Cmok | Veles (parallel) | `@veles` | yes |
+| Cmok | Mokash (parallel) | `@mokash` | yes |
 | Cmok | Bagnik | `@bagnik` (code QA) | yes |
 | Bagnik (code QA pass) | Zlydni | `@zlydni` | yes |
 | Bagnik (test gate fail) | Laznik | `/laznik` | yes |
 | Bagnik (code QA fail) | Cmok | `@cmok` | yes |
 | Zlydni | End | — | Optional push |
 
-*The **Invocation** column is Claude-style shorthand (`/` skills, `@` agents). Same roles elsewhere: **Cursor** — `/` skill picker and `@` rule names (**`@cmok-build`** for implementation). **Copilot** — agents menu (**cmok** agent for build).*
+*The **Invocation** column is Claude-style shorthand (`/` skills, `@` agents). Same roles elsewhere: **Cursor** — `/` skill picker and **`/subagent-name`** for kit agents (**`/cmok-build`** for implementation). **Copilot** — agents menu (**cmok** agent for build).*
 
 **Bagnik context inference:** Bagnik determines its role from who invoked it. From Laznik = test gate (fail → Laznik, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bagnik passes — no iteration limit.
 
@@ -189,7 +190,7 @@ When handing off to another agent, include:
 
 ### Handoff Log
 
-Each feature folder contains a `handoff-log.md` created by **`.claude/skills/vadavik/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is symlinked by `init.sh` whenever the kit sets up Claude paths — modes `claude`, `cursor`, `github`, or `all`). Every agent appends one entry before handing off:
+Each feature folder contains a `handoff-log.md` created by **`.claude/skills/vadavik/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh` whenever the kit sets up Claude paths — modes `claude`, `cursor`, `github`, or `all`). Every agent appends one entry before handing off:
 
 ```markdown
 ## HH:MM [From] → [To] [context]
@@ -205,7 +206,24 @@ This gives any agent a full chain of custody when context is lost, especially ac
 2. **Include feature path** — Always pass `.artefacts/features/YYYY-MM-DD-feature-name/` in handoffs
 3. **Summarize decisions** — Don't make the next agent re-derive
 4. **Flag blockers early** — Hand back to the appropriate agent
-5. **Parallel handoffs** — Veles can run alongside Lojma or Cmok; pass same context to both
+5. **Parallel handoffs** — Mokash can run alongside Lojma or Cmok; pass same context to both
 6. **Close feature after commit** — After Zlydni commit, move feature folder to `.artefacts/archive/`
 7. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
-8. **Veles handoff template:** Feature path, Spec path, UX path, Tech plan path, What was built, Document: [scope]
+8. **Mokash handoff template:** Feature path, Spec path, UX path, Tech plan path, What was built, Document: [scope]
+
+## Memory layers
+
+The kit uses a five-layer memory tree (see `agentic-kit/templates/memory/SCHEMA.md`). All agents read **`.artefacts/MEMORY.md`** (L4) before starting and write to today's L2 file when their checklist triggers fire.
+
+| Layer | Path | Read | Write |
+|-------|------|------|-------|
+| L0 enforcement | `agents/*.md`, `skills/*/SKILL.md`, `autoresearch/program.md` | yes | only via `apply-patches.sh` or Veles |
+| L1 hot state | `.artefacts/SESSION-STATE.md` | yes | every agent on entry/exit |
+| L2 daily | `.artefacts/memory/YYYY-MM-DD.md` | when relevant | append-only per checklist |
+| L3 long-term | `.artefacts/memory/{preferences,system,projects,decisions}.md` | drilldowns from L4 | only via `memory-promote.sh` |
+| L4 root summary | `.artefacts/MEMORY.md` | **first**, always | regenerated by `memory-promote.sh` |
+| L5 semantic recall | `agentic-kit/tools/memory-search.sh "<q>"` | when uncertain | n/a |
+
+**Promotion** (`agentic-kit/tools/memory-promote.sh`): observed → logged (L2) → curated (L3 via 2-strike rule) → hardened (L0 patch) → stable. Run after every archive (Zlydni does this automatically).
+
+**Temporal awareness:** entries declaring `supersedes: mem_<id>` cause the older entry to be tagged `[superseded by …]` instead of being deleted (Навь principle — past is preserved, just deprioritised in retrieval).

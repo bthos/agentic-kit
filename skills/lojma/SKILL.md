@@ -57,7 +57,7 @@ When handoff specifies a feature path (`.artefacts/features/YYYY-MM-DD-feature-n
 ## Handoff
 
 **Receive from:** Vadavik (spec)
-**Hand off to:** Cmok (mockups), Veles (parallel docs)
+**Hand off to:** Cmok (mockups), Mokash (parallel docs)
 
 When UX design is complete, **use the Agent tool** to launch:
 
@@ -66,16 +66,33 @@ When UX design is complete, **use the Agent tool** to launch:
    Create mockups from UX design at [path]. Feature path: [path]. States to implement: [list from states matrix]. Key decisions: [list]. Accessibility: [notes].
    ```
 
-2. **Veles** (parallel docs) — launch agent `veles` in parallel with prompt:
+2. **Mokash** (parallel docs) — launch agent `mokash` in parallel with prompt:
    ```
    Feature path: [path]. Spec: [path]. UX: [path]. Document: [user guide | API | both]. Key flows to document: [list from ux-design.md].
    ```
 
 Launch both using the Agent tool. Do not wait for user confirmation.
 
-## Semantic Memory
+## Project Profile
 
-If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before designing.
+If `.artefacts/PROJECT_PROFILE.md` exists, read it before designing — it captures the project's stack, conventions, and inferred priorities (constrains UI choices to match what the project already uses).
+
+## Memory
+
+Use the layered memory tree before drafting UX (see `agentic-kit/templates/memory/SCHEMA.md`):
+
+1. **Read** `.artefacts/MEMORY.md` (L4) for project-wide priorities and recent decisions.
+2. **Search** `agentic-kit/tools/memory-search.sh "<screen-or-flow>"` to surface prior UX patterns and anti-patterns.
+3. **Apply** `confidence: high` patterns; treat `medium` as advisory; ignore `low`.
+
+### Mandatory write checklist
+
+Append to today's L2 file (`.artefacts/memory/$(date +%Y-%m-%d).md`) when you make any of these calls:
+
+- [ ] **UX pattern** chosen / rejected — `entity_type: pattern` (or `anti-pattern`)
+- [ ] **Accessibility decision** that future features should keep — `entity_type: decision`
+- [ ] **Component / library** newly introduced for the UI — `entity_type: library`
+- [ ] **Reusable flow** that other features will copy — `entity_type: project`
 
 **HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior features. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Use to surface past UX decisions and avoid re-raising issues already resolved.
 

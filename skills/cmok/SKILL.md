@@ -41,14 +41,25 @@ After mockups are complete:
 - State coverage confirmation: "States implemented: [list]"
 - UAT prompt for user
 
-## Semantic Memory
+## Project Profile
 
-If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before creating mockups.
+If `.artefacts/PROJECT_PROFILE.md` exists, read it before creating mockups — it captures the project's stack and UI conventions.
 
-**HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior features. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Use to avoid re-implementing patterns already found to work or fail.
+## Memory
+
+1. **Read** `.artefacts/MEMORY.md` (L4) before mocking.
+2. **Search**: `agentic-kit/tools/memory-search.sh "<screen | component>"` to pull prior mockup patterns and anti-patterns.
+3. Apply `high` patterns, treat `medium` as advisory, ignore `low`.
+
+### Mandatory write checklist
+
+Append a bullet to today's L2 file when any of these fire:
+
+- [ ] **Mockup pattern** that fits this project (or one to avoid) — `entity_type: pattern` / `anti-pattern`
+- [ ] **State** that emerged from UAT and was not in the spec — `entity_type: pattern`
 
 ## Guardrails
 
 - Do NOT implement application code — mockups only
 - Do NOT auto-invoke the next agent — always stop for user UAT
-- If asked to build, hand off to `@cmok` (agent) for build
+- If asked to build, hand off to the **Cmok build agent** (`@cmok` in Claude Code / Copilot; **`/cmok-build`** subagent in Cursor)

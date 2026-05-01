@@ -12,3 +12,6 @@
 AGENTS.md
 CLAUDE.md
 PROJECT.md
+
+# Kit install manifest (SHA-256 per managed path; local to each checkout)
+.agentic-kit.files

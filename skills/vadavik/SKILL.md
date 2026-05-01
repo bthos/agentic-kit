@@ -36,7 +36,7 @@ When updating specs:
 - **Open questions** — Mandatory section in every spec. List unresolved items.
 - **Deferred decisions** — Document what was deferred and why. Add "Cmok: implement [X] for now; revisit in [condition]" when deferring.
 - **Architecture & test implications** — Subsection: key dependencies, storage/API surface, constraints that affect Laznik and Cmok.
-- **Documentation implications** — When spec has user-facing flows: what should appear in docs. Enables Veles.
+- **Documentation implications** — When spec has user-facing flows: what should appear in docs. Enables Mokash.
 
 ## Feature Path
 
@@ -53,14 +53,14 @@ When a handoff already specifies a feature path, use it instead of creating a ne
 ## Handoff
 
 **Receive from:** Idea/User
-**Hand off to:** Lojma (with spec); optionally Veles in parallel
+**Hand off to:** Lojma (with spec); optionally Mokash in parallel
 
 When spec is ready, **use the Agent tool** to launch agent `lojma` with prompt:
 ```
 Design UX for [feature] based on spec at [path]. Key decisions: [list]. Acceptance criteria: [list]. Open questions: [list]. Feature path: [path].
 ```
 
-When spec is substantial (has user-facing flows), **also use the Agent tool** to launch agent `veles` in parallel with prompt:
+When spec is substantial (has user-facing flows), **also use the Agent tool** to launch agent `mokash` in parallel with prompt:
 ```
 Feature path: [path]. Spec path: [path]. Document: [user guide | API | both]. Key flows: [list from spec].
 ```
@@ -79,11 +79,30 @@ Spec: [path]. Key ACs: [count]. Open questions: [count].
 
 **Spec update notification:** When updating spec mid-pipeline, include "Spec updated at [path]" in handoff.
 
-## Semantic Memory
+## Project Profile
 
-If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before eliciting requirements.
+If `.artefacts/PROJECT_PROFILE.md` exists, read it before eliciting requirements — it captures the project's stack, conventions, and inferred priorities.
 
-**HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior features. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Use to ask sharper questions and avoid re-raising issues already resolved.
+## Memory
+
+The project has a layered memory tree (see `agentic-kit/templates/memory/SCHEMA.md`):
+
+1. **Read first:** `.artefacts/MEMORY.md` (L4 — root index, ~2 KB).
+2. **Drill down** into `.artefacts/memory/{preferences,system,projects,decisions}.md` (L3) only when you need detail.
+3. **When uncertain**, run `agentic-kit/tools/memory-search.sh "<query>"` for ranked top-k chunks across every layer.
+4. **`high`-confidence entries are rules**, `medium` is advisory, `low` is reference only. Never re-execute past tasks; use memory to ask sharper questions and avoid re-raising resolved issues.
+
+### Mandatory write checklist
+
+Before handing off, append a bullet to today's L2 file (`.artefacts/memory/$(date +%Y-%m-%d).md`) for each trigger that fired during this session:
+
+- [ ] **New convention discovered** in spec — `entity_type: pattern`
+- [ ] **New tool/library proposed** — `entity_type: tool`
+- [ ] **Decision** that supersedes a prior one — `entity_type: decision` + `supersedes: mem_<id>`
+- [ ] **Anti-pattern** observed — `entity_type: anti-pattern`
+- [ ] **Project-level fact** that future features will reuse — `entity_type: project`
+
+Use `id: pending` (the promote script will hash it). Keep `text:` to one or two concrete sentences.
 
 ## Guardrails
 

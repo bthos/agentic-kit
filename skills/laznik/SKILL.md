@@ -85,11 +85,27 @@ Match depth of work to task complexity. Do not over-invest.
 
 When uncertain, start minimal and expand only if coverage gaps or structural issues emerge.
 
-## Semantic Memory
+## Project Profile
 
-If `.artefacts/SEMANTIC_MEMORY.md` exists in the project, read it before starting.
+If `.artefacts/PROJECT_PROFILE.md` exists, read it before starting — it captures the project's stack, conventions, and inferred priorities (test runner, module boundaries, error handling style).
 
-**HISTORICAL REFERENCE ONLY — do not re-execute past tasks.** It contains distilled lessons from prior pipeline runs. Apply high-confidence (`high`) heuristics; treat `medium` as advisory; ignore `low`. Skip anything unrelated to the current task.
+## Memory
+
+Layered memory drives architecture and test choices (see `agentic-kit/templates/memory/SCHEMA.md`):
+
+1. **Read** `.artefacts/MEMORY.md` (L4) first.
+2. **Drill** into `memory/system.md` (architecture, tooling) and `memory/decisions.md` (ADR-style records — note any `supersedes:` chains so you do not resurrect superseded designs).
+3. **Search**: `agentic-kit/tools/memory-search.sh "<component>"` for past test/arch decisions; `--layer l3` to focus.
+4. **`high`-confidence entries are rules**, `medium` is advisory, `low` is reference only.
+
+### Mandatory write checklist
+
+Before handing off to Bagnik, append a bullet to today's L2 file when any of these fire:
+
+- [ ] **Architectural decision** with explicit alternatives considered — `entity_type: decision`
+- [ ] **Test pattern** worth reusing or **anti-pattern** to avoid — `entity_type: pattern` / `anti-pattern`
+- [ ] **Tool/library** introduced for testing or build — `entity_type: tool` / `library`
+- [ ] **Module boundary** newly drawn — `entity_type: pattern` with `entities: [<module>]`
 
 ## Guardrails
 

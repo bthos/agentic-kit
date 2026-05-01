@@ -3,7 +3,7 @@
 # Usage: agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive] [--ide=claude|cursor|github|all]
 # Env: IDE_CHOICE=claude|cursor|github|all (same as --ide, for non-interactive)
 #
-# Creates symlinks for Claude Code (.claude/) and/or Cursor (.cursor/skills/, .cursor/rules/*.mdc),
+# Creates copies into .claude/ / .cursor/ with hashes recorded in .agentic-kit.files,
 # copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template.
 #
 # Flags:
@@ -42,8 +42,8 @@ show_help() {
 
   OPTIONS
     --ide=<target>          Which IDE to configure (default: claude)
-                              claude   — Claude Code (.claude/ symlinks, CLAUDE.md)
-                              cursor   — Cursor (.cursor/skills/, .cursor/rules/*.mdc, AGENTS.md)
+                              claude   — Claude Code (.claude/ copies, CLAUDE.md)
+                              cursor   — Cursor (.cursor/skills/ copies, .cursor/agents/*.md subagents, AGENTS.md)
                               github   — GitHub Copilot (.github/agents/*.agent.md,
                                          .github/instructions/*.instructions.md,
                                          .github/copilot-instructions.md)
@@ -60,6 +60,12 @@ show_help() {
 
     --force, --overwrite-all
                             Overwrite all existing kit-managed files without prompting
+
+    --tune                  After install, probe the project (stack, frameworks,
+                            test/build commands, conventions) and write
+                            .artefacts/PROJECT_PROFILE.md so agents can self-tune.
+                            Calls `agentic-kit/tools/probe-project.sh --force`.
+    --no-tune               Skip the probe step (default).
 
     --help, -h              Show this help and exit
 
@@ -118,6 +124,7 @@ ask_conflict() {
 MODE=""
 NON_INTERACTIVE=false
 IDE_CHOICE="${IDE_CHOICE:-}"
+TUNE=false
 
 for arg in "$@"; do
   case "$arg" in
@@ -126,6 +133,8 @@ for arg in "$@"; do
     --skip|--skip-all)               MODE="skip" ;;
     --non-interactive|-n|--yes|-y)   NON_INTERACTIVE=true ;;
     --ide=*)                         IDE_CHOICE="${arg#--ide=}" ;;
+    --tune)                          TUNE=true ;;
+    --no-tune)                       TUNE=false ;;
   esac
 done
 
@@ -160,8 +169,154 @@ should_overwrite() {
   ask_conflict "$label"
 }
 
+# Copy kit file into project; record SHA-256 in .agentic-kit.files for teardown.
+# Usage: install_kit_copy_file <label> <rel_path> <src_file_abs>
+install_kit_copy_file() {
+  local label="$1" rel_path="$2" src_file="$3"
+  local target="$PROJECT_ROOT/$rel_path"
+  local want have recorded
+
+  want=$(kit_sha256_file "$src_file") || return 1
+  mkdir -p "$(dirname "$target")"
+  recorded=$(manifest_get_hash "$rel_path" || true)
+
+  if [ -L "$target" ] || [ ! -e "$target" ]; then
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      if ! should_overwrite "$label"; then
+        skip "$label (exists — use --force to replace)"
+        return 1
+      fi
+      rm -rf "$target"
+    fi
+    cp "$src_file" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
+    success "$label"
+    return 0
+  fi
+
+  if [ ! -f "$target" ]; then
+    if ! should_overwrite "$label"; then skip "$label (not a regular file)"; return 1; fi
+    rm -rf "$target"
+    cp "$src_file" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
+    success "$label"
+    return 0
+  fi
+
+  have=$(kit_sha256_file "$target")
+  if [ "$have" = "$want" ]; then
+    manifest_set_hash "$rel_path" "$want"
+    info "$label (matches kit)"
+    return 0
+  fi
+  if [ -n "$recorded" ] && [ "$have" = "$recorded" ]; then
+    if ! should_overwrite "$label"; then
+      skip "$label (kit updated in submodule — use --force to refresh)"
+      return 1
+    fi
+    rm -f "$target"
+    cp "$src_file" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
+    success "$label (refreshed from kit)"
+    return 0
+  fi
+  if [ -n "$recorded" ] && [ "$have" != "$recorded" ]; then
+    if ! should_overwrite "$label"; then
+      skip "$label (modified locally — use --force to replace)"
+      return 1
+    fi
+    rm -f "$target"
+    cp "$src_file" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
+    success "$label (overwritten)"
+    return 0
+  fi
+  if ! should_overwrite "$label"; then
+    skip "$label (exists — use --force)"
+    return 1
+  fi
+  rm -f "$target"
+  cp "$src_file" "$target"
+  manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
+  success "$label (overwritten)"
+  return 0
+}
+
+# Copy skill directory tree; record aggregate SHA-256 of all files.
+# Usage: install_kit_copy_tree <label> <rel_path> <src_dir_abs>
+install_kit_copy_tree() {
+  local label="$1" rel_path="$2" src_dir="$3"
+  local target="$PROJECT_ROOT/$rel_path"
+  local want have recorded
+
+  want=$(kit_sha256_tree "$src_dir") || return 1
+  mkdir -p "$(dirname "$target")"
+  recorded=$(manifest_get_hash "$rel_path" || true)
+
+  if [ -L "$target" ] || [ ! -e "$target" ]; then
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      if ! should_overwrite "$label"; then
+        skip "$label (exists — use --force to replace)"
+        return 1
+      fi
+      rm -rf "$target"
+    fi
+    cp -R "$src_dir" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
+    success "$label"
+    return 0
+  fi
+
+  if [ ! -d "$target" ] || [ -L "$target" ]; then
+    if ! should_overwrite "$label"; then skip "$label (not a directory)"; return 1; fi
+    rm -rf "$target"
+    cp -R "$src_dir" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
+    success "$label"
+    return 0
+  fi
+
+  have=$(kit_sha256_tree "$target")
+  if [ "$have" = "$want" ]; then
+    manifest_set_hash "$rel_path" "$want"
+    info "$label (matches kit)"
+    return 0
+  fi
+  if [ -n "$recorded" ] && [ "$have" = "$recorded" ]; then
+    if ! should_overwrite "$label"; then
+      skip "$label (kit skill updated — use --force)"
+      return 1
+    fi
+    rm -rf "$target"
+    cp -R "$src_dir" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
+    success "$label (refreshed from kit)"
+    return 0
+  fi
+  if [ -n "$recorded" ] && [ "$have" != "$recorded" ]; then
+    if ! should_overwrite "$label"; then
+      skip "$label (modified locally — use --force)"
+      return 1
+    fi
+    rm -rf "$target"
+    cp -R "$src_dir" "$target"
+    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
+    success "$label (overwritten)"
+    return 0
+  fi
+  if ! should_overwrite "$label"; then
+    skip "$label (exists — use --force)"
+    return 1
+  fi
+  rm -rf "$target"
+  cp -R "$src_dir" "$target"
+  manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
+  success "$label (overwritten)"
+  return 0
+}
+
 # ---------------------------------------------------------------------------
-# YAML / .mdc helpers (Cursor)
+# YAML helpers + Cursor subagents (https://cursor.com/docs/context/subagents)
 # ---------------------------------------------------------------------------
 # Body: everything after the closing --- of YAML frontmatter
 strip_frontmatter_body() {
@@ -178,34 +333,65 @@ escape_yaml_double() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
-# Output .mdc basename (with .mdc suffix) from optional frontmatter cursor_rule_name, else <base>.mdc
-cursor_rule_out_name() {
+# Subagent id / filename stem: optional cursor_subagent_name, else cursor_rule_name (legacy), else agent basename
+cursor_subagent_stem() {
   local file="$1" base="$2"
   local custom
-  custom=$(extract_yaml_field "$file" "cursor_rule_name")
+  custom=$(extract_yaml_field "$file" "cursor_subagent_name")
+  if [ -z "$custom" ]; then
+    custom=$(extract_yaml_field "$file" "cursor_rule_name")
+  fi
   if [ -n "$custom" ]; then
     case "$custom" in
-      *.mdc) printf '%s' "$custom" ;;
-      *)     printf '%s.mdc' "$custom" ;;
+      *.md)  printf '%s' "${custom%.md}" ;;
+      *.mdc) printf '%s' "${custom%.mdc}" ;;
+      *)     printf '%s' "$custom" ;;
     esac
   else
-    printf '%s.mdc' "$base"
+    printf '%s' "$base"
   fi
 }
 
-# $1 = source md path, $2 = output .mdc path (no dir), $3 = Cursor rule description (plain text)
-write_mdc() {
-  local src="$1"
-  local dest_name="$2"
-  local desc="$3"
-  local dest="$PROJECT_ROOT/.cursor/rules/$dest_name"
-  local esc
-  esc=$(escape_yaml_double "$desc")
-  mkdir -p "$PROJECT_ROOT/.cursor/rules"
+# Single path segment, Cursor-style id (lowercase letters, digits, hyphens). Else unsafe for dest path.
+cursor_subagent_stem_safe() {
+  local file="$1" base="$2"
+  local stem
+  stem=$(cursor_subagent_stem "$file" "$base")
+  if [[ "$stem" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    printf '%s' "$stem"
+    return 0
+  fi
+  warn "Invalid cursor_subagent_name / cursor_rule_name '${stem}' in $(basename "$file") — using '${base}'"
+  printf '%s' "$base"
+}
+
+yaml_truthy_is_background() {
+  local v="$1"
+  case "$v" in
+    true|True|TRUE|yes|Yes|1) printf 'true' ;;
+    *)                        printf 'false' ;;
+  esac
+}
+
+write_cursor_subagent() {
+  local src="$1" dest="$2"
+  local stem name desc esc_name esc_desc bg is_bg
+  stem=$(cursor_subagent_stem_safe "$src" "$(basename "$src" .md)")
+  name="$stem"
+  desc=$(extract_yaml_field "$src" "description")
+  [ -n "$desc" ] || desc="Agent: $name"
+  esc_name=$(escape_yaml_double "$name")
+  esc_desc=$(escape_yaml_double "$desc")
+  bg=$(extract_yaml_field "$src" "background")
+  is_bg=$(yaml_truthy_is_background "$bg")
+  mkdir -p "$(dirname "$dest")"
   {
     printf '%s\n' "---"
-    printf '%s\n' "description: \"$esc\""
-    printf '%s\n' "alwaysApply: false"
+    printf '%s\n' "name: \"$esc_name\""
+    printf '%s\n' "description: \"$esc_desc\""
+    printf '%s\n' "model: inherit"
+    printf '%s\n' "readonly: false"
+    printf '%s\n' "is_background: $is_bg"
     printf '%s\n' "---"
     printf '\n'
     printf '%s\n' "$AGENTIC_MARKER"
@@ -214,47 +400,15 @@ write_mdc() {
   } > "$dest"
 }
 
-# Remove dangling symlinks from a directory (stale after submodule update).
-clean_stale_symlinks() {
-  local dir="$1"
-  [ -d "$dir" ] || return 0
-  local link
-  for link in "$dir"/*; do
-    [ -L "$link" ] || continue
-    [ -e "$link" ] && continue
-    rm "$link"
-    removed "$(basename "$dir")/$(basename "$link") (stale symlink)"
-  done
-}
-
-# ensure_symlink <label> <target_path> <link_value>
-# Returns 0 if linked/already linked/overwritten, 1 if skipped
-ensure_symlink() {
-  local label="$1" target="$2" link="$3"
-  if [ -L "$target" ] && [ "$(readlink "$target")" = "$link" ]; then
-    info "$label (already linked)"
-    return 0
-  fi
-  if [ -e "$target" ] || [ -L "$target" ]; then
-    if should_overwrite "$label"; then
-      rm -rf "$target"
-      ln -s "$link" "$target"
-      success "$label (overwritten)"
-      return 0
-    fi
-    return 1
-  fi
-  ln -s "$link" "$target"
-  success "$label"
-  return 0
-}
-
 # Write kit-managed file: skip if exists without marker; prompt if kit-managed; create or overwrite.
+# Records SHA-256 in .agentic-kit.files after a successful write.
 # Usage: write_if_kit_managed <human_label> <dest_path> <write_fn> [args to write_fn...]
 # write_fn receives dest as last argument (caller passes dest twice: once as $2, once as arg to fn)
 write_if_kit_managed() {
-  local label="$1" dest="$2" writer="$3"
+  local label="$1" dest="$2" writer="$3" rel
   shift 3
+  rel="${dest#"$PROJECT_ROOT"/}"
+  rel="${rel//\\//}"
   if [ -f "$dest" ]; then
     if ! grep -qF "$AGENTIC_MARKER" "$dest" 2>/dev/null; then
       case "$label" in
@@ -265,12 +419,16 @@ write_if_kit_managed() {
     fi
     if should_overwrite "$label"; then
       "$writer" "$@"
+      manifest_set_hash "$rel" "$(kit_sha256_file "$dest")"
       success "$label (overwritten)"
       return 0
     fi
+    manifest_set_hash "$rel" "$(kit_sha256_file "$dest")"
+    info "$label (unchanged — manifest synced)"
     return 1
   fi
   "$writer" "$@"
+  manifest_set_hash "$rel" "$(kit_sha256_file "$dest")"
   success "$label"
   return 0
 }
@@ -284,24 +442,12 @@ write_agents_md_body() {
   } > "$dest"
 }
 
-# $1 = dest path; uses PIPELINE_MDC_BODY (set by caller)
-write_pipeline_mdc_body() {
-  local dest="$1"
-  {
-    printf '%s\n' "---"
-    printf '%s\n' "description: \"Agentic kit — pipeline overview, handoff protocol, invocation map\""
-    printf '%s\n' "alwaysApply: true"
-    printf '%s\n' "---"
-    printf '\n'
-    printf '%s\n' "$AGENTIC_MARKER"
-    printf '\n'
-    printf '%s\n' "$PIPELINE_MDC_BODY"
-  } > "$dest"
-}
-
-install_or_update_mdc_rule() {
-  local rel_label="$1" src="$2" out_name="$3" desc="$4"
-  local dest="$PROJECT_ROOT/.cursor/rules/$out_name"
+install_or_update_cursor_subagent_file() {
+  local src="$1"
+  local stem dest rel_label
+  stem=$(cursor_subagent_stem_safe "$src" "$(basename "$src" .md)")
+  dest="$PROJECT_ROOT/.cursor/agents/${stem}.md"
+  rel_label=".cursor/agents/${stem}.md"
 
   if [ -f "$dest" ]; then
     if ! grep -qF "$AGENTIC_MARKER" "$dest" 2>/dev/null; then
@@ -309,69 +455,64 @@ install_or_update_mdc_rule() {
       return 1
     fi
     if should_overwrite "$rel_label"; then
-      write_mdc "$src" "$out_name" "$desc"
+      write_cursor_subagent "$src" "$dest"
+      manifest_set_hash "$rel_label" "$(kit_sha256_file "$dest")"
       success "$rel_label (overwritten)"
+    else
+      manifest_set_hash "$rel_label" "$(kit_sha256_file "$dest")"
+      info "$rel_label (unchanged — manifest synced)"
     fi
   else
-    write_mdc "$src" "$out_name" "$desc"
+    write_cursor_subagent "$src" "$dest"
+    manifest_set_hash "$rel_label" "$(kit_sha256_file "$dest")"
     success "$rel_label"
   fi
 }
 
-generate_mdc_rules_from_sources() {
-  local agent base out desc
+generate_cursor_subagents_from_sources() {
+  local agent
+  mkdir -p "$PROJECT_ROOT/.cursor/agents"
   for agent in "$SCRIPT_DIR/agents/"*.md; do
     [ -e "$agent" ] || continue
-    base=$(basename "$agent" .md)
-    out=$(cursor_rule_out_name "$agent" "$base")
-    desc=$(extract_yaml_field "$agent" "description")
-    [ -n "$desc" ] || desc="Agent: $base"
-    install_or_update_mdc_rule ".cursor/rules/$out" "$agent" "$out" "$desc"
+    install_or_update_cursor_subagent_file "$agent"
   done
 }
 
 # Cursor Agent Skills: one folder per skill with SKILL.md (see https://cursor.com/docs/context/skills).
 link_cursor_skills() {
   header "Cursor — Skills (.cursor/skills/)"
-  mkdir -p "$PROJECT_ROOT/.cursor/skills"
-  clean_stale_symlinks "$PROJECT_ROOT/.cursor/skills"
 
-  local skill_dir name target link skill_file
+  local skill_dir name skill_file src_dir rel
   for skill_dir in "$SCRIPT_DIR/skills/"*/; do
     [ -d "$skill_dir" ] || continue
     name=$(basename "$skill_dir")
     skill_file="${skill_dir}SKILL.md"
     [ -f "$skill_file" ] || continue
-    target="$PROJECT_ROOT/.cursor/skills/$name"
-    link="../../$SUBMODULE_DIR/skills/$name"
-    ensure_symlink ".cursor/skills/$name" "$target" "$link" || true
+    src_dir="${skill_dir%/}"
+    rel=".cursor/skills/$name"
+    install_kit_copy_tree ".cursor/skills/$name" "$rel" "$src_dir" || true
   done
 }
 
 # Optional $1 overrides section header (cursor-only uses the longer label).
 link_claude_skills() {
   header "${1:-Claude Code — Skills}"
-  mkdir -p "$PROJECT_ROOT/.claude/skills"
-  clean_stale_symlinks "$PROJECT_ROOT/.claude/skills"
 
-  local skill_dir name target link
+  local skill_dir name skill_file src_dir rel
   for skill_dir in "$SCRIPT_DIR/skills/"*/; do
     [ -d "$skill_dir" ] || continue
     name=$(basename "$skill_dir")
-    target="$PROJECT_ROOT/.claude/skills/$name"
-    link="../../$SUBMODULE_DIR/skills/$name"
-    ensure_symlink ".claude/skills/$name" "$target" "$link" || true
+    skill_file="${skill_dir}SKILL.md"
+    [ -f "$skill_file" ] || continue
+    src_dir="${skill_dir%/}"
+    rel=".claude/skills/$name"
+    install_kit_copy_tree ".claude/skills/$name" "$rel" "$src_dir" || true
   done
 }
 
-setup_cursor_rules_from_sources() {
-  header "Cursor rules (.cursor/rules/)"
-
-  generate_mdc_rules_from_sources
-
-  local pipe="$PROJECT_ROOT/.cursor/rules/pipeline.mdc"
-  PIPELINE_MDC_BODY=$(grep -v '^@PROJECT.md$' "$SCRIPT_DIR/PIPELINE.md.template")
-  write_if_kit_managed ".cursor/rules/pipeline.mdc" "$pipe" write_pipeline_mdc_body "$pipe"
+setup_cursor_subagents() {
+  header "Cursor — Subagents (.cursor/agents/)"
+  generate_cursor_subagents_from_sources
 }
 
 setup_agents_md() {
@@ -382,16 +523,13 @@ setup_agents_md() {
 
 setup_claude() {
   header "Claude Code — Agents"
-  mkdir -p "$PROJECT_ROOT/.claude/agents"
-  clean_stale_symlinks "$PROJECT_ROOT/.claude/agents"
 
-  local agent name target link
+  local agent name rel
   for agent in "$SCRIPT_DIR/agents/"*.md; do
     [ -e "$agent" ] || continue
     name=$(basename "$agent")
-    target="$PROJECT_ROOT/.claude/agents/$name"
-    link="../../$SUBMODULE_DIR/agents/$name"
-    ensure_symlink ".claude/agents/$name" "$target" "$link" || true
+    rel=".claude/agents/$name"
+    install_kit_copy_file ".claude/agents/$name" "$rel" "$agent" || true
   done
 
   link_claude_skills
@@ -409,13 +547,13 @@ setup_claude() {
 }
 
 setup_cursor() {
-  # Cursor-only: symlink skills so paths like .claude/skills/vadavik/new-feature.sh work.
+  # Cursor-only: copy skills so paths like .claude/skills/vadavik/new-feature.sh work.
   # "all" already linked skills via setup_claude.
   if [ "$IDE_CHOICE" = "cursor" ]; then
     link_claude_skills "Claude Code — Skills (for bundled scripts)"
   fi
   link_cursor_skills
-  setup_cursor_rules_from_sources
+  setup_cursor_subagents
   setup_agents_md
 }
 
@@ -466,7 +604,7 @@ write_github_instructions() {
 }
 
 setup_github() {
-  # GitHub Copilot-only: symlink skills for bundled shell scripts (same as Cursor-only).
+  # GitHub Copilot-only: copy skills for bundled shell scripts (same as Cursor-only).
   if [ "$IDE_CHOICE" = "github" ]; then
     link_claude_skills "Claude Code — Skills (for bundled scripts)"
   fi
@@ -485,10 +623,15 @@ setup_github() {
         skip ".github/agents/$out (not kit-managed — delete manually to replace)"
       elif should_overwrite ".github/agents/$out"; then
         write_github_agent "$agent" "$dest"
+        manifest_set_hash ".github/agents/$out" "$(kit_sha256_file "$dest")"
         success ".github/agents/$out (overwritten)"
+      else
+        manifest_set_hash ".github/agents/$out" "$(kit_sha256_file "$dest")"
+        info ".github/agents/$out (unchanged — manifest synced)"
       fi
     else
       write_github_agent "$agent" "$dest"
+      manifest_set_hash ".github/agents/$out" "$(kit_sha256_file "$dest")"
       success ".github/agents/$out"
     fi
   done
@@ -509,10 +652,15 @@ setup_github() {
         skip ".github/instructions/$out (not kit-managed — delete manually to replace)"
       elif should_overwrite ".github/instructions/$out"; then
         write_github_instructions "$skill_file" "$dest"
+        manifest_set_hash ".github/instructions/$out" "$(kit_sha256_file "$dest")"
         success ".github/instructions/$out (overwritten)"
+      else
+        manifest_set_hash ".github/instructions/$out" "$(kit_sha256_file "$dest")"
+        info ".github/instructions/$out (unchanged — manifest synced)"
       fi
     else
       write_github_instructions "$skill_file" "$dest"
+      manifest_set_hash ".github/instructions/$out" "$(kit_sha256_file "$dest")"
       success ".github/instructions/$out"
     fi
   done
@@ -526,12 +674,17 @@ setup_github() {
     if ! grep -qF "$AGENTIC_MARKER" "$ci_dest" 2>/dev/null; then
       skip ".github/copilot-instructions.md (not kit-managed — merge manually)"
     elif should_overwrite ".github/copilot-instructions.md"; then
-      { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } > "$ci_dest"
+      { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } >"$ci_dest"
+      manifest_set_hash ".github/copilot-instructions.md" "$(kit_sha256_file "$ci_dest")"
       success ".github/copilot-instructions.md (overwritten)"
+    else
+      manifest_set_hash ".github/copilot-instructions.md" "$(kit_sha256_file "$ci_dest")"
+      info ".github/copilot-instructions.md (unchanged — manifest synced)"
     fi
   else
     mkdir -p "$PROJECT_ROOT/.github"
-    { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } > "$ci_dest"
+    { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } >"$ci_dest"
+    manifest_set_hash ".github/copilot-instructions.md" "$(kit_sha256_file "$ci_dest")"
     success ".github/copilot-instructions.md"
   fi
 }
@@ -762,6 +915,34 @@ _kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || tru
 } > "$PROJECT_ROOT/.agentic-kit.cfg"
 
 # ---------------------------------------------------------------------------
+# Project probe (--tune): write .artefacts/PROJECT_PROFILE.md so agents self-tune
+# ---------------------------------------------------------------------------
+if $TUNE; then
+  _probe="$SCRIPT_DIR/tools/probe-project.sh"
+  if [ -x "$_probe" ]; then
+    info "Probing project to write .artefacts/PROJECT_PROFILE.md (--tune)…"
+    _probe_args=( "--force" )
+    if $NON_INTERACTIVE; then _probe_args+=( "--quick" ); fi
+    ( cd "$PROJECT_ROOT" && "$_probe" "${_probe_args[@]}" ) || true
+  else
+    info "probe-project.sh not found at $_probe — skipping --tune."
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Memory tree: always initialise (idempotent, never overwrites entries)
+# ---------------------------------------------------------------------------
+_mem_init="$SCRIPT_DIR/tools/memory-init.sh"
+if [ -x "$_mem_init" ]; then
+  info "Initialising layered memory tree at .artefacts/memory/…"
+  _mem_args=()
+  if [ -f "$PROJECT_ROOT/.artefacts/SEMANTIC_MEMORY.md" ]; then
+    _mem_args+=( "--migrate" )
+  fi
+  ( cd "$PROJECT_ROOT" && "$_mem_init" "${_mem_args[@]}" ) || true
+fi
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${GREEN}  ✓ Done.${RESET}\n\n"
@@ -774,7 +955,7 @@ case "$IDE_CHOICE" in
     ;;
   cursor)
     printf "  ${DIM}%-38s${RESET} %s\n" "Skills installed:" "${CYAN}.cursor/skills/${RESET}"
-    printf "  ${DIM}%-38s${RESET} %s\n" "Rules installed:" "${CYAN}.cursor/rules/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Subagents installed:" "${CYAN}.cursor/agents/${RESET}"
     printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
     ;;
   github)
@@ -784,7 +965,7 @@ case "$IDE_CHOICE" in
     ;;
   all)
     printf "  ${DIM}%-38s${RESET} %s\n" "Claude Code — start a feature:" "${CYAN}/vadavik${RESET}"
-    printf "  ${DIM}%-38s${RESET} %s\n" "Cursor rules:" "${CYAN}.cursor/rules/${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "Cursor subagents:" "${CYAN}.cursor/agents/${RESET}"
     printf "  ${DIM}%-38s${RESET} %s\n" "Copilot agents:" "${CYAN}.github/agents/${RESET}"
     printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
     ;;
