@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates a new feature folder under .artefacts/features/ with today's date prefix.
+# Creates a new feature folder under .agentic-kit-artefacts/features/ with today's date prefix.
 # Usage: /skills/vadavik/new-feature.sh <feature-slug>
 # Example: /skills/vadavik/new-feature.sh user-login-flow
 # Run from project root.
@@ -14,7 +14,7 @@ fi
 
 SLUG="$1"
 DATE=$(date +%Y-%m-%d)
-ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
 FEATURE_DIR="$ARTEFACTS/features/${DATE}-${SLUG}"
 
 if [ -d "$FEATURE_DIR" ]; then
