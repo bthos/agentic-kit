@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
-# Initialises the project memory tree at .artefacts/memory/.
+# Initialises the project memory tree at .agentic-kit-artefacts/memory/.
 #
 # Layout (see agentic-kit/templates/memory/SCHEMA.md):
-#   .artefacts/MEMORY.md                 # L4 root summary
-#   .artefacts/SESSION-STATE.md          # L1 hot state
-#   .artefacts/memory/SCHEMA.md          # ontology
-#   .artefacts/memory/preferences.md     # L3
-#   .artefacts/memory/system.md          # L3
-#   .artefacts/memory/projects.md        # L3
-#   .artefacts/memory/decisions.md       # L3
-#   .artefacts/memory/<YYYY-MM-DD>.md    # L2 (today's)
-#   .artefacts/memory/index.jsonl        # L5 (created by memory-search.sh)
+#   .agentic-kit-artefacts/MEMORY.md              # L4 root summary
+#   .agentic-kit-artefacts/SESSION-STATE.md       # L1 hot state
+#   .agentic-kit-artefacts/memory/SCHEMA.md       # ontology
+#   .agentic-kit-artefacts/memory/preferences.md  # L3
+#   .agentic-kit-artefacts/memory/system.md       # L3
+#   .agentic-kit-artefacts/memory/projects.md     # L3
+#   .agentic-kit-artefacts/memory/decisions.md    # L3
+#   .agentic-kit-artefacts/memory/<YYYY-MM-DD>.md # L2 (today's)
+#   .agentic-kit-artefacts/memory/index.jsonl     # L5 (created by memory-search.sh)
+#
+# Override the artefacts directory with $ARTEFACTS_DIR (e.g. for legacy
+# .artefacts/ checkouts that have not migrated yet).
 #
 # Usage:
 #   agentic-kit/tools/memory-init.sh                  # safe init (skips existing files)
 #   agentic-kit/tools/memory-init.sh --force          # overwrite stubs from templates
-#   agentic-kit/tools/memory-init.sh --migrate        # also import legacy SEMANTIC_MEMORY.md
 #
 # Run from project root.
 
@@ -23,17 +25,14 @@ set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TPL_DIR="$KIT_DIR/templates/memory"
-ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
 MEM_DIR="$ARTEFACTS/memory"
-LEGACY_SEMANTIC="$ARTEFACTS/SEMANTIC_MEMORY.md"
 
 FORCE=false
-MIGRATE=false
 for _arg in "$@"; do
   case "$_arg" in
     --force) FORCE=true ;;
-    --migrate) MIGRATE=true ;;
-    -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   esac
 done
 
@@ -121,25 +120,6 @@ EOF
   echo "  init $ROOT"
 else
   echo "  skip $ROOT (exists)"
-fi
-
-# Optional migration of legacy SEMANTIC_MEMORY.md
-if $MIGRATE && [ -f "$LEGACY_SEMANTIC" ]; then
-  echo "  migrating legacy SEMANTIC_MEMORY.md → memory/preferences.md (best effort)…"
-  # Append a single block referencing the legacy file. memory-promote.sh
-  # will hash + structure it on next run.
-  {
-    echo ""
-    echo "<!-- migrated $(date -u +%Y-%m-%dT%H:%M:%SZ) from SEMANTIC_MEMORY.md -->"
-    echo ""
-    while IFS= read -r line; do
-      [[ "$line" =~ ^- ]] || continue
-      printf -- '- id: pending\n  decided: %s\n  entity_type: pattern\n  entities: []\n  confidence: medium\n  source: SEMANTIC_MEMORY.md\n  text: |\n    %s\n' \
-        "$(date +%Y-%m-%d)" "${line#- }"
-    done < "$LEGACY_SEMANTIC"
-  } >> "$MEM_DIR/preferences.md"
-  mv "$LEGACY_SEMANTIC" "$LEGACY_SEMANTIC.legacy" 2>/dev/null || true
-  echo "  legacy file renamed → SEMANTIC_MEMORY.md.legacy (review and delete when satisfied)"
 fi
 
 echo

@@ -1,40 +1,37 @@
 #!/usr/bin/env bash
 # Distills LESSONS.md files from archived features into the layered memory tree.
-# Usage: agentic-kit/tools/distill-lessons.sh [--target=memory|agents|both] [--legacy]
+# Usage: agentic-kit/tools/distill-lessons.sh [--target=memory|agents|both]
 #
 #   --target=memory  (default) Append schema-compliant entries into today's L2
-#                              daily file (.artefacts/memory/YYYY-MM-DD.md), then
-#                              run memory-promote.sh so the 2-strike rule, supersedes
-#                              resolver, and L4 root index update automatically.
+#                              daily file (.agentic-kit-artefacts/memory/YYYY-MM-DD.md),
+#                              then run memory-promote.sh so the 2-strike rule,
+#                              supersedes resolver, and L4 root index update
+#                              automatically.
 #   --target=agents            Write proposed per-agent patches to
-#                              .artefacts/proposed-patches/<agent>.md so a human (or
-#                              `apply-patches.sh`) can review and merge them into the
-#                              installed agent copies (self-improvement Layer 2).
+#                              .agentic-kit-artefacts/proposed-patches/<agent>.md so
+#                              a human (or `apply-patches.sh`) can review and merge
+#                              them into the installed agent copies
+#                              (self-improvement Layer 2).
 #   --target=both              Run both pipelines.
 #
-#   --legacy                   Append a flat section to .artefacts/SEMANTIC_MEMORY.md
-#                              instead of using the layered memory tree (kept for
-#                              projects that have not migrated yet).
+# Override the artefacts directory with $ARTEFACTS_DIR.
 #
-# Reads all .artefacts/archive/*/LESSONS.md files and uses the Claude CLI.
-# Requires: claude CLI on PATH.
+# Reads all .agentic-kit-artefacts/archive/*/LESSONS.md files and uses the Claude
+# CLI. Requires: claude CLI on PATH.
 # Run from project root.
 
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
 ARCHIVE_DIR="$ARTEFACTS/archive"
 MEM_DIR="$ARTEFACTS/memory"
-LEGACY_MEMORY_FILE="$ARTEFACTS/SEMANTIC_MEMORY.md"
 PATCHES_DIR="$ARTEFACTS/proposed-patches"
 
 TARGET="memory"
-LEGACY=false
 for _arg in "$@"; do
   case "$_arg" in
     --target=*) TARGET="${_arg#--target=}" ;;
-    --legacy)   LEGACY=true ;;
     -h|--help)
       sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
@@ -82,11 +79,6 @@ done
 # Target 1 (default): write schema-compliant entries into today's L2 daily file
 # ---------------------------------------------------------------------------
 distill_to_memory() {
-  if $LEGACY; then
-    distill_to_legacy_memory
-    return
-  fi
-
   # Make sure the memory tree exists; init silently if missing.
   if [ ! -d "$MEM_DIR" ]; then
     if [ -x "$KIT_DIR/tools/memory-init.sh" ]; then
@@ -103,7 +95,7 @@ distill_to_memory() {
 
   existing_context=""
   if [ -f "$ARTEFACTS/MEMORY.md" ]; then
-    existing_context="Current root summary (.artefacts/MEMORY.md) — do NOT duplicate facts already in the high-confidence sections:
+    existing_context="Current root summary ($ARTEFACTS/MEMORY.md) — do NOT duplicate facts already in the high-confidence sections:
 ---
 $(cat "$ARTEFACTS/MEMORY.md")
 ---
@@ -160,55 +152,6 @@ Rules:
   if [ -x "$KIT_DIR/tools/memory-promote.sh" ]; then
     ( cd "$(pwd)" && "$KIT_DIR/tools/memory-promote.sh" ) || true
   fi
-}
-
-# Back-compat: write to flat SEMANTIC_MEMORY.md (deprecated; kept under --legacy)
-distill_to_legacy_memory() {
-  local existing_context=""
-  if [ -f "$LEGACY_MEMORY_FILE" ]; then
-    existing_context="Existing SEMANTIC_MEMORY.md (already distilled — do not duplicate):
----
-$(cat "$LEGACY_MEMORY_FILE")
----
-"
-  fi
-
-  local distill_prompt
-  distill_prompt="You are distilling project-specific lessons from completed feature pipeline runs into a permanent memory file.
-
-Below are LESSONS.md entries from archived features:
-
----
-$(cat "$tmp")
----
-
-${existing_context}Produce a new section to APPEND (not replace) to the existing file.
-
-Rules:
-- Only include lessons not already captured in the existing memory
-- Group by tag: [pattern], [anti-pattern], [decision], [shortcut]
-- Keep each bullet specific and actionable — no vague generalities
-- Do NOT reference scoring, evaluation criteria, or self-improvement metrics
-- Maximum 20 new bullets total; prefer quality over quantity
-- Start with: ## Distilled lessons ($(date +%Y-%m-%d))
-
-Output only the markdown section — no preamble, no explanation."
-
-  echo "(legacy) Distilling to $LEGACY_MEMORY_FILE…"
-  mkdir -p "$ARTEFACTS"
-  local new_section
-  new_section=$(claude -p --allowedTools '' "$distill_prompt" 2>/dev/null || true)
-
-  if [ -z "$new_section" ]; then
-    echo "Distillation returned empty output. No changes to memory."
-    return
-  fi
-
-  {
-    [ -f "$LEGACY_MEMORY_FILE" ] && echo ""
-    printf '%s\n' "$new_section"
-  } >> "$LEGACY_MEMORY_FILE"
-  echo "Appended to $LEGACY_MEMORY_FILE."
 }
 
 # ---------------------------------------------------------------------------

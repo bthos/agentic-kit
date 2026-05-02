@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Top-k retrieval across all memory layers (L1..L4 + legacy SEMANTIC_MEMORY.md).
+# Top-k retrieval across all memory layers (L1..L4).
 #
 # Strategy:
 #   1) If `memory-search.py` exists AND python3 + sklearn are present → delegate
@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
 MEM_DIR="$ARTEFACTS/memory"
 
 QUERY=""
@@ -77,9 +77,6 @@ fi
 if [ -z "$LAYER" ] || [ "$LAYER" = "l1" ]; then
   [ -f "$ARTEFACTS/SESSION-STATE.md" ] && files+=( "$ARTEFACTS/SESSION-STATE.md" )
 fi
-if [ -z "$LAYER" ] || [ "$LAYER" = "legacy" ]; then
-  [ -f "$ARTEFACTS/SEMANTIC_MEMORY.md" ] && files+=( "$ARTEFACTS/SEMANTIC_MEMORY.md" )
-fi
 
 if [ ${#files[@]} -eq 0 ]; then
   echo "(no memory files yet — run \`agentic-kit/tools/memory-init.sh\`)"
@@ -107,7 +104,6 @@ for f in "${files[@]}"; do
     */memory/preferences.md|*/memory/system.md|*/memory/projects.md|*/memory/decisions.md) layer_w=3 ;;
     */memory/[0-9]*.md) layer_w=2 ;;
     *SESSION-STATE.md)  layer_w=2 ;;
-    *SEMANTIC_MEMORY*)  layer_w=1 ;;
     *)                  layer_w=1 ;;
   esac
 

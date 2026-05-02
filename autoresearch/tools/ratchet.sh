@@ -8,8 +8,8 @@
 
 set -euo pipefail
 
-# shellcheck source=../../lib.sh
-source "$(cd "$(dirname "$0")/../.." && pwd)/lib.sh"
+# shellcheck source=../../tools/lib.sh
+source "$(cd "$(dirname "$0")/../.." && pwd)/tools/lib.sh"
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROGRAM="$KIT_DIR/program.md"
@@ -128,9 +128,10 @@ if awk -v a="$comp_prop" -v b="$comp_base" 'BEGIN{exit !(a >= b)}'; then
   MEM_ROOT="$(cd "$KIT_DIR/.." && pwd)"
   MEM_PROMOTE="$MEM_ROOT/tools/memory-promote.sh"
   PROJECT_ROOT="$(pwd)"
+  ARTEFACTS_DIR_LOCAL="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
   TODAY=$(date +%Y-%m-%d)
-  DAILY="$PROJECT_ROOT/.artefacts/memory/$TODAY.md"
-  if [ -d "$PROJECT_ROOT/.artefacts/memory" ]; then
+  DAILY="$PROJECT_ROOT/$ARTEFACTS_DIR_LOCAL/memory/$TODAY.md"
+  if [ -d "$PROJECT_ROOT/$ARTEFACTS_DIR_LOCAL/memory" ]; then
     [ -f "$DAILY" ] || printf '# Daily memory — %s (L2)\n\n## Observations\n' "$TODAY" > "$DAILY"
     {
       echo ""
@@ -145,7 +146,7 @@ if awk -v a="$comp_prop" -v b="$comp_base" 'BEGIN{exit !(a >= b)}'; then
         "$target" "$comp_base" "$comp_prop" "$delta"
     } >> "$DAILY"
     if [ -x "$MEM_PROMOTE" ]; then
-      ( cd "$PROJECT_ROOT" && "$MEM_PROMOTE" >/dev/null ) || true
+      ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_DIR_LOCAL" "$MEM_PROMOTE" >/dev/null ) || true
     fi
   fi
 else

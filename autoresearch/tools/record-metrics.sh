@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Append a row to .artefacts/features/<feature>/metrics.jsonl AND to
+# Append a row to <feature>/metrics.jsonl AND to
 # agentic-kit/autoresearch/runs/cost.jsonl (so Veles has fleet-wide history).
 #
 # Usage:
 #   record-metrics.sh \
-#     --feature .artefacts/features/2026-04-30-foo \
+#     --feature .agentic-kit-artefacts/features/2026-04-30-foo \
 #     --agent cmok \
 #     --tokens 18432 \
 #     --wall-ms 91500 \

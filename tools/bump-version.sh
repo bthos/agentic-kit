@@ -13,7 +13,7 @@ if [[ "$TYPE" != "patch" && "$TYPE" != "minor" ]]; then
   exit 1
 fi
 
-PROJECT_MD="${PROJECT_MD:-PROJECT.md}"
+PROJECT_MD="${PROJECT_MD:-.agentic-kit-artefacts/PROJECT.md}"
 if [ ! -f "$PROJECT_MD" ]; then
   echo "Error: $PROJECT_MD not found. Run from project root." >&2
   exit 1
@@ -87,6 +87,16 @@ bump_toml_file() {
 
   if [ -z "$current" ]; then
     echo "  SKIP $file — no version field found"
+    return
+  fi
+
+  if [[ ! "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "  SKIP $file — version '$current' is not valid semver (X.Y.Z, integers only)"
+    return
+  fi
+
+  if [[ ! "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "  SKIP $file — version '$current' is not valid semver (X.Y.Z, integers only)"
     return
   fi
 

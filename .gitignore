@@ -1,3 +1,4 @@
+.agentic-kit-artefacts/
 .artefacts/
 .specstory/
 .DS_Store
@@ -9,9 +10,14 @@
 .github/
 .vscode/
 
+# Kit install state (legacy: dropped at repo root by old releases — safe to ignore)
+.agentic-kit.cfg
+.agentic-kit.files
+
+# Defensive: when this repo is exercised standalone (init.sh resolves
+# PROJECT_ROOT to the kit's parent, but tooling that runs from inside the kit
+# dir during development sometimes drops these here).
 AGENTS.md
 CLAUDE.md
 PROJECT.md
-
-# Kit install manifest (SHA-256 per managed path; local to each checkout)
-.agentic-kit.files
+PIPELINE.md

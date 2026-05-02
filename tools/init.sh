@@ -1,10 +1,32 @@
 #!/usr/bin/env bash
 # Run from the target project root after adding the submodule.
-# Usage: agentic-kit/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive] [--ide=claude|cursor|github|all]
+# Usage: agentic-kit/tools/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive] [--ide=claude|cursor|github|all]
 # Env: IDE_CHOICE=claude|cursor|github|all (same as --ide, for non-interactive)
 #
-# Creates copies into .claude/ / .cursor/ with hashes recorded in .agentic-kit.files,
-# copies PIPELINE.md.template → CLAUDE.md and/or AGENTS.md, PROJECT.md template.
+# What this script does (minimally invasive by design):
+#
+#   1.  Creates `.agentic-kit-artefacts/` and copies the canonical pipeline doc
+#       and project config there:
+#         .agentic-kit-artefacts/PIPELINE.md   (kit-managed; refreshed on update)
+#         .agentic-kit-artefacts/PROJECT.md    (you edit; kept on update)
+#
+#   2.  Installs the per-IDE machinery (skills + agents) into `.claude/`,
+#       `.cursor/`, and/or `.github/`. SHA-256 of every installed file is
+#       recorded in `.agentic-kit-artefacts/.agentic-kit.files` so teardown.sh refuses to delete
+#       paths you have edited locally.
+#
+#   3.  Adds a small marker block to (or creates) the IDE entry-point file:
+#         CLAUDE.md, AGENTS.md, .github/copilot-instructions.md
+#       Block delimiters: <!-- agentic-kit:start --> ... <!-- agentic-kit:end -->
+#       The block points at .agentic-kit-artefacts/PIPELINE.md. Existing user
+#       content above/below the markers is preserved verbatim. We never rename
+#       or overwrite PIPELINE.md as CLAUDE.md/AGENTS.md again.
+#
+#   4.  Adds a managed block to .gitignore for ephemeral state under
+#         .agentic-kit-artefacts/{memory,features,archive,…} plus
+#         .agentic-kit-artefacts/.agentic-kit.cfg and .agentic-kit-artefacts/.agentic-kit.files
+#       PIPELINE.md and PROJECT.md inside .agentic-kit-artefacts/ are NOT
+#       ignored — your team should commit them.
 #
 # Flags:
 #   --force, --overwrite-all   Overwrite all existing kit-managed paths without prompting
@@ -12,19 +34,29 @@
 #   --non-interactive, -n      Agent / CI mode: no prompts, skip existing files, emit
 #                              [AGENT ACTION REQUIRED] instruction to fill PROJECT.md
 #                              (aliases: --yes, -y)
-#   --ide=X                    Target IDE: claude (default), cursor, or both
+#   --ide=X                    Target IDE: claude (default), cursor, github, or all
 #
-# Interactive conflict prompt: [s]kip this  [o]verwrite this  overwrite [a]ll  skip [r]est (this + all later conflicts)
+# Interactive conflict prompt: [s]kip this  [o]verwrite this  overwrite [a]ll  skip [r]est
 #
 # Agent invocation examples:
-#   agentic-kit/init.sh --non-interactive                      # claude (default)
-#   agentic-kit/init.sh --non-interactive --ide=cursor
-#   agentic-kit/init.sh --non-interactive --ide=both
+#   agentic-kit/tools/init.sh --non-interactive                      # claude (default)
+#   agentic-kit/tools/init.sh --non-interactive --ide=cursor
+#   agentic-kit/tools/init.sh --non-interactive --ide=both
 
 set -euo pipefail
 
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+
+kit_migrate_legacy_root_state
+
+# Canonical project-local locations (after migration from .artefacts/)
+PIPELINE_REL="$ARTEFACTS_DIR_NAME/PIPELINE.md"
+PROJECT_REL="$ARTEFACTS_DIR_NAME/PROJECT.md"
+PIPELINE_TARGET="$PROJECT_ROOT/$PIPELINE_REL"
+PROJECT_TARGET="$PROJECT_ROOT/$PROJECT_REL"
+PIPELINE_TEMPLATE="$SCRIPT_DIR/templates/PIPELINE.md.template"
+PROJECT_TEMPLATE="$SCRIPT_DIR/templates/PROJECT.md.template"
 
 # ---------------------------------------------------------------------------
 # Help
@@ -38,15 +70,31 @@ show_help() {
   Run from the project root (the directory that contains agentic-kit/).
 
   USAGE
-    agentic-kit/init.sh [OPTIONS]
+    agentic-kit/tools/init.sh [OPTIONS]
+
+  WHAT GETS WRITTEN
+    .agentic-kit-artefacts/PIPELINE.md       canonical pipeline (kit-managed)
+    .agentic-kit-artefacts/PROJECT.md        project-specific config (you edit)
+    .agentic-kit-artefacts/{memory,features,archive,…}
+                                             runtime state (gitignored)
+    .agentic-kit-artefacts/.agentic-kit.cfg   saved IDE + pipeline SHA (gitignored)
+    .agentic-kit-artefacts/.agentic-kit.files kit install manifest (gitignored)
+
+    .claude/  .cursor/  .github/             one folder per IDE you target
+    CLAUDE.md / AGENTS.md / copilot-instructions.md
+                                             tiny include block pointing at
+                                             .agentic-kit-artefacts/PIPELINE.md
+                                             (existing user content preserved)
+    .gitignore                               managed block for ephemeral state
 
   OPTIONS
     --ide=<target>          Which IDE to configure (default: claude)
-                              claude   — Claude Code (.claude/ copies, CLAUDE.md)
-                              cursor   — Cursor (.cursor/skills/ copies, .cursor/agents/*.md subagents, AGENTS.md)
+                              claude   — Claude Code (.claude/ copies, CLAUDE.md include block)
+                              cursor   — Cursor (.cursor/skills/ copies, .cursor/agents/*.md subagents,
+                                         AGENTS.md include block)
                               github   — GitHub Copilot (.github/agents/*.agent.md,
                                          .github/instructions/*.instructions.md,
-                                         .github/copilot-instructions.md)
+                                         .github/copilot-instructions.md include block)
                               all      — all three  (alias: both)
                             Env var: IDE_CHOICE=claude|cursor|github|all
 
@@ -63,8 +111,9 @@ show_help() {
 
     --tune                  After install, probe the project (stack, frameworks,
                             test/build commands, conventions) and write
-                            .artefacts/PROJECT_PROFILE.md so agents can self-tune.
-                            Calls `agentic-kit/tools/probe-project.sh --force`.
+                            .agentic-kit-artefacts/PROJECT_PROFILE.md so agents
+                            can self-tune. Calls
+                            `agentic-kit/tools/probe-project.sh --force`.
     --no-tune               Skip the probe step (default).
 
     --help, -h              Show this help and exit
@@ -77,21 +126,21 @@ show_help() {
       r  skip rest (this file and every later conflict)
 
   AGENT INVOCATION
-    agentic-kit/init.sh --non-interactive --ide=claude
-    agentic-kit/init.sh --non-interactive --ide=cursor
-    agentic-kit/init.sh --non-interactive --ide=github
-    agentic-kit/init.sh --non-interactive --ide=all
+    agentic-kit/tools/init.sh --non-interactive --ide=claude
+    agentic-kit/tools/init.sh --non-interactive --ide=cursor
+    agentic-kit/tools/init.sh --non-interactive --ide=github
+    agentic-kit/tools/init.sh --non-interactive --ide=all
 
     After the script exits, read the [AGENT ACTION REQUIRED] block in the output
-    and fill in PROJECT.md yourself (inspect package.json, pyproject.toml,
-    Cargo.toml, go.mod, Makefile, etc.), then run:
+    and fill in .agentic-kit-artefacts/PROJECT.md yourself (inspect package.json,
+    pyproject.toml, Cargo.toml, go.mod, Makefile, etc.), then run:
       agentic-kit/tools/validate-config.sh
 
   EXAMPLES
-    agentic-kit/init.sh                          # interactive
-    agentic-kit/init.sh --ide=github             # interactive, GitHub Copilot mode
-    agentic-kit/init.sh --non-interactive --ide=github
-    IDE_CHOICE=all agentic-kit/init.sh --skip
+    agentic-kit/tools/init.sh                          # interactive
+    agentic-kit/tools/init.sh --ide=github             # interactive, GitHub Copilot mode
+    agentic-kit/tools/init.sh --non-interactive --ide=github
+    IDE_CHOICE=all agentic-kit/tools/init.sh --skip
 
 EOF
 }
@@ -148,7 +197,7 @@ fi
 if $NON_INTERACTIVE && [ -z "$MODE" ]; then MODE="skip"; fi
 
 if [ -n "$IDE_CHOICE" ] && [[ ! "$IDE_CHOICE" =~ ^(claude|cursor|github|both|all)$ ]]; then
-  err "Invalid --ide value '$IDE_CHOICE' (use claude, cursor, github, or all)"
+  err "Invalid --ide value '$IDE_CHOICE' (use claude, cursor, github, all, or both)"
   exit 1
 fi
 # Normalise alias
@@ -169,7 +218,7 @@ should_overwrite() {
   ask_conflict "$label"
 }
 
-# Copy kit file into project; record SHA-256 in .agentic-kit.files for teardown.
+# Copy kit file into project; record SHA-256 in .agentic-kit-artefacts/.agentic-kit.files for teardown.
 # Usage: install_kit_copy_file <label> <rel_path> <src_file_abs>
 install_kit_copy_file() {
   local label="$1" rel_path="$2" src_file="$3"
@@ -400,48 +449,6 @@ write_cursor_subagent() {
   } > "$dest"
 }
 
-# Write kit-managed file: skip if exists without marker; prompt if kit-managed; create or overwrite.
-# Records SHA-256 in .agentic-kit.files after a successful write.
-# Usage: write_if_kit_managed <human_label> <dest_path> <write_fn> [args to write_fn...]
-# write_fn receives dest as last argument (caller passes dest twice: once as $2, once as arg to fn)
-write_if_kit_managed() {
-  local label="$1" dest="$2" writer="$3" rel
-  shift 3
-  rel="${dest#"$PROJECT_ROOT"/}"
-  rel="${rel//\\//}"
-  if [ -f "$dest" ]; then
-    if ! grep -qF "$AGENTIC_MARKER" "$dest" 2>/dev/null; then
-      case "$label" in
-        AGENTS.md) skip "$label (not kit-managed — merge manually)" ;;
-        *)         skip "$label (not kit-managed)" ;;
-      esac
-      return 1
-    fi
-    if should_overwrite "$label"; then
-      "$writer" "$@"
-      manifest_set_hash "$rel" "$(kit_sha256_file "$dest")"
-      success "$label (overwritten)"
-      return 0
-    fi
-    manifest_set_hash "$rel" "$(kit_sha256_file "$dest")"
-    info "$label (unchanged — manifest synced)"
-    return 1
-  fi
-  "$writer" "$@"
-  manifest_set_hash "$rel" "$(kit_sha256_file "$dest")"
-  success "$label"
-  return 0
-}
-
-write_agents_md_body() {
-  local dest="$1"
-  {
-    printf '%s\n' "$AGENTIC_MARKER"
-    printf '\n'
-    cat "$SCRIPT_DIR/PIPELINE.md.template"
-  } > "$dest"
-}
-
 install_or_update_cursor_subagent_file() {
   local src="$1"
   local stem dest rel_label
@@ -478,7 +485,50 @@ generate_cursor_subagents_from_sources() {
   done
 }
 
-# Cursor Agent Skills: one folder per skill with SKILL.md (see https://cursor.com/docs/context/skills).
+# ---------------------------------------------------------------------------
+# Managed include block — entry-point file (CLAUDE.md / AGENTS.md / copilot-instructions.md)
+#
+# Behaviour matrix:
+#   file missing                → write a small stub with the include block
+#   file present, block missing → append the block (existing content kept)
+#   file present, block present → leave as-is unless --force, then refresh block
+# ---------------------------------------------------------------------------
+install_pipeline_include() {
+  local label="$1" dest_rel="$2" ide_label="$3"
+  local dest="$PROJECT_ROOT/$dest_rel"
+  local block_sha
+
+  if [ -f "$dest" ]; then
+    if agentic_block_present "$dest"; then
+      if should_overwrite "$label"; then
+        agentic_block_strip "$dest" >/dev/null 2>&1 || true
+        agentic_block_append "$dest" "$PIPELINE_REL" "$ide_label"
+        block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL" "$ide_label")")
+        manifest_set_hash "$dest_rel" "block:$block_sha"
+        success "$label (block refreshed)"
+      else
+        block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL" "$ide_label")")
+        manifest_set_hash "$dest_rel" "block:$block_sha"
+        info "$label (block already present — manifest synced)"
+      fi
+    else
+      agentic_block_append "$dest" "$PIPELINE_REL" "$ide_label"
+      block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL" "$ide_label")")
+      manifest_set_hash "$dest_rel" "block:$block_sha"
+      success "$label (block appended; existing content preserved)"
+    fi
+    return 0
+  fi
+
+  agentic_block_write_stub "$dest" "$PIPELINE_REL" "$ide_label"
+  block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL" "$ide_label")")
+  manifest_set_hash "$dest_rel" "stub:$(kit_sha256_file "$dest")"
+  success "$label (created with include block)"
+}
+
+# ---------------------------------------------------------------------------
+# Cursor Agent Skills: one folder per skill with SKILL.md
+# ---------------------------------------------------------------------------
 link_cursor_skills() {
   header "Cursor — Skills (.cursor/skills/)"
 
@@ -515,12 +565,9 @@ setup_cursor_subagents() {
   generate_cursor_subagents_from_sources
 }
 
-setup_agents_md() {
-  header "AGENTS.md (Cursor / cross-tool)"
-  local dest="$PROJECT_ROOT/AGENTS.md"
-  write_if_kit_managed "AGENTS.md" "$dest" write_agents_md_body "$dest"
-}
-
+# ---------------------------------------------------------------------------
+# Per-IDE setups (each calls install_pipeline_include for its entry-point file)
+# ---------------------------------------------------------------------------
 setup_claude() {
   header "Claude Code — Agents"
 
@@ -534,16 +581,8 @@ setup_claude() {
 
   link_claude_skills
 
-  header "Claude Code — CLAUDE.md"
-  if [ -f "$PROJECT_ROOT/CLAUDE.md" ]; then
-    if should_overwrite "CLAUDE.md"; then
-      cp "$SCRIPT_DIR/PIPELINE.md.template" "$PROJECT_ROOT/CLAUDE.md"
-      success "CLAUDE.md (overwritten from template)"
-    fi
-  else
-    cp "$SCRIPT_DIR/PIPELINE.md.template" "$PROJECT_ROOT/CLAUDE.md"
-    success "CLAUDE.md"
-  fi
+  header "Claude Code — CLAUDE.md (managed include block)"
+  install_pipeline_include "CLAUDE.md" "CLAUDE.md" "Claude Code"
 }
 
 setup_cursor() {
@@ -554,7 +593,9 @@ setup_cursor() {
   fi
   link_cursor_skills
   setup_cursor_subagents
-  setup_agents_md
+
+  header "AGENTS.md (managed include block)"
+  install_pipeline_include "AGENTS.md" "AGENTS.md" "Cursor"
 }
 
 # ---------------------------------------------------------------------------
@@ -665,38 +706,86 @@ setup_github() {
     fi
   done
 
-  # .github/copilot-instructions.md (global always-on instructions)
-  header "GitHub Copilot — copilot-instructions.md"
-  local ci_dest="$PROJECT_ROOT/.github/copilot-instructions.md"
-  local ci_body
-  ci_body=$(grep -v '^@PROJECT.md$' "$SCRIPT_DIR/PIPELINE.md.template")
-  if [ -f "$ci_dest" ]; then
-    if ! grep -qF "$AGENTIC_MARKER" "$ci_dest" 2>/dev/null; then
-      skip ".github/copilot-instructions.md (not kit-managed — merge manually)"
-    elif should_overwrite ".github/copilot-instructions.md"; then
-      { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } >"$ci_dest"
-      manifest_set_hash ".github/copilot-instructions.md" "$(kit_sha256_file "$ci_dest")"
-      success ".github/copilot-instructions.md (overwritten)"
+  header "GitHub Copilot — copilot-instructions.md (managed include block)"
+  mkdir -p "$PROJECT_ROOT/.github"
+  install_pipeline_include ".github/copilot-instructions.md" ".github/copilot-instructions.md" "GitHub Copilot"
+}
+
+# ---------------------------------------------------------------------------
+# .agentic-kit-artefacts/ (canonical home for PIPELINE.md and PROJECT.md)
+# ---------------------------------------------------------------------------
+setup_artefacts_dir() {
+  header "$ARTEFACTS_DIR_NAME/ (pipeline + project config)"
+  mkdir -p "$ARTEFACTS_DIR"
+
+  # PIPELINE.md — kit-managed copy of the template, refreshed on update.
+  install_kit_copy_file "$PIPELINE_REL" "$PIPELINE_REL" "$PIPELINE_TEMPLATE" || true
+
+  # PROJECT.md — copied once from the template; user edits and we keep their copy.
+  # We track it in the manifest only when the bytes still match the template (so
+  # teardown can clean up an unedited copy automatically).
+  if [ -f "$PROJECT_TARGET" ]; then
+    if should_overwrite "$PROJECT_REL"; then
+      cp "$PROJECT_TEMPLATE" "$PROJECT_TARGET"
+      manifest_set_hash "$PROJECT_REL" "$(kit_sha256_file "$PROJECT_TARGET")"
+      success "$PROJECT_REL (overwritten from template)"
+      FRESH_PROJECT_MD=true
     else
-      manifest_set_hash ".github/copilot-instructions.md" "$(kit_sha256_file "$ci_dest")"
-      info ".github/copilot-instructions.md (unchanged — manifest synced)"
+      info "$PROJECT_REL (kept — your edits preserved)"
     fi
   else
-    mkdir -p "$PROJECT_ROOT/.github"
-    { echo "$AGENTIC_MARKER"; echo ""; printf '%s\n' "$ci_body"; } >"$ci_dest"
-    manifest_set_hash ".github/copilot-instructions.md" "$(kit_sha256_file "$ci_dest")"
-    success ".github/copilot-instructions.md"
+    cp "$PROJECT_TEMPLATE" "$PROJECT_TARGET"
+    manifest_set_hash "$PROJECT_REL" "$(kit_sha256_file "$PROJECT_TARGET")"
+    success "$PROJECT_REL"
+    FRESH_PROJECT_MD=true
   fi
 }
 
 # ---------------------------------------------------------------------------
-# IDE choice
+# .gitignore (managed block at the end of the file — never touches user entries)
+# ---------------------------------------------------------------------------
+setup_gitignore() {
+  header ".gitignore (managed block)"
+  local file="$PROJECT_ROOT/.gitignore"
+  local action="appended"
+
+  if [ -f "$file" ] && agentic_gitignore_present "$file"; then
+    if should_overwrite ".gitignore (managed block)"; then
+      agentic_gitignore_strip "$file" >/dev/null 2>&1 || true
+      action="refreshed"
+    else
+      info ".gitignore (managed block already present)"
+      manifest_set_hash ".gitignore" "block:$(kit_sha256_string "$(agentic_gitignore_render)")"
+      return 0
+    fi
+  elif [ ! -f "$file" ]; then
+    action="created"
+  fi
+
+  if [ -s "$file" ]; then
+    local last_byte
+    last_byte=$(tail -c1 "$file" 2>/dev/null || true)
+    [ "$last_byte" != $'\n' ] && printf '\n' >> "$file"
+    printf '\n' >> "$file"
+  fi
+  agentic_gitignore_render >> "$file"
+  manifest_set_hash ".gitignore" "block:$(kit_sha256_string "$(agentic_gitignore_render)")"
+  case "$action" in
+    refreshed) success ".gitignore (managed block refreshed)" ;;
+    created)   success ".gitignore (created with managed block)" ;;
+    *)         success ".gitignore (managed block appended)" ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
+# Header
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
 printf "${BOLD}${CYAN}  │       agentic-kit           │${RESET}\n"
 printf "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
 info "project root: $PROJECT_ROOT"
 info "kit location: $SUBMODULE_DIR/"
+info "artefacts:    $ARTEFACTS_DIR_NAME/  (pipeline doc, project config, memory, features)"
 
 if [ -z "$IDE_CHOICE" ]; then
   if [ -t 0 ] && [ -t 1 ]; then
@@ -723,13 +812,14 @@ if [ -f "$_cfg_file" ]; then
   if [ -n "$_saved_sha" ]; then
     _current_sha=""
     if command -v sha256sum &>/dev/null; then
-      _current_sha=$(sha256sum "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+      _current_sha=$(sha256sum "$PIPELINE_TEMPLATE" | awk '{print $1}')
     elif command -v shasum &>/dev/null; then
-      _current_sha=$(shasum -a 256 "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+      _current_sha=$(shasum -a 256 "$PIPELINE_TEMPLATE" | awk '{print $1}')
     fi
     if [ -n "$_current_sha" ] && [ "$_current_sha" != "$_saved_sha" ]; then
       warn "PIPELINE.md.template has changed since last init."
-      info "Review: diff $PROJECT_ROOT/CLAUDE.md $SCRIPT_DIR/PIPELINE.md.template"
+      info "Review:  diff $PIPELINE_TARGET $PIPELINE_TEMPLATE"
+      info "Refresh: $SUBMODULE_DIR/tools/init.sh --force"
     fi
   fi
 fi
@@ -737,6 +827,11 @@ fi
 # ---------------------------------------------------------------------------
 # Run setups
 # ---------------------------------------------------------------------------
+FRESH_PROJECT_MD=false
+
+# Always set up the artefacts dir first — it is referenced by every IDE entry-point.
+setup_artefacts_dir
+
 case "$IDE_CHOICE" in
   claude)
     setup_claude
@@ -758,28 +853,15 @@ case "$IDE_CHOICE" in
     ;;
 esac
 
+setup_gitignore
+
 # ---------------------------------------------------------------------------
-# PROJECT.md (shared)
+# PROJECT.md autofill (CLI nudge or [AGENT ACTION REQUIRED] hint)
 # ---------------------------------------------------------------------------
-header "PROJECT.md"
+if [ "$FRESH_PROJECT_MD" = true ]; then
+  header "$PROJECT_REL — fill in project-specific config"
 
-fresh_project_md_from_template=false
-
-if [ -f "$PROJECT_ROOT/PROJECT.md" ]; then
-  if should_overwrite "PROJECT.md"; then
-    cp "$SCRIPT_DIR/PROJECT.md.template" "$PROJECT_ROOT/PROJECT.md"
-    success "PROJECT.md (overwritten from template)"
-    fresh_project_md_from_template=true
-  fi
-else
-  cp "$SCRIPT_DIR/PROJECT.md.template" "$PROJECT_ROOT/PROJECT.md"
-  success "PROJECT.md"
-  fresh_project_md_from_template=true
-fi
-
-if [ "$fresh_project_md_from_template" = true ]; then
-  # Optional AI fill: Claude Code CLI vs Cursor Agent CLI — see https://cursor.com/docs/cli/installation
-  project_md_fill_prompt="Inspect this project's files (e.g. package.json, pyproject.toml, Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build command, and any version files. Then fill in all the placeholder values in PROJECT.md and write the completed file. Only ask me if you genuinely cannot determine a value."
+  project_md_fill_prompt="Inspect this project's files (e.g. package.json, pyproject.toml, Makefile, Cargo.toml, go.mod — whatever exists) to infer the test command, build command, and any version files. Then fill in all the placeholder values in $PROJECT_REL and write the completed file. Only ask me if you genuinely cannot determine a value."
 
   # On Windows, the Cursor Agent CLI is installed on the Windows PATH but Git Bash / MSYS2 inherit
   # their own PATH subset.  Fall back to PowerShell to resolve the real exe path.
@@ -812,8 +894,6 @@ if [ "$fresh_project_md_from_template" = true ]; then
       fi
       ;;
     cursor)
-      # Use the Cursor Agent CLI (`agent` from https://cursor.com/install), not the desktop `cursor`
-      # launcher — that binary is Electron/Chromium and treats unknown flags like -p as Chromium args.
       AGENT_BIN=$(find_agent_bin 2>/dev/null) || AGENT_BIN=""
       if [ -n "$AGENT_BIN" ]; then
         fill_cli="agent"
@@ -821,7 +901,6 @@ if [ "$fresh_project_md_from_template" = true ]; then
       fi
       ;;
     github|all)
-      # For github/all: prefer claude CLI, then cursor agent CLI
       if command -v claude &>/dev/null; then
         fill_cli="claude"
         fill_label="Claude"
@@ -838,23 +917,22 @@ if [ "$fresh_project_md_from_template" = true ]; then
   if $NON_INTERACTIVE; then
     # Agent / CI mode: do NOT spawn a nested agent process — the agent that invoked this
     # script should fill PROJECT.md itself using its own tools after init completes.
-    printf "\n${BOLD}  [AGENT ACTION REQUIRED]${RESET} Fill in PROJECT.md\n"
+    printf "\n${BOLD}  [AGENT ACTION REQUIRED]${RESET} Fill in $PROJECT_REL\n"
     printf "  Inspect the project files (package.json, pyproject.toml, Cargo.toml, go.mod,\n"
     printf "  Makefile, etc.) to infer the test command, build command, and version files.\n"
-    printf "  Replace every <placeholder> in PROJECT.md with the correct value.\n"
+    printf "  Replace every <placeholder> in $PROJECT_REL with the correct value.\n"
     printf "  Then run: ${SUBMODULE_DIR}/tools/validate-config.sh\n\n"
   else
     run_fill=false
     if [ -n "$fill_cli" ]; then
       if [ -t 0 ]; then
         printf '\n'
-        printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] "
+        printf "  Fill in ${BOLD}$PROJECT_REL${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] "
         read -r yn; yn="${yn:-Y}"
         [[ "$yn" =~ ^[Yy]$ ]] && run_fill=true
       elif { : >/dev/tty; } 2>/dev/null; then
-        # Require a writable /dev/tty; -r alone can pass on Git Bash while redirects fail.
         printf '\n'
-        printf "  Fill in ${BOLD}PROJECT.md${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] " > /dev/tty
+        printf "  Fill in ${BOLD}$PROJECT_REL${RESET} automatically using ${fill_label}? [${BOLD}Y${RESET}/n] " > /dev/tty
         read -r yn < /dev/tty; yn="${yn:-Y}"
         [[ "$yn" =~ ^[Yy]$ ]] && run_fill=true
       fi
@@ -870,40 +948,40 @@ if [ "$fresh_project_md_from_template" = true ]; then
           ( cd "$PROJECT_ROOT" && "$AGENT_BIN" -p --force "$project_md_fill_prompt" )
           ;;
       esac
-      success "PROJECT.md filled in"
+      success "$PROJECT_REL filled in"
       info "Run ${SUBMODULE_DIR}/tools/validate-config.sh to verify."
     else
       if [ -n "$fill_cli" ] && [ ! -t 0 ]; then
-        info "PROJECT.md auto-fill skipped (no TTY). Pass --non-interactive for agent/CI mode, or edit PROJECT.md manually."
+        info "$PROJECT_REL auto-fill skipped (no TTY). Pass --non-interactive for agent/CI mode, or edit it manually."
       fi
       if [ -z "$fill_cli" ]; then
         case "$IDE_CHOICE" in
           claude)
-            info "Claude CLI (\`claude\`) not on PATH — install Claude Code or fill PROJECT.md manually."
+            info "Claude CLI (\`claude\`) not on PATH — install Claude Code or fill $PROJECT_REL manually."
             ;;
           cursor)
             info "Cursor Agent CLI (\`agent\`) not on PATH — https://cursor.com/docs/cli/installation"
             info "(the desktop \`cursor\` launcher is Electron — not the same binary)."
             ;;
           github|all)
-            info "Neither \`claude\` nor \`agent\` (Cursor Agent CLI) on PATH — install one or fill PROJECT.md manually."
+            info "Neither \`claude\` nor \`agent\` (Cursor Agent CLI) on PATH — install one or fill $PROJECT_REL manually."
             ;;
         esac
       fi
-      info "Edit PROJECT.md → Project-Specific Configuration, then run:"
+      info "Edit $PROJECT_REL → Project-Specific Configuration, then run:"
       info "${SUBMODULE_DIR}/tools/validate-config.sh"
     fi
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# Write .agentic-kit.cfg (persist IDE choice + template sha for drift detection)
+# Write .agentic-kit-artefacts/.agentic-kit.cfg (persist IDE choice + template sha for drift detection)
 # ---------------------------------------------------------------------------
 _pipeline_sha=""
 if command -v sha256sum &>/dev/null; then
-  _pipeline_sha=$(sha256sum "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+  _pipeline_sha=$(sha256sum "$PIPELINE_TEMPLATE" | awk '{print $1}')
 elif command -v shasum &>/dev/null; then
-  _pipeline_sha=$(shasum -a 256 "$SCRIPT_DIR/PIPELINE.md.template" | awk '{print $1}')
+  _pipeline_sha=$(shasum -a 256 "$PIPELINE_TEMPLATE" | awk '{print $1}')
 fi
 _kit_version=""
 _kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || true)
@@ -912,18 +990,21 @@ _kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || tru
   printf 'INIT_DATE=%s\n' "$(date +%Y-%m-%d)"
   printf 'KIT_VERSION=%s\n' "$_kit_version"
   printf 'PIPELINE_SHA=%s\n' "$_pipeline_sha"
-} > "$PROJECT_ROOT/.agentic-kit.cfg"
+  printf 'ARTEFACTS_DIR=%s\n' "$ARTEFACTS_DIR_NAME"
+} > "$KIT_CFG"
 
 # ---------------------------------------------------------------------------
-# Project probe (--tune): write .artefacts/PROJECT_PROFILE.md so agents self-tune
+# Project probe (--tune): write .agentic-kit-artefacts/PROJECT_PROFILE.md so agents self-tune
 # ---------------------------------------------------------------------------
 if $TUNE; then
   _probe="$SCRIPT_DIR/tools/probe-project.sh"
   if [ -x "$_probe" ]; then
-    info "Probing project to write .artefacts/PROJECT_PROFILE.md (--tune)…"
+    info "Probing project to write $ARTEFACTS_DIR_NAME/PROJECT_PROFILE.md (--tune)…"
     _probe_args=( "--force" )
     if $NON_INTERACTIVE; then _probe_args+=( "--quick" ); fi
-    ( cd "$PROJECT_ROOT" && "$_probe" "${_probe_args[@]}" ) || true
+    if ! ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_DIR_NAME" "$_probe" "${_probe_args[@]}" ); then
+      warn "probe-project.sh exited non-zero — PROJECT_PROFILE.md may be incomplete or missing."
+    fi
   else
     info "probe-project.sh not found at $_probe — skipping --tune."
   fi
@@ -934,19 +1015,35 @@ fi
 # ---------------------------------------------------------------------------
 _mem_init="$SCRIPT_DIR/tools/memory-init.sh"
 if [ -x "$_mem_init" ]; then
-  info "Initialising layered memory tree at .artefacts/memory/…"
-  _mem_args=()
-  if [ -f "$PROJECT_ROOT/.artefacts/SEMANTIC_MEMORY.md" ]; then
-    _mem_args+=( "--migrate" )
+  info "Initialising layered memory tree at $ARTEFACTS_DIR_NAME/memory/…"
+  if ! ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_DIR_NAME" "$_mem_init" ); then
+    warn "memory-init.sh exited non-zero — memory tree may be missing files. Re-run: $SUBMODULE_DIR/tools/memory-init.sh"
   fi
-  ( cd "$PROJECT_ROOT" && "$_mem_init" "${_mem_args[@]}" ) || true
 fi
 
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${GREEN}  ✓ Done.${RESET}\n\n"
-printf "  ${BOLD}Next steps${RESET}\n"
+printf "  ${BOLD}Layout${RESET}\n"
+printf "  ${DIM}%-38s${RESET} %s\n" "Pipeline doc:"      "${CYAN}$PIPELINE_REL${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Project config:"    "${CYAN}$PROJECT_REL${RESET}"
+case "$IDE_CHOICE" in
+  claude)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Entry point:" "${CYAN}CLAUDE.md${RESET} (managed include block)"
+    ;;
+  cursor)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Entry point:" "${CYAN}AGENTS.md${RESET} (managed include block)"
+    ;;
+  github)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Entry point:" "${CYAN}.github/copilot-instructions.md${RESET} (managed include block)"
+    ;;
+  all)
+    printf "  ${DIM}%-38s${RESET} %s\n" "Entry points:" "${CYAN}CLAUDE.md, AGENTS.md, .github/copilot-instructions.md${RESET}"
+    ;;
+esac
+
+printf "\n  ${BOLD}Next steps${RESET}\n"
 case "$IDE_CHOICE" in
   claude)
     printf "  ${DIM}%-38s${RESET} %s\n" "Start a feature:" "${CYAN}/vadavik${RESET}"
@@ -956,18 +1053,22 @@ case "$IDE_CHOICE" in
   cursor)
     printf "  ${DIM}%-38s${RESET} %s\n" "Skills installed:" "${CYAN}.cursor/skills/${RESET}"
     printf "  ${DIM}%-38s${RESET} %s\n" "Subagents installed:" "${CYAN}.cursor/agents/${RESET}"
-    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/tools/update.sh${RESET}"
     ;;
   github)
     printf "  ${DIM}%-38s${RESET} %s\n" "Agents installed:" "${CYAN}.github/agents/${RESET}"
     printf "  ${DIM}%-38s${RESET} %s\n" "Instructions installed:" "${CYAN}.github/instructions/${RESET}"
-    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/tools/update.sh${RESET}"
     ;;
   all)
     printf "  ${DIM}%-38s${RESET} %s\n" "Claude Code — start a feature:" "${CYAN}/vadavik${RESET}"
     printf "  ${DIM}%-38s${RESET} %s\n" "Cursor subagents:" "${CYAN}.cursor/agents/${RESET}"
     printf "  ${DIM}%-38s${RESET} %s\n" "Copilot agents:" "${CYAN}.github/agents/${RESET}"
-    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/update.sh${RESET}"
+    printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/tools/update.sh${RESET}"
     ;;
 esac
+
+printf "\n  ${BOLD}Removal${RESET}\n"
+printf "  ${DIM}%-38s${RESET} %s\n" "Strip kit:" "${CYAN}${SUBMODULE_DIR}/tools/teardown.sh${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Strip kit + remove submodule:" "${CYAN}${SUBMODULE_DIR}/tools/teardown.sh --remove-submodule${RESET}"
 printf '\n'

@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-PROJECT_MD="${PROJECT_MD:-PROJECT.md}"
+PROJECT_MD="${PROJECT_MD:-.agentic-kit-artefacts/PROJECT.md}"
 
 if [ ! -f "$PROJECT_MD" ]; then
   echo "Error: $PROJECT_MD not found. Run from project root." >&2

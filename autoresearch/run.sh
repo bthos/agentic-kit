@@ -58,7 +58,7 @@ else
 fi
 
 if [ ${#candidates[@]} -eq 0 ]; then
-  echo "No installed agent/skill files found — run agentic-kit/init.sh first." >&2
+  echo "No installed agent/skill files found — run agentic-kit/tools/init.sh first." >&2
   exit 1
 fi
 

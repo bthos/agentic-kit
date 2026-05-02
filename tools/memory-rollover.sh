@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
 MEM_DIR="$ARTEFACTS/memory"
 SESSION="$ARTEFACTS/SESSION-STATE.md"
 

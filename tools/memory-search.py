@@ -6,6 +6,8 @@ available. Same CLI shape as the bash version:
 
     memory-search.py --query "<q>" [--top-k 5] [--layer l3] [--json]
 
+Override the artefacts directory with $ARTEFACTS_DIR.
+
 Run from the project root.
 """
 
@@ -13,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -24,7 +27,7 @@ except ImportError:  # pragma: no cover
     sys.stderr.write("sklearn not installed — fall back to memory-search.sh\n")
     sys.exit(2)
 
-ARTEFACTS = Path("./.artefacts").resolve()
+ARTEFACTS = Path(os.environ.get("ARTEFACTS_DIR", ".agentic-kit-artefacts")).resolve()
 MEM_DIR = ARTEFACTS / "memory"
 
 LAYER_WEIGHT = {
@@ -32,7 +35,6 @@ LAYER_WEIGHT = {
     "l3": 3.0,
     "l2": 2.0,
     "l1": 2.0,
-    "legacy": 1.0,
 }
 
 
@@ -54,8 +56,6 @@ def discover(layer: str | None) -> list[tuple[Path, str]]:
                 files.append((p, "l2"))
     if layer in (None, "l1"):
         add(ARTEFACTS / "SESSION-STATE.md", "l1")
-    if layer in (None, "legacy"):
-        add(ARTEFACTS / "SEMANTIC_MEMORY.md", "legacy")
 
     return files
 
@@ -86,7 +86,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--query", required=True)
     ap.add_argument("--top-k", type=int, default=5)
-    ap.add_argument("--layer", default=None, choices=[None, "l1", "l2", "l3", "l4", "legacy"])
+    ap.add_argument("--layer", default=None, choices=[None, "l1", "l2", "l3", "l4"])
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 

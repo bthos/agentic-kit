@@ -22,7 +22,7 @@ composite = accuracy_score − λ · cost_normalized
 4. **Eval-set is read-only for Veles.** New eval pairs are added by humans or by `tools/build-eval-set.sh` (which only adds, never edits or removes).
 5. **No network mutations.** Veles never runs `git push`, `gh pr create`, package publish commands, deployment commands, or anything that affects systems beyond the project root.
 6. **No `rm -rf`.** Veles only modifies installed agent/skill copies and writes to `agentic-kit/autoresearch/`.
-7. **Manifest integrity.** After every accepted mutation, `.agentic-kit.files` must record the new SHA-256 for the changed file. `teardown.sh` must still recognise the file as kit-managed.
+7. **Manifest integrity.** After every accepted mutation, `.agentic-kit-artefacts/.agentic-kit.files` must record the new SHA-256 for the changed file. `teardown.sh` must still recognise the file as kit-managed.
 
 ## Allowed mutation targets
 
@@ -38,7 +38,7 @@ Veles may **NOT** modify:
 
 - The kit source under `agentic-kit/` (only the user does that, via PRs).
 - `.cursor/agents/` files generated **from** `agents/*.md` if the change would also need to land in the kit source — those should be proposed via `distill-lessons.sh --target=agents` instead.
-- `PROJECT.md`, `CLAUDE.md`, `AGENTS.md`, `PIPELINE.md.template`.
+- `PROJECT.md`, `CLAUDE.md`, `AGENTS.md`, `templates/PIPELINE.md.template`, `templates/PROJECT.md.template`.
 - `program.md`, `judge.md`, `eval-set/`.
 
 ## Stop conditions

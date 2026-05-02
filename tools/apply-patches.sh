@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Reviews .artefacts/proposed-patches/<agent>.md (produced by `distill-lessons.sh
-# --target=agents`) and lets the user accept or skip each patch. On accept the
-# patch is appended to every installed agent copy (.claude/agents, .cursor/agents,
-# .github/agents) and the SHA-256 in `.agentic-kit.files` is refreshed so
-# `teardown.sh` still treats the file as kit-managed.
+# Reviews .agentic-kit-artefacts/proposed-patches/<agent>.md (produced by
+# `distill-lessons.sh --target=agents`) and lets the user accept or skip each
+# patch. On accept the patch is appended to every installed agent copy
+# (.claude/agents, .cursor/agents, .github/agents) and the SHA-256 in
+# `.agentic-kit-artefacts/.agentic-kit.files` is refreshed so `teardown.sh` still treats the file as
+# kit-managed.
+#
+# Override the artefacts directory with $ARTEFACTS_DIR.
 #
 # Usage:
 #   agentic-kit/tools/apply-patches.sh           # interactive review
@@ -14,10 +17,10 @@
 
 set -euo pipefail
 
-# shellcheck source=../lib.sh
-source "$(cd "$(dirname "$0")/.." && pwd)/lib.sh"
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
-ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-$ARTEFACTS_DIR_NAME}"
 PATCHES_DIR="$ARTEFACTS/proposed-patches"
 
 ACCEPT_ALL=false
@@ -129,9 +132,9 @@ $DRY_RUN || rmdir "$PATCHES_DIR" 2>/dev/null || true
 if ! $DRY_RUN && [ "$ACCEPTED" -gt 0 ]; then
   KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
   PROMOTE="$KIT_DIR/tools/memory-promote.sh"
-  if [ -x "$PROMOTE" ] && [ -d "$PROJECT_ROOT/.artefacts/memory" ]; then
+  if [ -x "$PROMOTE" ] && [ -d "$PROJECT_ROOT/$ARTEFACTS/memory" ]; then
     info "Refreshing memory index (memory-promote.sh)…"
-    ( cd "$PROJECT_ROOT" && "$PROMOTE" >/dev/null ) || true
+    ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS" "$PROMOTE" >/dev/null ) || true
   fi
 fi
 

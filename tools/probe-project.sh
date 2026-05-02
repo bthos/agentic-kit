@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Probes the project to produce .artefacts/PROJECT_PROFILE.md.
+# Probes the project to produce .agentic-kit-artefacts/PROJECT_PROFILE.md.
 # Usage:  agentic-kit/tools/probe-project.sh [--force] [--quick]
 #   --force   Overwrite existing PROJECT_PROFILE.md
 #   --quick   Skip the LLM enrichment step (fast, plain heuristics only)
+#
+# Override the artefacts directory with $ARTEFACTS_DIR.
 #
 # Detects: language, package manager, test/build commands, frameworks, conventions.
 # When `claude` CLI is on PATH and not --quick, it asks for a richer summary.
@@ -10,7 +12,7 @@
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
 PROFILE_FILE="$ARTEFACTS/PROJECT_PROFILE.md"
 
 FORCE=false
