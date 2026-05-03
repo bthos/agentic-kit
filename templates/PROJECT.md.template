@@ -6,7 +6,7 @@
 
 ## Agent bootstrap
 
-**If this file still contains `<placeholder>` values, fill them in now.**
+**If this file still contains unfilled placeholder values (angle-bracket tokens), fill them in now.**
 
 You are reading an unconfigured PROJECT.md. Do not ask the user — probe the project and fill every placeholder automatically:
 
@@ -17,7 +17,7 @@ You are reading an unconfigured PROJECT.md. Do not ask the user — probe the pr
 5. **What it is.** Use the `description` field from the manifest, or the first non-heading paragraph of `README.md`. One sentence.
 6. **Tech stack.** Summarise what you found (e.g. `TypeScript, React, Vite`).
 7. **Key conventions.** Scan `CONTRIBUTING.md`, linter configs (`.eslintrc`, `ruff.toml`, `rustfmt.toml`), and comments in entry-point files. List 2–4 bullet points.
-8. Replace **every** `<…>` token with a concrete value, then write the file.
+8. Replace **every** angle-bracket placeholder token with a concrete value, then write the file.
 
 Keep this section. Re-run the steps above whenever the stack, commands, or conventions change.
 

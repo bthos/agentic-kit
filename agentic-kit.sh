@@ -73,7 +73,7 @@ detect_stage() {
   if [ ! -d "$ART" ] || [ ! -f "$CFG" ]; then
     echo 0; return
   fi
-  if [ ! -f "$PROJECT_MD" ] || grep -q '<' "$PROJECT_MD" 2>/dev/null; then
+  if [ ! -f "$PROJECT_MD" ] || grep -qF ':** `<' "$PROJECT_MD" 2>/dev/null; then
     echo 1; return
   fi
   echo 2
