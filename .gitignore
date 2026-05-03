@@ -1,5 +1,3 @@
-.artefacts/
-.specstory/
 .DS_Store
 
 #IDE specific
@@ -7,11 +5,11 @@
 .claude/
 .cursor/
 .github/
+.specstory/
 .vscode/
 
-# Kit install state (legacy: dropped at repo root by old releases — safe to ignore)
-.agentic-kit.cfg
-.agentic-kit.files
+# Kit artefacts
+.artefacts/
 
 # Defensive: when this repo is exercised standalone (init.sh resolves
 # PROJECT_ROOT to the kit's parent, but tooling that runs from inside the kit
