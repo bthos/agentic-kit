@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Shows pipeline status for all active features in .agentic-kit-artefacts/features/.
+# Shows pipeline status for all active features in .artefacts/features/.
 # Usage: agentic-kit/tools/feature-status.sh  (from project root)
 # Run from project root.
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
 FEATURES_DIR="$ARTEFACTS/features"
 ARCHIVE_DIR="$ARTEFACTS/archive"
 

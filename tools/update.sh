@@ -65,7 +65,7 @@ for arg in "$@"; do
   esac
 done
 
-# Read saved IDE from .agentic-kit-artefacts/.agentic-kit.cfg if --ide not explicitly passed.
+# Read saved IDE from .artefacts/.agentic-kit.cfg if --ide not explicitly passed.
 if ! $has_ide_arg; then
   _cfg="$KIT_CFG"
   if [ -f "$_cfg" ]; then

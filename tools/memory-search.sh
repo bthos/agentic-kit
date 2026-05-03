@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
 MEM_DIR="$ARTEFACTS/memory"
 
 QUERY=""

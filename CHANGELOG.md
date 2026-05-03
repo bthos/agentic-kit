@@ -56,4 +56,4 @@ Pre-CHANGELOG history is in `git log`. Notable structural moves:
 - `PIPELINE.md.template` / `PROJECT.md.template` -> `templates/`
 - Mokash agent added (documentation role)
 - Memory layered tree (`SCHEMA.md`, L1-L4) introduced
-- `.agentic-kit-artefacts/` adopted as the single home for kit-managed project state
+- `.artefacts/` adopted as the single home for kit-managed project state

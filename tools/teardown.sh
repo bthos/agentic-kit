@@ -9,17 +9,17 @@
 #      is removed entirely.
 #   2. Remove kit-installed agent / skill copies under .claude/, .cursor/,
 #      .github/ — but only when their SHA-256 still matches the value
-#      recorded in .agentic-kit-artefacts/.agentic-kit.files. Files you edited locally are kept.
-#   3. Remove the canonical pipeline copy at .agentic-kit-artefacts/PIPELINE.md
+#      recorded in .artefacts/.agentic-kit.files. Files you edited locally are kept.
+#   3. Remove the canonical pipeline copy at .artefacts/PIPELINE.md
 #      when its hash still matches; PROJECT.md is kept unless --full-clean.
 #   4. Strip the managed block from .gitignore.
 #   5. (--remove-submodule) Deinit the agentic-kit submodule.
-#   6. (--full-clean) Offer to remove .agentic-kit-artefacts/PROJECT.md and
-#      the .agentic-kit-artefacts/ folder itself.
+#   6. (--full-clean) Offer to remove .artefacts/PROJECT.md and
+#      the .artefacts/ folder itself.
 #
 # Usage: agentic-kit/tools/teardown.sh [--remove-submodule] [--full-clean] [--yes] [--dry-run]
-#   --full-clean        Also remove .agentic-kit-artefacts/PROJECT.md and the
-#                       .agentic-kit-artefacts/ directory if empty.
+#   --full-clean        Also remove .artefacts/PROJECT.md and the
+#                       .artefacts/ directory if empty.
 #   --remove-submodule  Also `git submodule deinit` and remove the kit submodule.
 #   --yes, -y           Skip confirmation prompts (auto-confirm).
 #   --dry-run           Show what would be removed without doing it.
@@ -49,8 +49,8 @@ agentic-kit / teardown.sh
 
   FLAGS
     --remove-submodule   Also `git submodule deinit` and remove the kit submodule.
-    --full-clean         Also remove .agentic-kit-artefacts/PROJECT.md and the
-                         .agentic-kit-artefacts/ folder if empty.
+    --full-clean         Also remove .artefacts/PROJECT.md and the
+                         .artefacts/ folder if empty.
     --yes, -y            Skip confirmation prompts. Aliases: --non-interactive, -n.
     --dry-run            Show what would be removed without doing it.
     --help, -h           Show this help and exit.
@@ -398,7 +398,7 @@ if ! $DRY_RUN && [ -d "$GITHUB_DIR" ] && [ -z "$(ls -A "$GITHUB_DIR" 2>/dev/null
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Remove .agentic-kit-artefacts/PIPELINE.md (kit-managed copy)
+# 6. Remove .artefacts/PIPELINE.md (kit-managed copy)
 # ---------------------------------------------------------------------------
 header "$ARTEFACTS_DIR_NAME/ (canonical pipeline copy)"
 teardown_managed_file "$ARTEFACTS_DIR_NAME/PIPELINE.md"
@@ -478,7 +478,7 @@ if $FULL_CLEAN; then
   fi
 
   if [ -f "$KIT_CFG" ] && ! $DRY_RUN; then
-    rm "$KIT_CFG" && removed ".agentic-kit-artefacts/.agentic-kit.cfg"
+    rm "$KIT_CFG" && removed ".artefacts/.agentic-kit.cfg"
   elif [ -f "$KIT_CFG" ] && $DRY_RUN; then
     info "would remove: $ARTEFACTS_DIR_NAME/.agentic-kit.cfg"
   fi

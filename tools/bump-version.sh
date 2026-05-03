@@ -13,7 +13,7 @@ if [[ "$TYPE" != "patch" && "$TYPE" != "minor" ]]; then
   exit 1
 fi
 
-PROJECT_MD="${PROJECT_MD:-.agentic-kit-artefacts/PROJECT.md}"
+PROJECT_MD="${PROJECT_MD:-.artefacts/PROJECT.md}"
 if [ ! -f "$PROJECT_MD" ]; then
   echo "Error: $PROJECT_MD not found. Run from project root." >&2
   exit 1

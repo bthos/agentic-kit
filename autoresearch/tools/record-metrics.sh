@@ -4,7 +4,7 @@
 #
 # Usage:
 #   record-metrics.sh \
-#     --feature .agentic-kit-artefacts/features/2026-04-30-foo \
+#     --feature .artefacts/features/2026-04-30-foo \
 #     --agent cmok \
 #     --tokens 18432 \
 #     --wall-ms 91500 \

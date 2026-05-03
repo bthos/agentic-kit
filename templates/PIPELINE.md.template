@@ -1,6 +1,6 @@
 # Development pipeline
 
-@.agentic-kit-artefacts/PROJECT.md
+@.artefacts/PROJECT.md
 
 ---
 
@@ -15,15 +15,15 @@ agentic-kit/tools/init.sh --non-interactive --ide=github  # Copilot
 agentic-kit/tools/init.sh --non-interactive --ide=all      # all three (alias: --ide=both)
 ```
 
-Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script prints a **`[AGENT ACTION REQUIRED]`** block instead of spawning a nested CLI to edit `.agentic-kit-artefacts/PROJECT.md`.
+Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script prints a **`[AGENT ACTION REQUIRED]`** block instead of spawning a nested CLI to edit `.artefacts/PROJECT.md`.
 
-**After the script exits, fill in `.agentic-kit-artefacts/PROJECT.md` yourself:** inspect the project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, version files, etc.) and replace every `<placeholder>` with the correct value. Then run `agentic-kit/tools/validate-config.sh` to confirm all placeholders are resolved.
+**After the script exits, fill in `.artefacts/PROJECT.md` yourself:** inspect the project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, version files, etc.) and replace every `<placeholder>` with the correct value. Then run `agentic-kit/tools/validate-config.sh` to confirm all placeholders are resolved.
 
 **Layout — minimally invasive (the goal):**
 
 ```
 project root/
-├── .agentic-kit-artefacts/        ← single home for kit-managed docs + state
+├── .artefacts/        ← single home for kit-managed docs + state
 │   ├── PIPELINE.md                ← canonical pipeline (kit-managed; refreshed on init)
 │   ├── PROJECT.md                 ← project-specific config (you edit this)
 │   ├── memory/                    ← layered memory (auto-managed)
@@ -33,16 +33,16 @@ project root/
 │                                  ← thin stub OR your existing file with a managed
 │                                    include block <!-- agentic-kit:start --> … --end -->
 ├── .claude/  .cursor/  .github/   ← agent + skill copies (one folder per IDE)
-└── .gitignore                     ← managed block ignores .agentic-kit-artefacts/{memory,features,archive,…}
+└── .gitignore                     ← managed block ignores .artefacts/{memory,features,archive,…}
 ```
 
-Everything kit-touched is either inside `.agentic-kit-artefacts/`, the IDE folder (`.claude/`, `.cursor/`, `.github/`), or wrapped in a removable `<!-- agentic-kit:start --> … <!-- agentic-kit:end -->` block. `agentic-kit/tools/teardown.sh` either strips the block or removes the file when its SHA-256 still matches the kit copy.
+Everything kit-touched is either inside `.artefacts/`, the IDE folder (`.claude/`, `.cursor/`, `.github/`), or wrapped in a removable `<!-- agentic-kit:start --> … <!-- agentic-kit:end -->` block. `agentic-kit/tools/teardown.sh` either strips the block or removes the file when its SHA-256 still matches the kit copy.
 
 **What each `--ide` produces:**
 
 | Target | Skills | Agents | Pipeline entry-point |
 |--------|--------|--------|----------------------|
-| `claude` | Copies → `.claude/skills/` | Copies → `.claude/agents/` | `CLAUDE.md` (managed include block → `@.agentic-kit-artefacts/PIPELINE.md`) |
+| `claude` | Copies → `.claude/skills/` | Copies → `.claude/agents/` | `CLAUDE.md` (managed include block → `@.artefacts/PIPELINE.md`) |
 | `cursor` | Copies → `.cursor/skills/` (and `.claude/skills/` for bundled scripts) | Generated `.cursor/agents/*.md` ([subagents](https://cursor.com/docs/context/subagents)) | `AGENTS.md` (managed include block) |
 | `github` | `.github/instructions/*.instructions.md` | `.github/agents/*.agent.md` | `.github/copilot-instructions.md` (managed include block) |
 | `all` | All of the above | All of the above | All of the above |
@@ -148,7 +148,7 @@ When handing off to another agent, include:
 
 **Context:** [spec | design | mockups | test gate | build | code QA | commit]
 **Trigger:** [Task completed | Blocked | User request]
-**Feature path:** `.agentic-kit-artefacts/features/YYYY-MM-DD-feature-name/`
+**Feature path:** `.artefacts/features/YYYY-MM-DD-feature-name/`
 
 ### Deliverables
 - [Artifact 1]: [path or description]
@@ -165,7 +165,7 @@ When handing off to another agent, include:
 **Prompt:** [Suggested prompt for next agent]
 ```
 
-**Feature path rule:** All feature artifacts live in `.agentic-kit-artefacts/features/YYYY-MM-DD-feature-name/`. Include this path in every handoff so the next agent knows where to read/write. When feature is complete, Zlydni moves the folder to `.agentic-kit-artefacts/archive/`.
+**Feature path rule:** All feature artifacts live in `.artefacts/features/YYYY-MM-DD-feature-name/`. Include this path in every handoff so the next agent knows where to read/write. When feature is complete, Zlydni moves the folder to `.artefacts/archive/`.
 
 ### Agent-Specific Handoff Checklists
 
@@ -222,25 +222,25 @@ This gives any agent a full chain of custody when context is lost, especially ac
 ### Best Practices
 
 1. **Include file paths** — Receiving agent needs to know what to read
-2. **Include feature path** — Always pass `.agentic-kit-artefacts/features/YYYY-MM-DD-feature-name/` in handoffs
+2. **Include feature path** — Always pass `.artefacts/features/YYYY-MM-DD-feature-name/` in handoffs
 3. **Summarize decisions** — Don't make the next agent re-derive
 4. **Flag blockers early** — Hand back to the appropriate agent
 5. **Parallel handoffs** — Mokash can run alongside Lojma or Cmok; pass same context to both
-6. **Close feature after commit** — After Zlydni commit, move feature folder to `.agentic-kit-artefacts/archive/`
+6. **Close feature after commit** — After Zlydni commit, move feature folder to `.artefacts/archive/`
 7. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
 8. **Mokash handoff template:** Feature path, Spec path, UX path, Tech plan path, What was built, Document: [scope]
 
 ## Memory layers
 
-The kit uses a five-layer memory tree (see `agentic-kit/templates/memory/SCHEMA.md`). All agents read **`.agentic-kit-artefacts/MEMORY.md`** (L4) before starting and write to today's L2 file when their checklist triggers fire.
+The kit uses a five-layer memory tree (see `agentic-kit/templates/memory/SCHEMA.md`). All agents read **`.artefacts/MEMORY.md`** (L4) before starting and write to today's L2 file when their checklist triggers fire.
 
 | Layer | Path | Read | Write |
 |-------|------|------|-------|
 | L0 enforcement | `agents/*.md`, `skills/*/SKILL.md`, `autoresearch/program.md` | yes | only via `apply-patches.sh` or Veles |
-| L1 hot state | `.agentic-kit-artefacts/SESSION-STATE.md` | yes | every agent on entry/exit |
-| L2 daily | `.agentic-kit-artefacts/memory/YYYY-MM-DD.md` | when relevant | append-only per checklist |
-| L3 long-term | `.agentic-kit-artefacts/memory/{preferences,system,projects,decisions}.md` | drilldowns from L4 | only via `memory-promote.sh` |
-| L4 root summary | `.agentic-kit-artefacts/MEMORY.md` | **first**, always | regenerated by `memory-promote.sh` |
+| L1 hot state | `.artefacts/SESSION-STATE.md` | yes | every agent on entry/exit |
+| L2 daily | `.artefacts/memory/YYYY-MM-DD.md` | when relevant | append-only per checklist |
+| L3 long-term | `.artefacts/memory/{preferences,system,projects,decisions}.md` | drilldowns from L4 | only via `memory-promote.sh` |
+| L4 root summary | `.artefacts/MEMORY.md` | **first**, always | regenerated by `memory-promote.sh` |
 | L5 semantic recall | `agentic-kit/tools/memory-search.sh "<q>"` | when uncertain | n/a |
 
 **Promotion** (`agentic-kit/tools/memory-promote.sh`): observed → logged (L2) → curated (L3 via 2-strike rule) → hardened (L0 patch) → stable. Run after every archive (Zlydni does this automatically).

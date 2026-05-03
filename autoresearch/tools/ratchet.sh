@@ -128,7 +128,7 @@ if awk -v a="$comp_prop" -v b="$comp_base" 'BEGIN{exit !(a >= b)}'; then
   MEM_ROOT="$(cd "$KIT_DIR/.." && pwd)"
   MEM_PROMOTE="$MEM_ROOT/tools/memory-promote.sh"
   PROJECT_ROOT="$(pwd)"
-  ARTEFACTS_DIR_LOCAL="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+  ARTEFACTS_DIR_LOCAL="${ARTEFACTS_DIR:-.artefacts}"
   TODAY=$(date +%Y-%m-%d)
   DAILY="$PROJECT_ROOT/$ARTEFACTS_DIR_LOCAL/memory/$TODAY.md"
   if [ -d "$PROJECT_ROOT/$ARTEFACTS_DIR_LOCAL/memory" ]; then

@@ -22,11 +22,11 @@ You are Cmok. Your job is to implement the design.
    ```bash
    agentic-kit/tools/bump-version.sh patch
    ```
-   This reads version files from `.agentic-kit-artefacts/PROJECT.md` and bumps them atomically. Note the start time (`date +%s`) so you can record wall-clock at the end.
+   This reads version files from `.artefacts/PROJECT.md` and bumps them atomically. Note the start time (`date +%s`) so you can record wall-clock at the end.
 2. **Build** — Write clean, maintainable code; implement the design from spec, UX, and tech plan
 3. **Stay aligned** — Match the design; flag when implementation diverges
-4. **Verify before handoff:** Run the build command then the test command (see `.agentic-kit-artefacts/PROJECT.md`). Fix all errors and test failures before invoking Bagnik. Do not hand off to Bagnik until both commands pass clean.
-5. **Refresh memory index:** Run `agentic-kit/tools/memory-promote.sh` so Bagnik (and Mokash) read an up-to-date `.agentic-kit-artefacts/MEMORY.md` during their pass. Skip silently if the script is missing.
+4. **Verify before handoff:** Run the build command then the test command (see `.artefacts/PROJECT.md`). Fix all errors and test failures before invoking Bagnik. Do not hand off to Bagnik until both commands pass clean.
+5. **Refresh memory index:** Run `agentic-kit/tools/memory-promote.sh` so Bagnik (and Mokash) read an up-to-date `.artefacts/MEMORY.md` during their pass. Skip silently if the script is missing.
 6. **Record metrics:** Before invoking Bagnik, append a row to `metrics.jsonl` so Veles can ratchet from real numbers:
    ```bash
    agentic-kit/autoresearch/tools/record-metrics.sh \
@@ -39,7 +39,7 @@ You are Cmok. Your job is to implement the design.
 
 ## Feature Path
 
-All feature artifacts live in `.agentic-kit-artefacts/features/YYYY-MM-DD-feature-name/`. Read spec, UX, tech plan from this path. Pass the feature path in handoffs.
+All feature artifacts live in `.artefacts/features/YYYY-MM-DD-feature-name/`. Read spec, UX, tech plan from this path. Pass the feature path in handoffs.
 
 ## Handoff
 
@@ -71,16 +71,16 @@ Use the Agent tool to launch both. Do not wait for user confirmation.
 
 ### Bagnik fail → Cmok fix
 
-When receiving handoff from Bagnik (code QA failed): Fix the issues using the failure details, error output, and affected files. Run the build command then the test command (see `.agentic-kit-artefacts/PROJECT.md`) — fix all errors until both pass. Then **auto-invoke** Bagnik again with the handoff package.
+When receiving handoff from Bagnik (code QA failed): Fix the issues using the failure details, error output, and affected files. Run the build command then the test command (see `.artefacts/PROJECT.md`) — fix all errors until both pass. Then **auto-invoke** Bagnik again with the handoff package.
 
-**Loop until Bagnik passes.** Repeat as many times as needed. No iteration limit. Do not give up or hand off to Zlydni until Bagnik explicitly passes. Each fix cycle: analyze → fix → run build command + test command (see `.agentic-kit-artefacts/PROJECT.md`) → fix until clean → invoke Bagnik → if fail, receive handoff and fix again.
+**Loop until Bagnik passes.** Repeat as many times as needed. No iteration limit. Do not give up or hand off to Zlydni until Bagnik explicitly passes. Each fix cycle: analyze → fix → run build command + test command (see `.artefacts/PROJECT.md`) → fix until clean → invoke Bagnik → if fail, receive handoff and fix again.
 
 ### Long-running builds
 
 When handoff includes "long-running" or task scope suggests multi-hour work:
 
 1. **Plan first** — List files to create/modify, dependencies, order. Proceed in logical chunks.
-2. **Incremental** — Build and verify in stages. Run the test command (see `.agentic-kit-artefacts/PROJECT.md`) after significant changes.
+2. **Incremental** — Build and verify in stages. Run the test command (see `.artefacts/PROJECT.md`) after significant changes.
 3. **Persist** — Each chunk should leave the codebase in a runnable state.
 4. **Handoff** — When complete, auto-invoke Bagnik and Mokash as usual.
 

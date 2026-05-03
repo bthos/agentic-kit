@@ -47,7 +47,7 @@ AGENTIC_GITIGNORE_END='# <<< agentic-kit (managed) <<<'
 # Single home for all kit-managed project artefacts (memory, features, archive,
 # pipeline copy, project config). Override with $ARTEFACTS_DIR_NAME if a downstream
 # project ever needs a different folder name.
-ARTEFACTS_DIR_NAME="${ARTEFACTS_DIR_NAME:-.agentic-kit-artefacts}"
+ARTEFACTS_DIR_NAME="${ARTEFACTS_DIR_NAME:-.artefacts}"
 
 # This file lives at agentic-kit/tools/lib.sh — SCRIPT_DIR is always the kit root
 # (the directory that contains init.sh, teardown.sh, templates/, agents/, …).
@@ -175,14 +175,14 @@ kit_symlink_points_into_kit() {
 #
 # Strategy: instead of overwriting (or even creating from scratch) full pipeline
 # documents at the project root, we maintain a small, clearly-marked block inside
-# the IDE's entry-point file. The block points at .agentic-kit-artefacts/PIPELINE.md
+# the IDE's entry-point file. The block points at .artefacts/PIPELINE.md
 # (the canonical, kit-refreshable copy). Existing user content in the entry-point
 # file is preserved verbatim; teardown.sh strips only the marked block.
 # ---------------------------------------------------------------------------
 
 # Build the include block. Args:
 #   $1 — relative path to the canonical pipeline file
-#         (e.g. .agentic-kit-artefacts/PIPELINE.md)
+#         (e.g. .artefacts/PIPELINE.md)
 #   $2 — IDE label for the embedded comment (e.g. "Claude Code", "Cursor", "GitHub Copilot")
 # The block is identical across IDEs except for the label so it diffs cleanly
 # when the user inspects multiple entry-point files.

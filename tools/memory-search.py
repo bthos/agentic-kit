@@ -27,7 +27,7 @@ except ImportError:  # pragma: no cover
     sys.stderr.write("sklearn not installed — fall back to memory-search.sh\n")
     sys.exit(2)
 
-ARTEFACTS = Path(os.environ.get("ARTEFACTS_DIR", ".agentic-kit-artefacts")).resolve()
+ARTEFACTS = Path(os.environ.get("ARTEFACTS_DIR", ".artefacts")).resolve()
 MEM_DIR = ARTEFACTS / "memory"
 
 LAYER_WEIGHT = {

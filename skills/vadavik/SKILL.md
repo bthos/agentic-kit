@@ -46,7 +46,7 @@ When starting a new feature, run:
 /skills/vadavik/new-feature.sh <feature-slug>
 ```
 
-This creates `.agentic-kit-artefacts/features/YYYY-MM-DD-<slug>/` with a `spec.md` skeleton and `handoff-log.md`. Use the printed `FEATURE_PATH` value in every handoff.
+This creates `.artefacts/features/YYYY-MM-DD-<slug>/` with a `spec.md` skeleton and `handoff-log.md`. Use the printed `FEATURE_PATH` value in every handoff.
 
 When a handoff already specifies a feature path, use it instead of creating a new one.
 
@@ -81,20 +81,20 @@ Spec: [path]. Key ACs: [count]. Open questions: [count].
 
 ## Project Profile
 
-If `.agentic-kit-artefacts/PROJECT_PROFILE.md` exists, read it before eliciting requirements — it captures the project's stack, conventions, and inferred priorities.
+If `.artefacts/PROJECT_PROFILE.md` exists, read it before eliciting requirements — it captures the project's stack, conventions, and inferred priorities.
 
 ## Memory
 
 The project has a layered memory tree (see `agentic-kit/templates/memory/SCHEMA.md`):
 
-1. **Read first:** `.agentic-kit-artefacts/MEMORY.md` (L4 — root index, ~2 KB).
-2. **Drill down** into `.agentic-kit-artefacts/memory/{preferences,system,projects,decisions}.md` (L3) only when you need detail.
+1. **Read first:** `.artefacts/MEMORY.md` (L4 — root index, ~2 KB).
+2. **Drill down** into `.artefacts/memory/{preferences,system,projects,decisions}.md` (L3) only when you need detail.
 3. **When uncertain**, run `agentic-kit/tools/memory-search.sh "<query>"` for ranked top-k chunks across every layer.
 4. **`high`-confidence entries are rules**, `medium` is advisory, `low` is reference only. Never re-execute past tasks; use memory to ask sharper questions and avoid re-raising resolved issues.
 
 ### Mandatory write checklist
 
-Before handing off, append a bullet to today's L2 file (`.agentic-kit-artefacts/memory/$(date +%Y-%m-%d).md`) for each trigger that fired during this session:
+Before handing off, append a bullet to today's L2 file (`.artefacts/memory/$(date +%Y-%m-%d).md`) for each trigger that fired during this session:
 
 - [ ] **New convention discovered** in spec — `entity_type: pattern`
 - [ ] **New tool/library proposed** — `entity_type: tool`

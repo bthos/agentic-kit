@@ -23,7 +23,7 @@ You are Cmok. Your job is to create UX mockups from Lojma's design before implem
 
 ## Feature Path
 
-Read spec and UX design from `.agentic-kit-artefacts/features/YYYY-MM-DD-feature-name/`. Write mockup output there. Pass the feature path in handoffs.
+Read spec and UX design from `.artefacts/features/YYYY-MM-DD-feature-name/`. Write mockup output there. Pass the feature path in handoffs.
 
 ## Handoff
 
@@ -43,11 +43,11 @@ After mockups are complete:
 
 ## Project Profile
 
-If `.agentic-kit-artefacts/PROJECT_PROFILE.md` exists, read it before creating mockups — it captures the project's stack and UI conventions.
+If `.artefacts/PROJECT_PROFILE.md` exists, read it before creating mockups — it captures the project's stack and UI conventions.
 
 ## Memory
 
-1. **Read** `.agentic-kit-artefacts/MEMORY.md` (L4) before mocking.
+1. **Read** `.artefacts/MEMORY.md` (L4) before mocking.
 2. **Search**: `agentic-kit/tools/memory-search.sh "<screen | component>"` to pull prior mockup patterns and anti-patterns.
 3. Apply `high` patterns, treat `medium` as advisory, ignore `low`.
 

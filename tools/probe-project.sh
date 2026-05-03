@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Probes the project to produce .agentic-kit-artefacts/PROJECT_PROFILE.md.
+# Probes the project to produce .artefacts/PROJECT_PROFILE.md.
 # Usage:  agentic-kit/tools/probe-project.sh [--force] [--quick]
 #   --force   Overwrite existing PROJECT_PROFILE.md
 #   --quick   Skip the LLM enrichment step (fast, plain heuristics only)
@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
 PROFILE_FILE="$ARTEFACTS/PROJECT_PROFILE.md"
 
 FORCE=false

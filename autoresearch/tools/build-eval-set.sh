@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Auto-generates eval-set entries from .agentic-kit-artefacts/archive/<feature>/.
+# Auto-generates eval-set entries from .artefacts/archive/<feature>/.
 # Each archived feature with both spec.md and handoff-log.md becomes an
 # eval-set/<feature-id>.md file containing a list of (requirement, expected)
 # pairs. Existing files are NOT modified (per program.md invariants).
@@ -13,7 +13,7 @@ set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 EVAL_DIR="$KIT_DIR/eval-set"
-ARCHIVE_DIR="${ARTEFACTS_DIR:-.agentic-kit-artefacts}/archive"
+ARCHIVE_DIR="${ARTEFACTS_DIR:-.artefacts}/archive"
 
 mkdir -p "$EVAL_DIR"
 

@@ -5,27 +5,27 @@
 #
 # What this script does (minimally invasive by design):
 #
-#   1.  Creates `.agentic-kit-artefacts/` and copies the canonical pipeline doc
+#   1.  Creates `.artefacts/` and copies the canonical pipeline doc
 #       and project config there:
-#         .agentic-kit-artefacts/PIPELINE.md   (kit-managed; refreshed on update)
-#         .agentic-kit-artefacts/PROJECT.md    (you edit; kept on update)
+#         .artefacts/PIPELINE.md   (kit-managed; refreshed on update)
+#         .artefacts/PROJECT.md    (you edit; kept on update)
 #
 #   2.  Installs the per-IDE machinery (skills + agents) into `.claude/`,
 #       `.cursor/`, and/or `.github/`. SHA-256 of every installed file is
-#       recorded in `.agentic-kit-artefacts/.agentic-kit.files` so teardown.sh refuses to delete
+#       recorded in `.artefacts/.agentic-kit.files` so teardown.sh refuses to delete
 #       paths you have edited locally.
 #
 #   3.  Adds a small marker block to (or creates) the IDE entry-point file:
 #         CLAUDE.md, AGENTS.md, .github/copilot-instructions.md
 #       Block delimiters: <!-- agentic-kit:start --> ... <!-- agentic-kit:end -->
-#       The block points at .agentic-kit-artefacts/PIPELINE.md. Existing user
+#       The block points at .artefacts/PIPELINE.md. Existing user
 #       content above/below the markers is preserved verbatim. We never rename
 #       or overwrite PIPELINE.md as CLAUDE.md/AGENTS.md again.
 #
 #   4.  Adds a managed block to .gitignore for ephemeral state under
-#         .agentic-kit-artefacts/{memory,features,archive,…} plus
-#         .agentic-kit-artefacts/.agentic-kit.cfg and .agentic-kit-artefacts/.agentic-kit.files
-#       PIPELINE.md and PROJECT.md inside .agentic-kit-artefacts/ are NOT
+#         .artefacts/{memory,features,archive,…} plus
+#         .artefacts/.agentic-kit.cfg and .artefacts/.agentic-kit.files
+#       PIPELINE.md and PROJECT.md inside .artefacts/ are NOT
 #       ignored — your team should commit them.
 #
 # Flags:
@@ -73,17 +73,17 @@ show_help() {
     agentic-kit/tools/init.sh [OPTIONS]
 
   WHAT GETS WRITTEN
-    .agentic-kit-artefacts/PIPELINE.md       canonical pipeline (kit-managed)
-    .agentic-kit-artefacts/PROJECT.md        project-specific config (you edit)
-    .agentic-kit-artefacts/{memory,features,archive,…}
+    .artefacts/PIPELINE.md       canonical pipeline (kit-managed)
+    .artefacts/PROJECT.md        project-specific config (you edit)
+    .artefacts/{memory,features,archive,…}
                                              runtime state (gitignored)
-    .agentic-kit-artefacts/.agentic-kit.cfg   saved IDE + pipeline SHA (gitignored)
-    .agentic-kit-artefacts/.agentic-kit.files kit install manifest (gitignored)
+    .artefacts/.agentic-kit.cfg   saved IDE + pipeline SHA (gitignored)
+    .artefacts/.agentic-kit.files kit install manifest (gitignored)
 
     .claude/  .cursor/  .github/             one folder per IDE you target
     CLAUDE.md / AGENTS.md / copilot-instructions.md
                                              tiny include block pointing at
-                                             .agentic-kit-artefacts/PIPELINE.md
+                                             .artefacts/PIPELINE.md
                                              (existing user content preserved)
     .gitignore                               managed block for ephemeral state
 
@@ -111,7 +111,7 @@ show_help() {
 
     --tune                  After install, probe the project (stack, frameworks,
                             test/build commands, conventions) and write
-                            .agentic-kit-artefacts/PROJECT_PROFILE.md so agents
+                            .artefacts/PROJECT_PROFILE.md so agents
                             can self-tune. Calls
                             `agentic-kit/tools/probe-project.sh --force`.
     --no-tune               Skip the probe step (default).
@@ -132,7 +132,7 @@ show_help() {
     agentic-kit/tools/init.sh --non-interactive --ide=all
 
     After the script exits, read the [AGENT ACTION REQUIRED] block in the output
-    and fill in .agentic-kit-artefacts/PROJECT.md yourself (inspect package.json,
+    and fill in .artefacts/PROJECT.md yourself (inspect package.json,
     pyproject.toml, Cargo.toml, go.mod, Makefile, etc.), then run:
       agentic-kit/tools/validate-config.sh
 
@@ -218,7 +218,7 @@ should_overwrite() {
   ask_conflict "$label"
 }
 
-# Copy kit file into project; record SHA-256 in .agentic-kit-artefacts/.agentic-kit.files for teardown.
+# Copy kit file into project; record SHA-256 in .artefacts/.agentic-kit.files for teardown.
 # Usage: install_kit_copy_file <label> <rel_path> <src_file_abs>
 install_kit_copy_file() {
   local label="$1" rel_path="$2" src_file="$3"
@@ -712,7 +712,7 @@ setup_github() {
 }
 
 # ---------------------------------------------------------------------------
-# .agentic-kit-artefacts/ (canonical home for PIPELINE.md and PROJECT.md)
+# .artefacts/ (canonical home for PIPELINE.md and PROJECT.md)
 # ---------------------------------------------------------------------------
 setup_artefacts_dir() {
   header "$ARTEFACTS_DIR_NAME/ (pipeline + project config)"
@@ -975,7 +975,7 @@ if [ "$FRESH_PROJECT_MD" = true ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Write .agentic-kit-artefacts/.agentic-kit.cfg (persist IDE choice + template sha for drift detection)
+# Write .artefacts/.agentic-kit.cfg (persist IDE choice + template sha for drift detection)
 # ---------------------------------------------------------------------------
 _pipeline_sha=""
 if command -v sha256sum &>/dev/null; then
@@ -994,7 +994,7 @@ _kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || tru
 } > "$KIT_CFG"
 
 # ---------------------------------------------------------------------------
-# Project probe (--tune): write .agentic-kit-artefacts/PROJECT_PROFILE.md so agents self-tune
+# Project probe (--tune): write .artefacts/PROJECT_PROFILE.md so agents self-tune
 # ---------------------------------------------------------------------------
 if $TUNE; then
   _probe="$SCRIPT_DIR/tools/probe-project.sh"

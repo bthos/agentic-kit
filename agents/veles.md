@@ -41,14 +41,14 @@ composite = accuracy_score − λ · cost_normalized
 4. **Run the eval-set** — invoke `agentic-kit/autoresearch/tools/run-eval.sh` (Generator side: produce candidate output; Evaluator side: `judge.sh` returns 0/1 per acceptance criterion).
 5. **Compute composite for baseline and proposal.**
 6. **Ratchet:**
-   - If `composite_proposal ≥ composite_baseline` AND every invariant in `program.md` still holds → **accept**: keep the proposal in Явь, refresh the manifest hash in `.agentic-kit-artefacts/.agentic-kit.files`, append a row to `autoresearch/runs/ratchet.jsonl`.
+   - If `composite_proposal ≥ composite_baseline` AND every invariant in `program.md` still holds → **accept**: keep the proposal in Явь, refresh the manifest hash in `.artefacts/.agentic-kit.files`, append a row to `autoresearch/runs/ratchet.jsonl`.
    - Otherwise → **reject**: revert Явь from baseline, log to `autoresearch/runs/rejected.jsonl`.
    - Either way, the Навь (`variants/<round-id>/`) is preserved.
 7. **Stop conditions** — N rounds reached, user interrupt, or three consecutive rejections (signals diminishing returns; report and exit).
 
 ## Manifest discipline
 
-After every accepted mutation, update `.agentic-kit-artefacts/.agentic-kit.files` so `teardown.sh` does not orphan the change. Use `manifest_set_hash <relative-path> <sha256>` from `tools/lib.sh` semantics — the helper is exposed by `agentic-kit/autoresearch/tools/ratchet.sh`.
+After every accepted mutation, update `.artefacts/.agentic-kit.files` so `teardown.sh` does not orphan the change. Use `manifest_set_hash <relative-path> <sha256>` from `tools/lib.sh` semantics — the helper is exposed by `agentic-kit/autoresearch/tools/ratchet.sh`.
 
 ## Handoff
 

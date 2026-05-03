@@ -2,14 +2,31 @@
 
 > This file is read by agents and pipeline scripts.
 > Fill in the values below before running the pipeline.
-> Lives at `.agentic-kit-artefacts/PROJECT.md` so the project root stays clean.
+> Lives at `.artefacts/PROJECT.md` so the project root stays clean.
+
+## Agent bootstrap
+
+**If this file still contains `<placeholder>` values, fill them in now.**
+
+You are reading an unconfigured PROJECT.md. Do not ask the user — probe the project and fill every placeholder automatically:
+
+1. **Detect the stack.** Look for `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`, `Makefile`, `CMakeLists.txt`.
+2. **Test command.** Read the `test` script from the manifest (e.g. `npm test`, `pytest`, `cargo test`, `go test ./...`). If none found, write `none`.
+3. **Build command.** Read the `build` script from the manifest (e.g. `npm run build`, `cargo build --release`, `make`). If none found, write `none`.
+4. **Version files.** List every file that contains the project's version string (e.g. `package.json`, `Cargo.toml`, `pyproject.toml`). Comma-separated; write `none` if not applicable.
+5. **What it is.** Use the `description` field from the manifest, or the first non-heading paragraph of `README.md`. One sentence.
+6. **Tech stack.** Summarise what you found (e.g. `TypeScript, React, Vite`).
+7. **Key conventions.** Scan `CONTRIBUTING.md`, linter configs (`.eslintrc`, `ruff.toml`, `rustfmt.toml`), and comments in entry-point files. List 2–4 bullet points.
+8. Replace **every** `<…>` token with a concrete value, then write the file.
+
+Keep this section. Re-run the steps above whenever the stack, commands, or conventions change.
 
 ## Project-Specific Configuration
 
 - **Test command:** `<your test command, e.g. npm test or pytest>`
 - **Build command:** `<your build command, e.g. npm run build or make>`
 - **Version files:** `<comma-separated list of files to version-bump, or "none", e.g. package.json, manifest.json>`
-- **Artifacts directory:** `.agentic-kit-artefacts/`
+- **Artifacts directory:** `.artefacts/`
 - **Judge command:** `<optional: CLI for LLM-as-judge in autoresearch loop. Defaults to `claude -p --allowedTools ''`. Set to e.g. `gemini -p` to swap providers.>`
 
 ## Project Context

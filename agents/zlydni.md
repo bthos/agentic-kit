@@ -22,7 +22,7 @@ You are Zlydni. Your job is commits and version control.
    ```bash
    agentic-kit/tools/bump-version.sh minor
    ```
-   This reads version files from `.agentic-kit-artefacts/PROJECT.md` and bumps them atomically (e.g. `1.2.4` → `1.3.0`).
+   This reads version files from `.artefacts/PROJECT.md` and bumps them atomically (e.g. `1.2.4` → `1.3.0`).
 2. **Stage appropriately** — Include what belongs together
 3. **Write clear commit messages** — Follow conventional commits when applicable
 4. **Verify before commit** — Ensure Bagnik has passed (tests) if applicable
@@ -76,23 +76,23 @@ When commit completes:
 2. **Append final handoff log entry** to `handoff-log.md`:
    ```
    ## HH:MM Zlydni [commit]
-   Commit: [hash]. Version: [new version]. Feature archived to .agentic-kit-artefacts/archive/.
+   Commit: [hash]. Version: [new version]. Feature archived to .artefacts/archive/.
    ```
 
-3. **Move feature folder to `.agentic-kit-artefacts/archive/`** immediately. Feature is closed after commit.
+3. **Move feature folder to `.artefacts/archive/`** immediately. Feature is closed after commit.
 
 4. **Promote memory.** Mirror the LESSONS.md entries into today's L2 daily file and run the promotion state machine so the 2-strike rule, supersedes resolver, and L4 root index stay current:
    ```bash
    # Mirror LESSONS.md into today's daily file (L2)
-   today=$(date +%Y-%m-%d); daily=".agentic-kit-artefacts/memory/${today}.md"
-   [ -d .agentic-kit-artefacts/memory ] || agentic-kit/tools/memory-init.sh
+   today=$(date +%Y-%m-%d); daily=".artefacts/memory/${today}.md"
+   [ -d .artefacts/memory ] || agentic-kit/tools/memory-init.sh
    {
-     printf '\n## Lessons from %s (mirrored from LESSONS.md by zlydni)\n\n' "$(basename .agentic-kit-artefacts/archive/<feature-id>)"
+     printf '\n## Lessons from %s (mirrored from LESSONS.md by zlydni)\n\n' "$(basename .artefacts/archive/<feature-id>)"
      awk '/^- \[/ {
        tag=$0; sub(/^- \[/, "", tag); sub(/].*/, "", tag)
        text=$0; sub(/^- \[[^]]+\][[:space:]]*/, "", text)
        printf "- id: pending\n  decided: '"$today"'\n  entity_type: %s\n  entities: []\n  confidence: medium\n  source: archive/<feature-id>/LESSONS.md\n  text: |\n    %s\n", tag, text
-     }' .agentic-kit-artefacts/archive/<feature-id>/LESSONS.md
+     }' .artefacts/archive/<feature-id>/LESSONS.md
    } >> "$daily"
    agentic-kit/tools/memory-promote.sh
    ```
@@ -106,7 +106,7 @@ When commit completes:
 
 Then report: "Pipeline complete. Commit [hash]. Optionally run `git push` or create PR." No auto-invoke — user may push or create PR. Flow stops here unless user continues.
 
-**Close feature after commit:** Move the feature folder from `.agentic-kit-artefacts/features/YYYY-MM-DD-feature-name/` to `.agentic-kit-artefacts/archive/`. Feature is closed after commit.
+**Close feature after commit:** Move the feature folder from `.artefacts/features/YYYY-MM-DD-feature-name/` to `.artefacts/archive/`. Feature is closed after commit.
 
 **Commit message traceability (optional):** For user-facing changes: "UX: [path to ux-design.md]". For architecture/test changes: "Arch: [path]. Tests: [paths]".
 

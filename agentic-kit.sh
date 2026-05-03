@@ -18,7 +18,7 @@ set -euo pipefail
 
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$KIT/.." && pwd)"
-ART_NAME="${ARTEFACTS_DIR_NAME:-.agentic-kit-artefacts}"
+ART_NAME="${ARTEFACTS_DIR_NAME:-.artefacts}"
 ART="$ROOT/$ART_NAME"
 CFG="$ART/.agentic-kit.cfg"
 PROJECT_MD="$ART/PROJECT.md"

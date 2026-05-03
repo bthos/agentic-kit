@@ -3,12 +3,12 @@
 # Usage: agentic-kit/tools/distill-lessons.sh [--target=memory|agents|both]
 #
 #   --target=memory  (default) Append schema-compliant entries into today's L2
-#                              daily file (.agentic-kit-artefacts/memory/YYYY-MM-DD.md),
+#                              daily file (.artefacts/memory/YYYY-MM-DD.md),
 #                              then run memory-promote.sh so the 2-strike rule,
 #                              supersedes resolver, and L4 root index update
 #                              automatically.
 #   --target=agents            Write proposed per-agent patches to
-#                              .agentic-kit-artefacts/proposed-patches/<agent>.md so
+#                              .artefacts/proposed-patches/<agent>.md so
 #                              a human (or `apply-patches.sh`) can review and merge
 #                              them into the installed agent copies
 #                              (self-improvement Layer 2).
@@ -16,14 +16,14 @@
 #
 # Override the artefacts directory with $ARTEFACTS_DIR.
 #
-# Reads all .agentic-kit-artefacts/archive/*/LESSONS.md files and uses the Claude
+# Reads all .artefacts/archive/*/LESSONS.md files and uses the Claude
 # CLI. Requires: claude CLI on PATH.
 # Run from project root.
 
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
 ARCHIVE_DIR="$ARTEFACTS/archive"
 MEM_DIR="$ARTEFACTS/memory"
 PATCHES_DIR="$ARTEFACTS/proposed-patches"

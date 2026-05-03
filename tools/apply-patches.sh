@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Reviews .agentic-kit-artefacts/proposed-patches/<agent>.md (produced by
+# Reviews .artefacts/proposed-patches/<agent>.md (produced by
 # `distill-lessons.sh --target=agents`) and lets the user accept or skip each
 # patch. On accept the patch is appended to every installed agent copy
 # (.claude/agents, .cursor/agents, .github/agents) and the SHA-256 in
-# `.agentic-kit-artefacts/.agentic-kit.files` is refreshed so `teardown.sh` still treats the file as
+# `.artefacts/.agentic-kit.files` is refreshed so `teardown.sh` still treats the file as
 # kit-managed.
 #
 # Override the artefacts directory with $ARTEFACTS_DIR.

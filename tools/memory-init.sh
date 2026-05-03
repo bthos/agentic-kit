@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Initialises the project memory tree at .agentic-kit-artefacts/memory/.
+# Initialises the project memory tree at .artefacts/memory/.
 #
 # Layout (see agentic-kit/templates/memory/SCHEMA.md):
-#   .agentic-kit-artefacts/MEMORY.md              # L4 root summary
-#   .agentic-kit-artefacts/SESSION-STATE.md       # L1 hot state
-#   .agentic-kit-artefacts/memory/SCHEMA.md       # ontology
-#   .agentic-kit-artefacts/memory/preferences.md  # L3
-#   .agentic-kit-artefacts/memory/system.md       # L3
-#   .agentic-kit-artefacts/memory/projects.md     # L3
-#   .agentic-kit-artefacts/memory/decisions.md    # L3
-#   .agentic-kit-artefacts/memory/<YYYY-MM-DD>.md # L2 (today's)
-#   .agentic-kit-artefacts/memory/index.jsonl     # L5 (created by memory-search.sh)
+#   .artefacts/MEMORY.md              # L4 root summary
+#   .artefacts/SESSION-STATE.md       # L1 hot state
+#   .artefacts/memory/SCHEMA.md       # ontology
+#   .artefacts/memory/preferences.md  # L3
+#   .artefacts/memory/system.md       # L3
+#   .artefacts/memory/projects.md     # L3
+#   .artefacts/memory/decisions.md    # L3
+#   .artefacts/memory/<YYYY-MM-DD>.md # L2 (today's)
+#   .artefacts/memory/index.jsonl     # L5 (created by memory-search.sh)
 #
 # Override the artefacts directory with $ARTEFACTS_DIR (e.g. for legacy
 # .artefacts/ checkouts that have not migrated yet).
@@ -25,7 +25,7 @@ set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TPL_DIR="$KIT_DIR/templates/memory"
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.artefacts}"
 MEM_DIR="$ARTEFACTS/memory"
 
 FORCE=false
