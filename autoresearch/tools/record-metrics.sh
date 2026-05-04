@@ -17,10 +17,25 @@
 
 set -euo pipefail
 
+# Enable verbose tracing if VERBOSE=1 or DEBUG=1
+if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
+  export PS4='+ $(date -u "+%Y-%m-%dT%H:%M:%SZ")\040 '
+  set -x
+fi
+
+# If LOG_FILE set, redirect stdout+stderr to the file (append)
+if [ -n "${LOG_FILE:-}" ]; then
+  mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
+  touch "$LOG_FILE" 2>/dev/null || true
+  exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
+fi
+
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-RUNS_DIR="$KIT_DIR/runs"
+# Use artefacts root for runs/cost log to avoid editing the kit submodule.
+ARTEFACTS_ROOT="${ARTEFACTS_DIR:-.artefacts}"
+RUNS_DIR="$ARTEFACTS_ROOT/runs"
 COST_LOG="$RUNS_DIR/cost.jsonl"
-mkdir -p "$RUNS_DIR"
+mkdir -p "$ARTEFACTS_ROOT" "$RUNS_DIR"
 
 feature=""
 agent=""
@@ -41,6 +56,8 @@ while [ $# -gt 0 ]; do
     --variant)        variant="$2"; shift 2 ;;
     --cost-per-min)   cost_per_min="$2"; shift 2 ;;
     --cost-per-token) cost_per_tok="$2"; shift 2 ;;
+    --log-file=*) LOG_FILE="${1#--log-file=}"; shift ;;
+    --log-file) LOG_FILE="${2:-}"; shift 2 ;;
     -h|--help)        sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac

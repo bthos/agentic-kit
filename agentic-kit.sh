@@ -157,6 +157,8 @@ register_actions() {
        "$KIT/tools/memory-promote.sh"
   add distill  2 maint "Distill lessons from archive"    "Read every archived feature's LESSONS.md and append to today's L2 daily memory." \
        "$KIT/tools/distill-lessons.sh"
+    add claude-check 2 maint "Audit Claude install"       "Run a lightweight check of local Claude/skills/plugins/settings." \
+      "$KIT/tools/lean-claude.sh"
   add patches  2 maint "Review proposed patches"         "Walk through $ART_NAME/proposed-patches/ interactively; accept or skip each." \
        "$KIT/tools/apply-patches.sh"
 }

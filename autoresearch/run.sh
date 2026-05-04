@@ -10,10 +10,27 @@
 
 set -euo pipefail
 
+# Enable verbose tracing if VERBOSE=1 or DEBUG=1
+if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
+  export PS4='+ $(date -u "+%Y-%m-%dT%H:%M:%SZ")\040 '
+  set -x
+fi
+
+# If LOG_FILE set, redirect stdout+stderr to the file (append)
+if [ -n "${LOG_FILE:-}" ]; then
+  mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
+  touch "$LOG_FILE" 2>/dev/null || true
+  exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
+fi
+
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
-EVAL_DIR="$KIT_DIR/eval-set"
-RUNS_DIR="$KIT_DIR/runs"
-VARIANTS_DIR="$KIT_DIR/variants"
+# Place ephemeral and output data under the artefacts root so the kit
+# (installed as a git submodule) remains unmodified. Override with ARTEFACTS_DIR.
+ARTEFACTS_ROOT="${ARTEFACTS_DIR:-.artefacts}"
+EVAL_DIR="$ARTEFACTS_ROOT/eval-set"
+RUNS_DIR="$ARTEFACTS_ROOT/runs"
+# Keep variants under artefacts so kit submodule is not modified
+VARIANTS_DIR="$ARTEFACTS_ROOT/variants"
 
 ROUNDS=1
 TARGET=""
@@ -21,6 +38,9 @@ INIT=false
 
 for arg in "$@"; do
   case "$arg" in
+    --verbose) VERBOSE=1; shift ;;
+    --log-file=*) LOG_FILE="${arg#--log-file=}"; shift ;;
+    --log-file) LOG_FILE="${1:-}"; shift 2 ;;
     --rounds=*) ROUNDS="${arg#--rounds=}" ;;
     --target=*) TARGET="${arg#--target=}" ;;
     --target)   shift; TARGET="${1:-}";;
@@ -29,7 +49,7 @@ for arg in "$@"; do
   esac
 done
 
-mkdir -p "$EVAL_DIR" "$RUNS_DIR" "$VARIANTS_DIR"
+mkdir -p "$ARTEFACTS_ROOT" "$EVAL_DIR" "$RUNS_DIR" "$VARIANTS_DIR"
 
 if $INIT; then
   echo "Initialising autoresearch loop…"

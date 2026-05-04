@@ -10,6 +10,19 @@
 
 set -euo pipefail
 
+# Enable verbose tracing if VERBOSE=1 or DEBUG=1
+if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
+  export PS4='+ $(date -u "+%Y-%m-%dT%H:%M:%SZ")\040 '
+  set -x
+fi
+
+# If LOG_FILE set, redirect stdout+stderr to the file (append)
+if [ -n "${LOG_FILE:-}" ]; then
+  mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
+  touch "$LOG_FILE" 2>/dev/null || true
+  exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
+fi
+
 req=""
 out=""
 req_file=""
@@ -17,9 +30,12 @@ out_file=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --verbose) export VERBOSE=1; shift ;;
     --requirement)        req="$2"; shift 2 ;;
     --requirement-file)   req_file="$2"; shift 2 ;;
     --output)             out="$2"; shift 2 ;;
+    --log-file=*) LOG_FILE="${1#--log-file=}"; shift ;;
+    --log-file) LOG_FILE="${2:-}"; shift 2 ;;
     --output-file)        out_file="$2"; shift 2 ;;
     -h|--help)
       sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'

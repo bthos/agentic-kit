@@ -11,11 +11,19 @@
 
 set -euo pipefail
 
+# Enable verbose tracing if VERBOSE=1 or DEBUG=1
+if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
+  export PS4='+ $(date -u "+%Y-%m-%dT%H:%M:%SZ")\040 '
+  set -x
+fi
+
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-EVAL_DIR="$KIT_DIR/eval-set"
+# Use artefacts root for eval-set so repo stays unchanged. Override with ARTEFACTS_DIR.
+ARTEFACTS_ROOT="${ARTEFACTS_DIR:-.artefacts}"
+EVAL_DIR="$ARTEFACTS_ROOT/eval-set"
 ARCHIVE_DIR="${ARTEFACTS_DIR:-.artefacts}/archive"
 
-mkdir -p "$EVAL_DIR"
+mkdir -p "${ARTEFACTS_ROOT}" "$EVAL_DIR"
 
 if [ ! -d "$ARCHIVE_DIR" ]; then
   echo "No $ARCHIVE_DIR yet — archive a feature first."
