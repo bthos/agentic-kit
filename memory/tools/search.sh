@@ -2,7 +2,7 @@
 # Top-k retrieval across all memory layers (L1..L4).
 #
 # Strategy:
-#   1) If `memory-search.py` exists AND python3 + sklearn are present → delegate
+#   1) If `search.py` exists AND python3 + sklearn are present → delegate
 #      to it (TF-IDF cosine; better quality).
 #   2) Otherwise: pure-shell scoring — counts unique query-term hits per chunk
 #      with simple stemming (lowercase, strip punctuation), boosts L4 > L3 > L2.
@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
 MEM_DIR="$ARTEFACTS/memory"
 
 QUERY=""
@@ -44,7 +44,7 @@ fi
 # ---------------------------------------------------------------------------
 # Python fast-path (TF-IDF cosine via sklearn)
 # ---------------------------------------------------------------------------
-PY_HELPER="$(cd "$(dirname "$0")" && pwd)/memory-search.py"
+PY_HELPER="$(cd "$(dirname "$0")" && pwd)/search.py"
 if [ -f "$PY_HELPER" ] && command -v python3 &>/dev/null \
    && python3 -c "import sklearn" 2>/dev/null; then
   exec python3 "$PY_HELPER" \
@@ -79,7 +79,7 @@ if [ -z "$LAYER" ] || [ "$LAYER" = "l1" ]; then
 fi
 
 if [ ${#files[@]} -eq 0 ]; then
-  echo "(no memory files yet — run \`agentic-kit/tools/memory-init.sh\`)"
+  echo "(no memory files yet — run \`agentic-kit/memory/tools/init.sh\`)"
   exit 0
 fi
 

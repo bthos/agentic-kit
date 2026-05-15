@@ -27,7 +27,7 @@ except ImportError:  # pragma: no cover
     sys.stderr.write("sklearn not installed — fall back to memory-search.sh\n")
     sys.exit(2)
 
-ARTEFACTS = Path(os.environ.get("ARTEFACTS_DIR", ".agentic-kit-artefacts")).resolve()
+ARTEFACTS = Path(os.environ.get("ARTEFACTS_DIR", ".akt")).resolve()
 MEM_DIR = ARTEFACTS / "memory"
 
 LAYER_WEIGHT = {
@@ -92,7 +92,7 @@ def main() -> int:
 
     files = discover(args.layer)
     if not files:
-        print("(no memory files yet — run `agentic-kit/tools/memory-init.sh`)")
+        print("(no memory files yet — run `agentic-kit/memory/tools/init.sh`)")
         return 0
 
     docs: list[str] = []

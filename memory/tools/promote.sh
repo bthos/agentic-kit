@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the memory promotion state machine across .agentic-kit-artefacts/memory/.
+# Runs the memory promotion state machine across .akt/memory/.
 #
 #     observed -> logged (L2 daily) -> curated (L3) -> hardened (L0 patch) -> stable
 #
@@ -10,25 +10,25 @@
 #      `tool`/`library` → system, `project` → projects, `decision` → decisions).
 #   3) Resolve `supersedes:` chains: when an L3 entry is referenced by `supersedes:`
 #      from a newer entry, append `[superseded by mem_xxxxxxxx]` to the older `text:`.
-#   4) Rebuild `.agentic-kit-artefacts/MEMORY.md` (L4 root summary) deterministically.
+#   4) Rebuild `.akt/MEMORY.md` (L4 root summary) deterministically.
 #   5) (--propose-hardening) For high-confidence L3 entries referenced ≥3 times in
 #      archived features, write proposed agent patches to
-#      `.agentic-kit-artefacts/proposed-patches/<agent>.md` so `apply-patches.sh`
+#      `.akt/proposed-patches/<agent>.md` so `apply-patches.sh`
 #      can land them.
 #
 # Override the artefacts directory with $ARTEFACTS_DIR (e.g. for legacy .artefacts/
 # checkouts that have not migrated yet).
 #
 # Usage:
-#   agentic-kit/tools/memory-promote.sh                    # run steps 1..4
-#   agentic-kit/tools/memory-promote.sh --propose-hardening
-#   agentic-kit/tools/memory-promote.sh --dry-run          # show what would happen
+#   agentic-kit/memory/tools/promote.sh                    # run steps 1..4
+#   agentic-kit/memory/tools/promote.sh --propose-hardening
+#   agentic-kit/memory/tools/promote.sh --dry-run          # show what would happen
 #
 # Run from project root.
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
 MEM_DIR="$ARTEFACTS/memory"
 ROOT="$ARTEFACTS/MEMORY.md"
 PATCHES_DIR="$ARTEFACTS/proposed-patches"
@@ -44,7 +44,7 @@ for _arg in "$@"; do
 done
 
 if [ ! -d "$MEM_DIR" ]; then
-  echo "Memory tree not initialised. Run: agentic-kit/tools/memory-init.sh"
+  echo "Memory tree not initialised. Run: agentic-kit/memory/tools/init.sh"
   exit 0
 fi
 

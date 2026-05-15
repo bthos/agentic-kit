@@ -18,7 +18,7 @@ set -euo pipefail
 
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$KIT/.." && pwd)"
-ART_NAME="${ARTEFACTS_DIR_NAME:-.agentic-kit-artefacts}"
+ART_NAME="${ARTEFACTS_DIR_NAME:-.akt}"
 ART="$ROOT/$ART_NAME"
 CFG="$ART/.agentic-kit.cfg"
 PROJECT_MD="$ART/PROJECT.md"
@@ -152,9 +152,9 @@ register_actions() {
   add bump-min 2 maint "Bump version (minor)"            "Increment Y, reset Z. Run before commit when shipping a new feature." \
        "$KIT/tools/bump-version.sh::minor"
   add mem-roll 2 maint "Memory rollover"                 "Empty stale L1 in-flight decisions; compact L2 daily files older than 7 days into a weekly stub." \
-       "$KIT/tools/memory-rollover.sh"
+       "$KIT/memory/tools/rollover.sh"
   add mem-prom 2 maint "Memory promote (2-strike)"       "Run the L2→L3 promotion state machine; rebuild MEMORY.md root index." \
-       "$KIT/tools/memory-promote.sh"
+       "$KIT/memory/tools/promote.sh"
   add distill  2 maint "Distill lessons from archive"    "Read every archived feature's LESSONS.md and append to today's L2 daily memory." \
        "$KIT/tools/distill-lessons.sh"
   add patches  2 maint "Review proposed patches"         "Walk through $ART_NAME/proposed-patches/ interactively; accept or skip each." \
@@ -255,7 +255,7 @@ run_action() {
         printf "  %s→%s empty query — nothing to do\n" "$YELLOW" "$RESET"
         return 0
       fi
-      "$KIT/tools/memory-search.sh" "$q"
+      "$KIT/memory/tools/search.sh" "$q"
       ;;
     ::teardown-prompt)
       if [ ! -t 0 ]; then

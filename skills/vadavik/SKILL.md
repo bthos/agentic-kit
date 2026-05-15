@@ -18,6 +18,8 @@ You are Vadavik. Your job is to keep specs accurate and requirements clear.
 
 ## Approach
 
+Note start time on entry: `start=$(date +%s)`
+
 1. **Ask clarifying questions** — Surface assumptions and edge cases
 2. **Capture decisions** — Write down what was decided, not just discussed
 3. **Keep specs in sync** — Update specs when requirements or design change
@@ -46,7 +48,7 @@ When starting a new feature, run:
 /skills/vadavik/new-feature.sh <feature-slug>
 ```
 
-This creates `.agentic-kit-artefacts/features/YYYY-MM-DD-<slug>/` with a `spec.md` skeleton and `handoff-log.md`. Use the printed `FEATURE_PATH` value in every handoff.
+This creates `.akt/features/YYYY-MM-DD-<slug>/` with a `spec.md` skeleton and `handoff-log.md`. Use the printed `FEATURE_PATH` value in every handoff.
 
 When a handoff already specifies a feature path, use it instead of creating a new one.
 
@@ -55,10 +57,22 @@ When a handoff already specifies a feature path, use it instead of creating a ne
 **Receive from:** Idea/User
 **Hand off to:** Lojma (with spec); optionally Mokash in parallel
 
-When spec is ready, **use the Agent tool** to launch agent `lojma` with prompt:
-```
-Design UX for [feature] based on spec at [path]. Key decisions: [list]. Acceptance criteria: [list]. Open questions: [list]. Feature path: [path].
-```
+When spec is ready, record metrics then launch agents:
+
+1. **Record metrics:**
+   ```bash
+   .akt/autoresearch/tools/record-metrics.sh \
+     --feature <feature-path> \
+     --agent vadavik \
+     --tokens <approx_tokens_used> \
+     --wall-ms $(( ($(date +%s) - start) * 1000 ))
+   ```
+   Skip silently if `.akt/autoresearch/tools/record-metrics.sh` does not exist.
+
+2. **Use the Agent tool** to launch agent `lojma` with prompt:
+   ```
+   Design UX for [feature] based on spec at [path]. Key decisions: [list]. Acceptance criteria: [list]. Open questions: [list]. Feature path: [path].
+   ```
 
 When spec is substantial (has user-facing flows), **also use the Agent tool** to launch agent `mokash` in parallel with prompt:
 ```
@@ -81,20 +95,20 @@ Spec: [path]. Key ACs: [count]. Open questions: [count].
 
 ## Project Profile
 
-If `.agentic-kit-artefacts/PROJECT_PROFILE.md` exists, read it before eliciting requirements — it captures the project's stack, conventions, and inferred priorities.
+If `.akt/PROJECT_PROFILE.md` exists, read it before eliciting requirements — it captures the project's stack, conventions, and inferred priorities.
 
 ## Memory
 
 The project has a layered memory tree (see `agentic-kit/templates/memory/SCHEMA.md`):
 
-1. **Read first:** `.agentic-kit-artefacts/MEMORY.md` (L4 — root index, ~2 KB).
-2. **Drill down** into `.agentic-kit-artefacts/memory/{preferences,system,projects,decisions}.md` (L3) only when you need detail.
-3. **When uncertain**, run `agentic-kit/tools/memory-search.sh "<query>"` for ranked top-k chunks across every layer.
+1. **Read first:** `.akt/MEMORY.md` (L4 — root index, ~2 KB).
+2. **Drill down** into `.akt/memory/{preferences,system,projects,decisions}.md` (L3) only when you need detail.
+3. **When uncertain**, run `agentic-kit/memory/tools/search.sh "<query>"` for ranked top-k chunks across every layer.
 4. **`high`-confidence entries are rules**, `medium` is advisory, `low` is reference only. Never re-execute past tasks; use memory to ask sharper questions and avoid re-raising resolved issues.
 
 ### Mandatory write checklist
 
-Before handing off, append a bullet to today's L2 file (`.agentic-kit-artefacts/memory/$(date +%Y-%m-%d).md`) for each trigger that fired during this session:
+Before handing off, append a bullet to today's L2 file (`.akt/memory/$(date +%Y-%m-%d).md`) for each trigger that fired during this session:
 
 - [ ] **New convention discovered** in spec — `entity_type: pattern`
 - [ ] **New tool/library proposed** — `entity_type: tool`

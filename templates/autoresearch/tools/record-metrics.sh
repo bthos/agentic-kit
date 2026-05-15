@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Append a row to <feature>/metrics.jsonl AND to
-# agentic-kit/autoresearch/runs/cost.jsonl (so Veles has fleet-wide history).
+# .akt/autoresearch/runs/cost.jsonl (so Veles has fleet-wide history).
+#
+# Installed from agentic-kit/templates/autoresearch/tools/ by run.sh --init.
+# Edit this copy freely — the kit template is never overwritten after first install.
 #
 # Usage:
-#   record-metrics.sh \
-#     --feature .agentic-kit-artefacts/features/2026-04-30-foo \
+#   .akt/autoresearch/tools/record-metrics.sh \
+#     --feature .akt/features/2026-04-30-foo \
 #     --agent cmok \
 #     --tokens 18432 \
 #     --wall-ms 91500 \
@@ -17,8 +20,9 @@
 
 set -euo pipefail
 
-KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-RUNS_DIR="$KIT_DIR/runs"
+PROJECT_ROOT="$(pwd)"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+RUNS_DIR="$ARTEFACTS/autoresearch/runs"
 COST_LOG="$RUNS_DIR/cost.jsonl"
 mkdir -p "$RUNS_DIR"
 
@@ -55,14 +59,13 @@ run_id=$(printf '%s_%s' "$ts" "$RANDOM")
 # Compute cost (USD); skip if no numeric inputs
 cost_usd="null"
 if [ "$tokens" != "null" ] || [ "$wall_ms" != "null" ]; then
-  awk_in=$(awk -v t="$tokens" -v w="$wall_ms" -v cm="$cost_per_min" -v ct="$cost_per_tok" '
+  cost_usd=$(awk -v t="$tokens" -v w="$wall_ms" -v cm="$cost_per_min" -v ct="$cost_per_tok" '
     BEGIN {
       tt = (t == "null" ? 0 : t)
       ww = (w == "null" ? 0 : w)
       printf "%.6f", (ww/1000.0/60.0)*cm + tt*ct
     }
   ')
-  cost_usd="$awk_in"
 fi
 
 json_line=$(printf '{"ts":"%s","run_id":"%s","feature":"%s","agent":"%s","variant":"%s","tokens":%s,"wall_ms":%s,"cost_usd":%s,"accuracy":%s}' \

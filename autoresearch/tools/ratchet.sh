@@ -5,6 +5,9 @@
 #
 # Usage:  ratchet.sh --round-id <id> --target <path>
 # Run from project root.
+#
+# Environment:
+#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .akt)
 
 set -euo pipefail
 
@@ -12,11 +15,14 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")/../.." && pwd)/tools/lib.sh"
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROGRAM="$KIT_DIR/program.md"
-JUDGE_TPL="$KIT_DIR/judge.md"
-EVAL_DIR="$KIT_DIR/eval-set"
-VARIANTS_DIR="$KIT_DIR/variants"
-RUNS_DIR="$KIT_DIR/runs"
+PROJECT_ROOT="$(pwd)"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+
+PROGRAM="$ARTEFACTS/autoresearch/program.md"
+JUDGE_TPL="$KIT_DIR/judge.md"          # kit law — stays in submodule
+EVAL_DIR="$ARTEFACTS/autoresearch/eval-set"
+VARIANTS_DIR="$ARTEFACTS/autoresearch/variants"
+RUNS_DIR="$ARTEFACTS/autoresearch/runs"
 RATCHET_LOG="$RUNS_DIR/ratchet.jsonl"
 REJECT_LOG="$RUNS_DIR/rejected.jsonl"
 
@@ -34,8 +40,10 @@ done
 
 [ -n "$round_id" ] && [ -n "$target" ] \
   || { echo "--round-id and --target are required" >&2; exit 2; }
-[ -f "$PROGRAM" ] && [ -f "$JUDGE_TPL" ] \
-  || { echo "autoresearch not initialised (program.md / judge.md missing)" >&2; exit 2; }
+[ -f "$PROGRAM" ] \
+  || { echo "program.md missing at $PROGRAM — run: agentic-kit/autoresearch/run.sh --init" >&2; exit 2; }
+[ -f "$JUDGE_TPL" ] \
+  || { echo "judge.md missing at $JUDGE_TPL — submodule broken" >&2; exit 2; }
 
 base_file="$VARIANTS_DIR/$round_id/baseline/${target#./}"
 prop_file="$VARIANTS_DIR/$round_id/proposal/${target#./}"
@@ -77,8 +85,7 @@ score_variant() {
   fi
 }
 
-# Composite: for now, accuracy alone (cost is logged but ratchet is accuracy-driven).
-# program.md formula stays canonical; this script reads λ from program.md when present.
+# Read λ from the project's program.md
 LAMBDA=$(grep -E '^λ\s*=\s*' "$PROGRAM" | head -n1 | sed -E 's/.*=\s*//' || true)
 LAMBDA="${LAMBDA:-0.3}"
 
@@ -123,15 +130,11 @@ if awk -v a="$comp_prop" -v b="$comp_base" 'BEGIN{exit !(a >= b)}'; then
     "$ts" "$round_id" "$target" "$comp_base" "$comp_prop" "$delta" >> "$RATCHET_LOG"
   echo "ACCEPT  baseline=$comp_base  proposal=$comp_prop  Δ=$delta"
 
-  # Log the accepted mutation as an L2 memory entry so future rounds
-  # (and Karpathy-style retrieval in mutate-agent.sh) can see it.
-  MEM_ROOT="$(cd "$KIT_DIR/.." && pwd)"
-  MEM_PROMOTE="$MEM_ROOT/tools/memory-promote.sh"
-  PROJECT_ROOT="$(pwd)"
-  ARTEFACTS_DIR_LOCAL="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+  # Log the accepted mutation as an L2 memory entry
+  MEM_PROMOTE="$(cd "$KIT_DIR/.." && pwd)/memory/tools/promote.sh"
   TODAY=$(date +%Y-%m-%d)
-  DAILY="$PROJECT_ROOT/$ARTEFACTS_DIR_LOCAL/memory/$TODAY.md"
-  if [ -d "$PROJECT_ROOT/$ARTEFACTS_DIR_LOCAL/memory" ]; then
+  DAILY="$ARTEFACTS/memory/$TODAY.md"
+  if [ -d "$ARTEFACTS/memory" ]; then
     [ -f "$DAILY" ] || printf '# Daily memory — %s (L2)\n\n## Observations\n' "$TODAY" > "$DAILY"
     {
       echo ""
@@ -146,7 +149,7 @@ if awk -v a="$comp_prop" -v b="$comp_base" 'BEGIN{exit !(a >= b)}'; then
         "$target" "$comp_base" "$comp_prop" "$delta"
     } >> "$DAILY"
     if [ -x "$MEM_PROMOTE" ]; then
-      ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_DIR_LOCAL" "$MEM_PROMOTE" >/dev/null ) || true
+      ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS" "$MEM_PROMOTE" >/dev/null ) || true
     fi
   fi
 else

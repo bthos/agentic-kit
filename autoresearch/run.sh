@@ -3,17 +3,26 @@
 #
 # Usage:
 #   agentic-kit/autoresearch/run.sh --rounds=3
-#   agentic-kit/autoresearch/run.sh --init                 # prepare directories + eval-set
+#   agentic-kit/autoresearch/run.sh --init                 # install templates + build eval-set
 #   agentic-kit/autoresearch/run.sh --rounds=2 --target .claude/agents/cmok.md
 #
 # Run from project root.
+#
+# Environment:
+#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .akt)
 
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
-EVAL_DIR="$KIT_DIR/eval-set"
-RUNS_DIR="$KIT_DIR/runs"
-VARIANTS_DIR="$KIT_DIR/variants"
+TEMPLATES_DIR="$(cd "$KIT_DIR/../templates/autoresearch" && pwd)"
+PROJECT_ROOT="$(pwd)"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+
+EVAL_DIR="$ARTEFACTS/autoresearch/eval-set"
+RUNS_DIR="$ARTEFACTS/autoresearch/runs"
+VARIANTS_DIR="$ARTEFACTS/autoresearch/variants"
+PROGRAM="$ARTEFACTS/autoresearch/program.md"
+TOOLS_DIR="$ARTEFACTS/autoresearch/tools"
 
 ROUNDS=1
 TARGET=""
@@ -29,18 +38,43 @@ for arg in "$@"; do
   esac
 done
 
-mkdir -p "$EVAL_DIR" "$RUNS_DIR" "$VARIANTS_DIR"
+mkdir -p "$EVAL_DIR" "$RUNS_DIR" "$VARIANTS_DIR" "$TOOLS_DIR"
 
 if $INIT; then
   echo "Initialising autoresearch loop…"
-  "$KIT_DIR/tools/build-eval-set.sh"
+
+  # Install program.md template (never overwrite if project has already edited it)
+  if [ ! -f "$PROGRAM" ]; then
+    cp "$TEMPLATES_DIR/program.md" "$PROGRAM"
+    echo "  Installed: $PROGRAM"
+  else
+    echo "  Kept existing: $PROGRAM"
+  fi
+
+  # Install record-metrics.sh template (same rule — never overwrite)
+  METRICS_SCRIPT="$TOOLS_DIR/record-metrics.sh"
+  if [ ! -f "$METRICS_SCRIPT" ]; then
+    cp "$TEMPLATES_DIR/tools/record-metrics.sh" "$METRICS_SCRIPT"
+    chmod +x "$METRICS_SCRIPT"
+    echo "  Installed: $METRICS_SCRIPT"
+  else
+    echo "  Kept existing: $METRICS_SCRIPT"
+  fi
+
+  ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/build-eval-set.sh"
   echo "OK. Eval entries:"
   ls -1 "$EVAL_DIR" 2>/dev/null || echo "  (none yet — archive a feature first)"
   exit 0
 fi
 
+# Guard: program.md must exist (run --init first)
+if [ ! -f "$PROGRAM" ]; then
+  echo "autoresearch not initialised — run: agentic-kit/autoresearch/run.sh --init" >&2
+  exit 1
+fi
+
 # Build any new eval-set entries from archive (idempotent, never edits existing)
-"$KIT_DIR/tools/build-eval-set.sh" >/dev/null
+ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/build-eval-set.sh" >/dev/null
 
 # Default candidate set: all installed kit agents/skills
 candidates=()
@@ -76,14 +110,13 @@ accepted=0
 rejected=0
 
 for ((round=1; round <= ROUNDS; round++)); do
-  # Pick a candidate pseudo-randomly weighted toward agents (prompts have more leverage)
   idx=$(( RANDOM % ${#candidates[@]} ))
   target="${candidates[$idx]}"
   echo
   echo "── Round $round/$ROUNDS — target: $target"
 
   set +e
-  round_id=$("$KIT_DIR/tools/mutate-agent.sh" --target "$target" --reason "round $round" 2>&1)
+  round_id=$(ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/mutate-agent.sh" --target "$target" --reason "round $round" 2>&1)
   rc=$?
   set -e
   if [ $rc -ne 0 ] || [ -z "$round_id" ]; then
@@ -94,7 +127,7 @@ for ((round=1; round <= ROUNDS; round++)); do
   fi
 
   set +e
-  out=$("$KIT_DIR/tools/ratchet.sh" --round-id "$round_id" --target "$target")
+  out=$(ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/ratchet.sh" --round-id "$round_id" --target "$target")
   rc=$?
   set -e
   echo "  $out"

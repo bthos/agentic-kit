@@ -7,14 +7,14 @@
 #     before the file ages out, so compaction is safe).
 #
 # Usage:
-#   agentic-kit/tools/memory-rollover.sh
-#   agentic-kit/tools/memory-rollover.sh --dry-run
+#   agentic-kit/memory/tools/rollover.sh
+#   agentic-kit/memory/tools/rollover.sh --dry-run
 #
 # Run from project root, ideally as a daily cron / hook.
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.agentic-kit-artefacts}"
+ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
 MEM_DIR="$ARTEFACTS/memory"
 SESSION="$ARTEFACTS/SESSION-STATE.md"
 

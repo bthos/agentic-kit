@@ -5,12 +5,19 @@
 #
 # Usage:  mutate-agent.sh --target .claude/agents/cmok.md [--round-id <id>] [--reason "..."]
 # Run from project root.
+#
+# Environment:
+#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .akt)
 
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROGRAM="$KIT_DIR/program.md"
-VARIANTS_DIR="$KIT_DIR/variants"
+PROJECT_ROOT="$(pwd)"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+
+PROGRAM="$ARTEFACTS/autoresearch/program.md"
+VARIANTS_DIR="$ARTEFACTS/autoresearch/variants"
+REJECT_LOG="$ARTEFACTS/autoresearch/runs/rejected.jsonl"
 
 target=""
 round_id=""
@@ -28,7 +35,7 @@ done
 
 [ -n "$target" ] || { echo "--target required (path to installed agent/skill file)" >&2; exit 2; }
 [ -f "$target" ] || { echo "Target not found: $target" >&2; exit 2; }
-[ -f "$PROGRAM" ] || { echo "program.md missing — autoresearch not initialised" >&2; exit 2; }
+[ -f "$PROGRAM" ] || { echo "program.md missing at $PROGRAM — run: agentic-kit/autoresearch/run.sh --init" >&2; exit 2; }
 
 if ! command -v claude &>/dev/null; then
   echo "claude CLI required for mutation step" >&2
@@ -40,13 +47,13 @@ fi
 # Karpathy-style retrieval: pull rejected mutations + memory hits for this target
 # so the LLM does not re-propose what already lost.
 PRIOR_REJECTS=""
-REJECT_LOG="$KIT_DIR/runs/rejected.jsonl"
+REJECT_LOG="$ARTEFACTS/autoresearch/runs/rejected.jsonl"
 if [ -f "$REJECT_LOG" ]; then
   PRIOR_REJECTS=$(grep -F "\"$target\"" "$REJECT_LOG" 2>/dev/null | tail -n 5 || true)
 fi
 
 MEMORY_HITS=""
-MEM_SEARCH="$(cd "$KIT_DIR/.." && pwd)/tools/memory-search.sh"
+MEM_SEARCH="$(cd "$KIT_DIR/.." && pwd)/memory/tools/search.sh"
 if [ -x "$MEM_SEARCH" ]; then
   query="$(basename "$target") $reason"
   MEMORY_HITS=$("$MEM_SEARCH" "$query" --top-k 5 2>/dev/null | head -n 60 || true)
@@ -89,7 +96,7 @@ Top memory hits relevant to this target (read for context — apply only what fi
 ${MEMORY_HITS:-(none)}
 \`\`\`
 
-Produce a NEW version of the file with **one focused, small change** that you believe improves the composite metric (accuracy − 0.3·cost). Examples of valid changes:
+Produce a NEW version of the file with **one focused, small change** that you believe improves the composite metric. Examples of valid changes:
 
 - Add ONE concrete rule to a guardrail or 'When to Use' section.
 - Tighten a vague instruction into a measurable one.
