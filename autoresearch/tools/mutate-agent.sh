@@ -11,6 +11,19 @@
 
 set -euo pipefail
 
+# Enable verbose tracing if VERBOSE=1 or DEBUG=1
+if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
+  export PS4='+ $(date -u "+%Y-%m-%dT%H:%M:%SZ")\040 '
+  set -x
+fi
+
+# If LOG_FILE set, redirect stdout+stderr to the file (append)
+if [ -n "${LOG_FILE:-}" ]; then
+  mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
+  touch "$LOG_FILE" 2>/dev/null || true
+  exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
+fi
+
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
@@ -25,6 +38,9 @@ reason="general improvement"
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --verbose) export VERBOSE=1; shift ;;
+    --log-file=*) LOG_FILE="${1#--log-file=}"; shift ;;
+    --log-file) LOG_FILE="${2:-}"; shift 2 ;;
     --target)   target="$2"; shift 2 ;;
     --round-id) round_id="$2"; shift 2 ;;
     --reason)   reason="$2"; shift 2 ;;

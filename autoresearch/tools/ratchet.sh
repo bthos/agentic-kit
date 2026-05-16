@@ -11,6 +11,19 @@
 
 set -euo pipefail
 
+# Enable verbose tracing if VERBOSE=1 or DEBUG=1
+if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
+  export PS4='+ $(date -u "+%Y-%m-%dT%H:%M:%SZ")\040 '
+  set -x
+fi
+
+# If LOG_FILE set, redirect stdout+stderr to the file (append)
+if [ -n "${LOG_FILE:-}" ]; then
+  mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
+  touch "$LOG_FILE" 2>/dev/null || true
+  exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
+fi
+
 # shellcheck source=../../tools/lib.sh
 source "$(cd "$(dirname "$0")/../.." && pwd)/tools/lib.sh"
 
@@ -31,8 +44,11 @@ target=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --verbose) export VERBOSE=1; shift ;;
     --round-id) round_id="$2"; shift 2 ;;
     --target)   target="$2"; shift 2 ;;
+    --log-file=*) LOG_FILE="${2#--log-file=}"; shift ;;
+    --log-file) LOG_FILE="${2:-}"; shift 2 ;;
     -h|--help)  sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -50,7 +66,7 @@ prop_file="$VARIANTS_DIR/$round_id/proposal/${target#./}"
 [ -f "$base_file" ] && [ -f "$prop_file" ] \
   || { echo "missing baseline or proposal for round $round_id" >&2; exit 2; }
 
-mkdir -p "$RUNS_DIR"
+mkdir -p "$ARTEFACTS_ROOT" "$RUNS_DIR" "$VARIANTS_DIR"
 
 # Hash judge.md and program.md before/after to enforce invariant 3 (judge sacred)
 judge_pre=$(kit_sha256_file "$JUDGE_TPL")

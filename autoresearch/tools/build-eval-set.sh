@@ -11,6 +11,12 @@
 
 set -euo pipefail
 
+# Enable verbose tracing if VERBOSE=1 or DEBUG=1
+if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
+  export PS4='+ $(date -u "+%Y-%m-%dT%H:%M:%SZ")\040 '
+  set -x
+fi
+
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
@@ -18,7 +24,7 @@ ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 EVAL_DIR="$ARTEFACTS/autoresearch/eval-set"
 ARCHIVE_DIR="$ARTEFACTS/archive"
 
-mkdir -p "$EVAL_DIR"
+mkdir -p "${ARTEFACTS_ROOT}" "$EVAL_DIR"
 
 if [ ! -d "$ARCHIVE_DIR" ]; then
   echo "No $ARCHIVE_DIR yet — archive a feature first."

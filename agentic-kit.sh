@@ -73,7 +73,7 @@ detect_stage() {
   if [ ! -d "$ART" ] || [ ! -f "$CFG" ]; then
     echo 0; return
   fi
-  if [ ! -f "$PROJECT_MD" ] || grep -q '<' "$PROJECT_MD" 2>/dev/null; then
+  if [ ! -f "$PROJECT_MD" ] || grep -qF ':** `<' "$PROJECT_MD" 2>/dev/null; then
     echo 1; return
   fi
   echo 2
@@ -157,6 +157,8 @@ register_actions() {
        "$KIT/memory/tools/promote.sh"
   add distill  2 maint "Distill lessons from archive"    "Read every archived feature's LESSONS.md and append to today's L2 daily memory." \
        "$KIT/tools/distill-lessons.sh"
+    add claude-check 2 maint "Audit Claude install"       "Run a lightweight check of local Claude/skills/plugins/settings." \
+      "$KIT/tools/lean-claude.sh"
   add patches  2 maint "Review proposed patches"         "Walk through $ART_NAME/proposed-patches/ interactively; accept or skip each." \
        "$KIT/tools/apply-patches.sh"
 }
