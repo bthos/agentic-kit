@@ -2,19 +2,20 @@
 # Removes agentic-kit installed copies from the target project.
 #
 # Order of operations:
-#   1. Strip the kit-managed include block from CLAUDE.md / AGENTS.md /
-#      .github/copilot-instructions.md  (existing user content is preserved
-#      verbatim; only the marked block is removed). If we created the file
-#      from scratch as a stub and it still matches what we created, the file
-#      is removed entirely.
-#   2. Remove kit-installed agent / skill copies under .claude/, .cursor/,
-#      .github/ — but only when their SHA-256 still matches the value
-#      recorded in .akt/.agentic-kit.files. Files you edited locally are kept.
-#   3. Remove the canonical pipeline copy at .akt/PIPELINE.md
-#      when its hash still matches; PROJECT.md is kept unless --full-clean.
-#   4. Strip the managed block from .gitignore.
-#   5. (--remove-submodule) Deinit the agentic-kit submodule.
-#   6. (--full-clean) Sweep .akt/scratch/ (ephemeral runtime files),
+#   1. Strip the kit-managed include block from CLAUDE.md and AGENTS.md
+#      (existing user content is preserved verbatim; only the marked block is
+#      removed). If we created the file from scratch as a stub and it still
+#      matches what we created, the file is removed entirely.
+#   2. Remove kit-installed agent / skill copies under .claude/ — but only
+#      when their SHA-256 still matches the value recorded in
+#      .akt/.agentic-kit.files. Files you edited locally are kept.
+#   3. Sweep legacy .cursor/ and .github/ artefacts left behind by older kit
+#      versions, using the same manifest-safety predicate.
+#   4. Remove the canonical pipeline copy at .akt/PIPELINE.md when its hash
+#      still matches; PROJECT.md is kept unless --full-clean.
+#   5. Strip the managed block from .gitignore.
+#   6. (--remove-submodule) Deinit the agentic-kit submodule.
+#   7. (--full-clean) Sweep .akt/scratch/ (ephemeral runtime files),
 #      offer to remove .akt/PROJECT.md, and try to remove the .akt/
 #      folder itself if nothing user-owned remains.
 #
@@ -125,12 +126,11 @@ teardown_gitignore_block() {
 header "Entry-point files (managed include blocks)"
 kit_include_block_remove "CLAUDE.md"
 kit_include_block_remove "AGENTS.md"
-kit_include_block_remove ".github/copilot-instructions.md"
 
 # ---------------------------------------------------------------------------
-# 2. Remove Claude agents (copies)
+# 2. Remove Claude agents + skills
 # ---------------------------------------------------------------------------
-header "Agents"
+header "Agents (.claude/agents/)"
 
 for agent in "$SCRIPT_DIR/agents/"*.md; do
   [ -e "$agent" ] || continue
@@ -141,10 +141,7 @@ if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.claude/agents" ] && [ -z "$(ls -A "$PROJEC
   rmdir "$PROJECT_ROOT/.claude/agents" 2>/dev/null && removed ".claude/agents/ (empty dir)" || true
 fi
 
-# ---------------------------------------------------------------------------
-# 3. Remove Claude skill copies
-# ---------------------------------------------------------------------------
-header "Skills"
+header "Skills (.claude/skills/)"
 
 for skill_dir in "$SCRIPT_DIR/skills/"*/; do
   [ -d "$skill_dir" ] || continue
@@ -159,94 +156,96 @@ if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.claude" ] && [ -z "$(ls -A "$PROJECT_ROOT/
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Remove Cursor skill copies, subagents, legacy rules
+# 3. Sweep legacy Cursor / Copilot artefacts (pre-vX.Y installs).
+#    Manifest-safe: only files whose SHA-256 still matches the manifest are
+#    removed. Locally-edited files are preserved with a "modified" warning.
+#    All guards (`[ -d ... ]`) no-op on fresh installs.
 # ---------------------------------------------------------------------------
-header "Cursor"
+header "Legacy IDE artefacts (Cursor / Copilot)"
 
-for skill_dir in "$SCRIPT_DIR/skills/"*/; do
-  [ -d "$skill_dir" ] || continue
-  name=$(basename "$skill_dir")
-  kit_managed_tree_remove ".cursor/skills/$name" "${skill_dir%/}"
-done
-if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.cursor/skills" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/skills" 2>/dev/null)" ]; then
-  rmdir "$PROJECT_ROOT/.cursor/skills" 2>/dev/null && removed ".cursor/skills/ (empty dir)" || true
-fi
-
+# Cursor subagents
 if [ -d "$PROJECT_ROOT/.cursor/agents" ]; then
-  for sf in "$PROJECT_ROOT/.cursor/agents/"*.md; do
-    [ -e "$sf" ] || continue
-    kit_managed_file_remove ".cursor/agents/$(basename "$sf")"
+  for f in "$PROJECT_ROOT/.cursor/agents/"*.md; do
+    [ -e "$f" ] || continue
+    kit_managed_file_remove ".cursor/agents/$(basename "$f")"
   done
-  if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.cursor/agents" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/agents" 2>/dev/null)" ]; then
+  if ! $DRY_RUN; then
     rmdir "$PROJECT_ROOT/.cursor/agents" 2>/dev/null && removed ".cursor/agents/ (empty dir)" || true
   fi
-else
-  info ".cursor/agents/ not present"
 fi
 
+# Cursor skill copies
+if [ -d "$PROJECT_ROOT/.cursor/skills" ]; then
+  for skill_dir in "$PROJECT_ROOT/.cursor/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    name=$(basename "$skill_dir")
+    kit_managed_tree_remove ".cursor/skills/$name" "$SCRIPT_DIR/skills/$name"
+  done
+  if ! $DRY_RUN; then
+    rmdir "$PROJECT_ROOT/.cursor/skills" 2>/dev/null && removed ".cursor/skills/ (empty dir)" || true
+  fi
+fi
+
+# Cursor legacy rules (pre-skills era)
 if [ -d "$PROJECT_ROOT/.cursor/rules" ]; then
   for mdc in "$PROJECT_ROOT/.cursor/rules/"*.mdc; do
     [ -e "$mdc" ] || continue
     kit_managed_file_remove ".cursor/rules/$(basename "$mdc")"
   done
-  if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.cursor/rules" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/rules" 2>/dev/null)" ]; then
+  if ! $DRY_RUN; then
     rmdir "$PROJECT_ROOT/.cursor/rules" 2>/dev/null && removed ".cursor/rules/ (empty dir)" || true
   fi
-else
-  info ".cursor/rules/ not present"
 fi
+
 if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.cursor" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor" 2>/dev/null)" ]; then
   rmdir "$PROJECT_ROOT/.cursor" 2>/dev/null && removed ".cursor/ (empty dir)" || true
 fi
 
-# ---------------------------------------------------------------------------
-# 5. Remove GitHub Copilot generated files
-# ---------------------------------------------------------------------------
-header "GitHub Copilot"
-
-GITHUB_DIR="$PROJECT_ROOT/.github"
-
-if [ -d "$GITHUB_DIR/agents" ]; then
-  for f in "$GITHUB_DIR/agents/"*.agent.md; do
+# GitHub Copilot agents
+if [ -d "$PROJECT_ROOT/.github/agents" ]; then
+  for f in "$PROJECT_ROOT/.github/agents/"*.agent.md; do
     [ -e "$f" ] || continue
     kit_managed_file_remove ".github/agents/$(basename "$f")"
   done
   if ! $DRY_RUN; then
-    [ -z "$(ls -A "$GITHUB_DIR/agents" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/agents" 2>/dev/null && removed ".github/agents/ (empty dir)" || true
+    rmdir "$PROJECT_ROOT/.github/agents" 2>/dev/null && removed ".github/agents/ (empty dir)" || true
   fi
-else
-  info ".github/agents/ not present"
 fi
 
-if [ -d "$GITHUB_DIR/instructions" ]; then
-  for f in "$GITHUB_DIR/instructions/"*.instructions.md; do
+# GitHub Copilot instructions
+if [ -d "$PROJECT_ROOT/.github/instructions" ]; then
+  for f in "$PROJECT_ROOT/.github/instructions/"*.instructions.md; do
     [ -e "$f" ] || continue
     kit_managed_file_remove ".github/instructions/$(basename "$f")"
   done
   if ! $DRY_RUN; then
-    [ -z "$(ls -A "$GITHUB_DIR/instructions" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/instructions" 2>/dev/null && removed ".github/instructions/ (empty dir)" || true
+    rmdir "$PROJECT_ROOT/.github/instructions" 2>/dev/null && removed ".github/instructions/ (empty dir)" || true
   fi
-else
-  info ".github/instructions/ not present"
 fi
-if ! $DRY_RUN && [ -d "$GITHUB_DIR" ] && [ -z "$(ls -A "$GITHUB_DIR" 2>/dev/null)" ]; then
-  rmdir "$GITHUB_DIR" 2>/dev/null && removed ".github/ (empty dir)" || true
+
+# .github/copilot-instructions.md managed block
+if [ -f "$PROJECT_ROOT/.github/copilot-instructions.md" ]; then
+  kit_include_block_remove ".github/copilot-instructions.md"
+fi
+
+if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.github" ] && [ -z "$(ls -A "$PROJECT_ROOT/.github" 2>/dev/null)" ]; then
+  rmdir "$PROJECT_ROOT/.github" 2>/dev/null && removed ".github/ (empty dir)" || true
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Remove .akt/PIPELINE.md (kit-managed copy)
+# 4. Remove .akt/PIPELINE.md (kit-managed copy)
 # ---------------------------------------------------------------------------
 header "$ARTEFACTS_DIR_NAME/ (canonical pipeline copy)"
 kit_managed_file_remove "$ARTEFACTS_DIR_NAME/PIPELINE.md"
 
 # ---------------------------------------------------------------------------
-# 7. Strip managed .gitignore block
+# 5. Strip managed .gitignore block
 # ---------------------------------------------------------------------------
 header ".gitignore (managed block)"
 teardown_gitignore_block
 
 # ---------------------------------------------------------------------------
-# 8. Optionally remove the submodule
+# 6. Optionally remove the submodule
 # ---------------------------------------------------------------------------
 if $REMOVE_SUBMODULE && ! $DRY_RUN; then
   header "Submodule"
@@ -261,7 +260,7 @@ elif $REMOVE_SUBMODULE && $DRY_RUN; then
 fi
 
 # ---------------------------------------------------------------------------
-# 9. Optionally remove PROJECT.md and the artefacts dir (--full-clean)
+# 7. Optionally remove PROJECT.md and the artefacts dir (--full-clean)
 # ---------------------------------------------------------------------------
 if $FULL_CLEAN; then
   header "Full clean — $ARTEFACTS_DIR_NAME/PROJECT.md and friends"
