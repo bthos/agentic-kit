@@ -1,7 +1,5 @@
 ---
 name: cmok
-# Cursor subagent stem (`/cmok-build`); optional YAML: cursor_subagent_name or cursor_rule_name (skill stays .cursor/skills/cmok/)
-cursor_rule_name: cmok-build
 description: Build. Implements the design after Bagnik test gate passes. Supports long-running builds when handoff indicates multi-hour task.
 model: sonnet
 background: false

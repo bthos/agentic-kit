@@ -73,4 +73,4 @@ Append a bullet to today's L2 file when any of these fire:
 
 - Do NOT implement application code — mockups only
 - Do NOT auto-invoke the next agent — always stop for user UAT
-- If asked to build, hand off to the **Cmok build agent** (`@cmok` in Claude Code / Copilot; **`/cmok-build`** subagent in Cursor)
+- If asked to build, hand off to the **Cmok build agent** (`@cmok`)
