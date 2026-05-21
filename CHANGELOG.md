@@ -10,6 +10,32 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ## [Unreleased]
 
+### Removed (BREAKING)
+- **`--ide=` flag** and all Cursor / GitHub Copilot generation. Previously
+  `init.sh`, `update.sh`, and `teardown.sh` produced and managed three parallel
+  install trees (`.claude/`, `.cursor/`, `.github/`). The kit now installs
+  **one** Claude-shaped layout. Cursor, GitHub Copilot, Codex, and other
+  workspace-aware tools read `AGENTS.md` — the kit writes it alongside
+  `CLAUDE.md` with the same managed include block. `init.sh` rejects
+  `--ide=*` with exit code 2 and a message pointing at this CHANGELOG.
+- **`cursor_rule_name` / `cursor_subagent_name`** YAML keys on agent and skill
+  files, and the **`cmok-build`** subagent shim that worked around Cursor's
+  namespace clash between the `cmok` skill and `cmok` agent. The build agent
+  is just `@cmok` again everywhere.
+- `tools/init.sh` lost ~500 lines of Cursor/Copilot helpers
+  (`cursor_subagent_*`, `write_cursor_subagent`, `setup_cursor`,
+  `write_github_agent`, `write_github_instructions`, `setup_github`,
+  `extract_yaml_field`, `escape_yaml_double`, `strip_frontmatter_body`,
+  `yaml_truthy_is_background`, and the interactive IDE picker).
+
+### Migration
+
+Run `agentic-kit/tools/update.sh` once. It refreshes the pipeline, agents,
+and skills the same way it always has, then sweeps the legacy `.cursor/` and
+`.github/` trees. If you edited any of those files locally, they are
+preserved with a `[skipped: locally modified]` warning — remove them
+manually if no longer needed.
+
 ### Added
 - **`agentic-kit.sh`** — single stage-aware interactive launcher. Detects install
   state (not installed / needs config / ready) and only offers actions that fit.
@@ -27,8 +53,23 @@ tags yet — entries are dated and grouped by submodule HEAD).
   like `1.20.-1`.
 
 ### Changed
-- `init.sh:200` — `--ide` validation error message now lists `both` (the
-  alias for `all` that was already accepted by the regex).
+- `init.sh` — installs both `CLAUDE.md` and `AGENTS.md` with the same managed
+  include block. The `agentic_block_*` lib helpers no longer take an
+  `ide_label` argument (the embedded comment names agentic-kit instead).
+- `update.sh` — automatically sweeps legacy `.cursor/agents/`,
+  `.cursor/skills/`, `.cursor/rules/`, `.github/agents/`,
+  `.github/instructions/`, and the managed block in
+  `.github/copilot-instructions.md` after each refresh. Manifest-SHA safety
+  is preserved: only files the kit installed and the user did not edit are
+  removed; locally-edited files are skipped with a warning.
+- `teardown.sh` — consolidated the old Cursor and GitHub Copilot teardown
+  sections into a single "Legacy IDE artefacts" sweep, using the same
+  manifest predicate. The dedicated sections were renumbered.
+- `tools/lib.sh` — gained `kit_managed_file_remove`, `kit_managed_tree_remove`,
+  `kit_include_block_remove`, `kit_rm`, `kit_rm_rf`, `_manifest_drop`
+  (lifted from `teardown.sh` so `update.sh` can use them). The last two
+  manifest-mismatch branches in the file/tree removers now `return 1` so
+  callers can count "skipped" vs "removed" accurately.
 - `init.sh` — silent `|| true` after `probe-project.sh` and `memory-init.sh`
   replaced with explicit `warn` messages so failures are audible without
   aborting the install.
