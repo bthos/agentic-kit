@@ -426,6 +426,7 @@ kit_managed_file_remove() {
   fi
 
   skip "$rel (modified or unknown — hash mismatch or not kit-managed)"
+  return 1
 }
 
 # Remove a copied tree if the manifest hash matches (or matches live kit source).
@@ -473,6 +474,7 @@ kit_managed_tree_remove() {
   fi
 
   skip "$rel (modified locally — hash mismatch)"
+  return 1
 }
 
 # Strip the kit-managed include block from $rel (a project-relative path).
