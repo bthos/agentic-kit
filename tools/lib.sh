@@ -36,7 +36,7 @@ removed() { printf "  ${RED}✗${RESET} %s\n" "$*"; }
 # ---------------------------------------------------------------------------
 AGENTIC_MARKER='<!-- agentic-kit managed -->'
 
-# Marker block delimiters used inside CLAUDE.md / AGENTS.md / copilot-instructions.md
+# Marker block delimiters used inside CLAUDE.md / AGENTS.md
 # and inside .gitignore. The marker form is intentionally distinctive so users (and
 # teardown.sh) can grep for it; never edit the markers by hand.
 AGENTIC_BLOCK_BEGIN='<!-- agentic-kit:start -->'
@@ -171,7 +171,7 @@ kit_symlink_points_into_kit() {
 }
 
 # ---------------------------------------------------------------------------
-# Managed include blocks (CLAUDE.md / AGENTS.md / copilot-instructions.md)
+# Managed include blocks (CLAUDE.md / AGENTS.md)
 #
 # Strategy: instead of overwriting (or even creating from scratch) full pipeline
 # documents at the project root, we maintain a small, clearly-marked block inside

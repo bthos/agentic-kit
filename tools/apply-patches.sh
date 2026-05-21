@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Reviews .akt/proposed-patches/<agent>.md (produced by
 # `distill-lessons.sh --target=agents`) and lets the user accept or skip each
-# patch. On accept the patch is appended to every installed agent copy
-# (.claude/agents, .cursor/agents, .github/agents) and the SHA-256 in
-# `.akt/.agentic-kit.files` is refreshed so `teardown.sh` still treats the file as
-# kit-managed.
+# patch. On accept the patch is appended to the installed agent copy
+# (.claude/agents/<agent>.md) and the SHA-256 in `.akt/.agentic-kit.files`
+# is refreshed so `teardown.sh` still treats the file as kit-managed.
 #
 # Override the artefacts directory with $ARTEFACTS_DIR.
 #
@@ -48,17 +47,12 @@ if [ ${#patch_files[@]} -eq 0 ]; then
   exit 0
 fi
 
-# Locations agents may be installed at (Claude / Cursor / Copilot)
+# Installed agent path. The kit installs only `.claude/agents/<name>.md` now;
+# legacy `.cursor/` and `.github/` paths are swept by update.sh.
 agent_install_paths() {
   local name="$1"
-  local out=()
-  for p in \
-    ".claude/agents/${name}.md" \
-    ".cursor/agents/${name}.md" \
-    ".github/agents/${name}.agent.md"; do
-    [ -f "$PROJECT_ROOT/$p" ] && out+=( "$p" )
-  done
-  printf '%s\n' "${out[@]}"
+  local p=".claude/agents/${name}.md"
+  [ -f "$PROJECT_ROOT/$p" ] && printf '%s\n' "$p"
 }
 
 apply_patch_to_file() {
