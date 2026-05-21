@@ -28,8 +28,8 @@ composite = accuracy_score − λ · cost_normalized
 
 Veles may modify:
 
-- **Installed agent prompts** — `.claude/agents/<agent>.md`, `.cursor/agents/<agent>.md`, `.github/agents/<agent>.agent.md` (these are copies; manifest hash gets refreshed on accept).
-- **Installed skill prompts** — `.claude/skills/<skill>/SKILL.md`, `.cursor/skills/<skill>/SKILL.md`, `.github/instructions/<skill>.instructions.md`.
+- **Installed agent prompts** — `.claude/agents/<agent>.md` (these are copies; manifest hash gets refreshed on accept).
+- **Installed skill prompts** — `.claude/skills/<skill>/SKILL.md`.
 - **Front-matter `model:` field** — swap `sonnet` ↔ `haiku` ↔ `opus` when justified by composite.
 - **Task decomposition rules** within agent prompts (e.g. "split into N steps when …").
 - **Tool-call ordering hints** within agent prompts.
@@ -37,7 +37,6 @@ Veles may modify:
 Veles may **NOT** modify:
 
 - The kit source under `agentic-kit/` (only the user does that, via PRs).
-- `.cursor/agents/` files generated **from** `agents/*.md` if the change would also need to land in the kit source — those should be proposed via `distill-lessons.sh --target=agents` instead.
 - `PROJECT.md`, `CLAUDE.md`, `AGENTS.md`, `templates/PIPELINE.md.template`, `templates/PROJECT.md.template`.
 - `program.md`, `judge.md`, `eval-set/`.
 

@@ -97,11 +97,11 @@ candidates=()
 if [ -n "$TARGET" ]; then
   candidates=( "$TARGET" )
 else
-  for d in .claude/agents .cursor/agents; do
+  for d in .claude/agents; do
     [ -d "$d" ] || continue
     while IFS= read -r f; do candidates+=( "$f" ); done < <(find "$d" -maxdepth 1 -name '*.md' 2>/dev/null)
   done
-  for d in .claude/skills .cursor/skills; do
+  for d in .claude/skills; do
     [ -d "$d" ] || continue
     while IFS= read -r f; do candidates+=( "$f" ); done < <(find "$d" -mindepth 2 -maxdepth 2 -name 'SKILL.md' 2>/dev/null)
   done
