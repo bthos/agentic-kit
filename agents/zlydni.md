@@ -42,6 +42,14 @@ Optional body with more context.
 
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
+**Passing the message to git — use a file, never an inline heredoc.** On Windows the shell command line caps at ~8KB and `git commit -m "$(cat <<EOF…)"` aborts the session with `The command line is too long`. Always:
+
+1. Use the **Write** tool to put the message in `.akt/scratch/commit-msg.txt` (the `.akt/scratch/` dir is git-ignored by the kit's managed `.gitignore` block).
+2. Run `git commit -F .akt/scratch/commit-msg.txt`.
+3. Delete the temp file after the commit succeeds; do not block on cleanup failures.
+
+Same rule for `gh pr create --body-file` / `gh issue create --body-file` if you create a PR or issue. See **Shell command conventions** in `.akt/PIPELINE.md` for the full list.
+
 ## Output
 
 - Commands executed

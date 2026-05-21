@@ -10,9 +10,6 @@
 .specstory/
 .vscode/
 
-# Kit artefacts
-.artefacts/
-
 # Defensive: when this repo is exercised standalone (init.sh resolves
 # PROJECT_ROOT to the kit's parent, but tooling that runs from inside the kit
 # dir during development sometimes drops these here).

@@ -230,6 +230,23 @@ This gives any agent a full chain of custody when context is lost, especially ac
 7. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
 8. **Mokash handoff template:** Feature path, Spec path, UX path, Tech plan path, What was built, Document: [scope]
 
+## Shell command conventions
+
+**Never inline multi-line strings into shell commands** — on Windows the pwsh/cmd command line caps at ~8KB and the session aborts with `The command line is too long`. The same content embedded in a heredoc or `-m "$(cat <<EOF…)"` counts against that cap.
+
+**Rule:** if a command argument contains a newline (or is likely to exceed ~2KB after quoting), write it to a temp file first and pass the file path.
+
+| Instead of | Do |
+|------------|----|
+| `git commit -m "$(cat <<'EOF'…EOF)"` | Write message to `.akt/scratch/commit-msg.txt`, then `git commit -F .akt/scratch/commit-msg.txt` |
+| `gh pr create --body "<long body>"` | Write body to `.akt/scratch/pr-body.md`, then `gh pr create --body-file .akt/scratch/pr-body.md` |
+| `gh issue create --body "<long>"` | `--body-file` with a temp file under `.akt/scratch/` |
+| `echo "<large json>" \| curl -d @-` | Write to `.akt/scratch/payload.json`, then `curl -d @.akt/scratch/payload.json` |
+
+Use the **Write** tool to produce the temp file (it does not go through the shell). The `.akt/scratch/` directory is git-ignored by the kit's managed `.gitignore` block. Clean files up after the command succeeds, but do not block on cleanup failures.
+
+This applies to every agent (Zlydni commits, Mokash PR/issue bodies, Cmok large patches) and every IDE.
+
 ## Memory layers
 
 The kit uses a five-layer memory tree (see `agentic-kit/templates/memory/SCHEMA.md`). All agents read **`.akt/MEMORY.md`** (L4) before starting and write to today's L2 file when their checklist triggers fire.

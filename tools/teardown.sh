@@ -14,8 +14,9 @@
 #      when its hash still matches; PROJECT.md is kept unless --full-clean.
 #   4. Strip the managed block from .gitignore.
 #   5. (--remove-submodule) Deinit the agentic-kit submodule.
-#   6. (--full-clean) Offer to remove .akt/PROJECT.md and
-#      the .akt/ folder itself.
+#   6. (--full-clean) Sweep .akt/scratch/ (ephemeral runtime files),
+#      offer to remove .akt/PROJECT.md, and try to remove the .akt/
+#      folder itself if nothing user-owned remains.
 #
 # Usage: agentic-kit/tools/teardown.sh [--remove-submodule] [--full-clean] [--yes] [--dry-run]
 #   --full-clean        Also remove .akt/PROJECT.md and the
@@ -49,8 +50,8 @@ agentic-kit / teardown.sh
 
   FLAGS
     --remove-submodule   Also `git submodule deinit` and remove the kit submodule.
-    --full-clean         Also remove .akt/PROJECT.md and the
-                         .akt/ folder if empty.
+    --full-clean         Sweep .akt/scratch/, also remove .akt/PROJECT.md
+                         and the .akt/ folder if empty.
     --yes, -y            Skip confirmation prompts. Aliases: --non-interactive, -n.
     --dry-run            Show what would be removed without doing it.
     --help, -h           Show this help and exit.
@@ -466,6 +467,15 @@ if $FULL_CLEAN; then
 
   _confirm_remove "$ARTEFACTS_DIR_NAME/PROJECT.md"
   _manifest_drop "$ARTEFACTS_DIR_NAME/PROJECT.md"
+
+  # scratch/ holds only ephemeral kit runtime files (commit messages, PR
+  # bodies, request payloads written to dodge the Windows command-line cap).
+  # Unlike memory/features/archive it carries no user state, so --full-clean
+  # always sweeps it away.
+  if [ -d "$ARTEFACTS_DIR/scratch" ]; then
+    do_rm_rf "$ARTEFACTS_DIR/scratch"
+    $DRY_RUN || removed "$ARTEFACTS_DIR_NAME/scratch/"
+  fi
 
   # Try to remove the artefacts directory if empty (it usually still has
   # memory/, features/, archive/ — those are user state, not kit-managed).
