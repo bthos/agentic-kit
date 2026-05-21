@@ -181,17 +181,15 @@ kit_symlink_points_into_kit() {
 # ---------------------------------------------------------------------------
 
 # Build the include block. Args:
-#   $1 — relative path to the canonical pipeline file
-#         (e.g. .akt/PIPELINE.md)
-#   $2 — IDE label for the embedded comment (e.g. "Claude Code", "Cursor", "GitHub Copilot")
-# The block is identical across IDEs except for the label so it diffs cleanly
-# when the user inspects multiple entry-point files.
+#   $1 — relative path to the canonical pipeline file (e.g. .akt/PIPELINE.md)
+# The same block is written to CLAUDE.md and AGENTS.md; the embedded comment
+# names agentic-kit so the source of truth is obvious to any reader.
 agentic_block_render() {
-  local pipeline_rel="$1" ide_label="$2"
+  local pipeline_rel="$1"
   cat <<EOF
 $AGENTIC_BLOCK_BEGIN
 <!--
-  This block is managed by agentic-kit ($ide_label).
+  This block is managed by agentic-kit.
   Do not edit between the start/end markers — re-run \`agentic-kit/init.sh\` to refresh it,
   or \`agentic-kit/teardown.sh\` to remove it. Everything outside the markers is yours.
 -->
@@ -254,16 +252,16 @@ agentic_block_strip() {
   return 0
 }
 
-# Write a fresh "stub" entry-point file (used when no CLAUDE.md / AGENTS.md /
-# copilot-instructions.md exists yet). We put the include block at the top so the
-# user's later edits accumulate naturally below it.
+# Write a fresh "stub" entry-point file (used when no CLAUDE.md / AGENTS.md
+# exists yet). We put the include block at the top so the user's later edits
+# accumulate naturally below it.
 agentic_block_write_stub() {
-  local file="$1" pipeline_rel="$2" ide_label="$3"
+  local file="$1" pipeline_rel="$2"
   mkdir -p "$(dirname "$file")"
   {
-    printf '# %s — entry point\n\n' "$ide_label"
+    printf '# %s\n\n' "$(basename "$file" .md)"
     printf 'This file is read by your IDE on every prompt. Add project-specific guidance below the managed block.\n\n'
-    agentic_block_render "$pipeline_rel" "$ide_label"
+    agentic_block_render "$pipeline_rel"
     printf '\n'
   } > "$file"
 }
@@ -272,7 +270,7 @@ agentic_block_write_stub() {
 # leading blank line if the existing file does not already end with one, so the
 # diff is small and reviewable.
 agentic_block_append() {
-  local file="$1" pipeline_rel="$2" ide_label="$3"
+  local file="$1" pipeline_rel="$2"
   if [ -s "$file" ]; then
     local last_byte
     last_byte=$(tail -c1 "$file" 2>/dev/null || true)
@@ -281,7 +279,7 @@ agentic_block_append() {
     fi
     printf '\n' >> "$file"
   fi
-  agentic_block_render "$pipeline_rel" "$ide_label" >> "$file"
+  agentic_block_render "$pipeline_rel" >> "$file"
 }
 
 # ---------------------------------------------------------------------------
