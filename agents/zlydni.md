@@ -95,14 +95,16 @@ When commit completes:
    ```bash
    # Mirror LESSONS.md into today's daily file (L2)
    today=$(date +%Y-%m-%d); daily=".akt/memory/${today}.md"
+   feature_slug="$(basename "$feature_path")"
+   archive_path=".akt/archive/${feature_slug}"
    [ -d .akt/memory ] || agentic-kit/memory/tools/init.sh
    {
-     printf '\n## Lessons from %s (mirrored from LESSONS.md by zlydni)\n\n' "$(basename .akt/archive/<feature-id>)"
-     awk '/^- \[/ {
+     printf '\n## Lessons from %s (mirrored from LESSONS.md by zlydni)\n\n' "$feature_slug"
+     awk -v slug="$feature_slug" -v today="$today" '/^- \[/ {
        tag=$0; sub(/^- \[/, "", tag); sub(/].*/, "", tag)
        text=$0; sub(/^- \[[^]]+\][[:space:]]*/, "", text)
-       printf "- id: pending\n  decided: '"$today"'\n  entity_type: %s\n  entities: []\n  confidence: medium\n  source: archive/<feature-id>/LESSONS.md\n  text: |\n    %s\n", tag, text
-     }' .akt/archive/<feature-id>/LESSONS.md
+       printf "- id: pending\n  decided: %s\n  entity_type: %s\n  entities: []\n  confidence: medium\n  source: archive/%s/LESSONS.md\n  text: |\n    %s\n", today, tag, slug, text
+     }' "${archive_path}/LESSONS.md"
    } >> "$daily"
    agentic-kit/memory/tools/promote.sh
    ```

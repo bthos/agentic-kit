@@ -22,7 +22,7 @@ Note start time on entry: `start=$(date +%s)`
    ```bash
    agentic-kit/tools/bump-version.sh patch
    ```
-   This reads version files from `.akt/PROJECT.md` and bumps them atomically.
+   This reads version files from `.akt/PROJECT.md` and bumps them atomically. If the script is missing (submodule not checked out), skip this step and note "version bump skipped — agentic-kit submodule missing" in the handoff log. Do not fail the build for this.
 2. **Read all artifacts first** — Before writing a single line of code, read every relevant artifact in the feature folder: `spec.md`, `ux-design.md`, `tech-plan.md`, and any files they reference. Also read the existing source files you will modify. Extract and list every acceptance criterion from `spec.md` as a numbered checklist. Only then begin implementing. This prevents blind spots and expensive mid-build rework.
 3. **Build** — Write clean, maintainable code; implement the design from spec, UX, and tech plan. Cross off each acceptance criterion as it is satisfied.
 4. **Stay aligned** — Match the design; flag when implementation diverges
