@@ -84,171 +84,6 @@ info "project root: $PROJECT_ROOT"
 info "artefacts:    $ARTEFACTS_DIR_NAME/"
 $DRY_RUN && warn "Dry run — no files will be removed."
 
-# ---------------------------------------------------------------------------
-# Dry-run-aware removal helpers
-# ---------------------------------------------------------------------------
-do_rm() {
-  if $DRY_RUN; then
-    info "would remove: $1"
-  else
-    rm "$1"
-  fi
-}
-do_rm_rf() {
-  if $DRY_RUN; then
-    info "would remove: $1"
-  else
-    rm -rf "$1"
-  fi
-}
-
-_manifest_drop() {
-  if ! $DRY_RUN; then manifest_remove_entry "$1"; fi
-}
-
-# Remove a regular file if manifest hash matches (or legacy kit marker + no manifest).
-teardown_managed_file() {
-  local rel="$1"
-  local abs="$PROJECT_ROOT/$rel"
-  local recorded have
-
-  if [ ! -e "$abs" ] && [ ! -L "$abs" ]; then
-    _manifest_drop "$rel"
-    return 0
-  fi
-
-  if [ -L "$abs" ] && kit_symlink_points_into_kit "$abs"; then
-    do_rm "$abs"
-    _manifest_drop "$rel"
-    removed "$rel (legacy symlink)"
-    return 0
-  fi
-
-  if [ ! -f "$abs" ] || [ -L "$abs" ]; then
-    skip "$rel (not a regular file — delete manually)"
-    return 1
-  fi
-
-  have=$(kit_sha256_file "$abs") || true
-  recorded=$(manifest_get_hash "$rel" || true)
-
-  if [ -n "$recorded" ] && [ -n "$have" ] && [ "$have" = "$recorded" ]; then
-    do_rm "$abs"
-    _manifest_drop "$rel"
-    removed "$rel"
-    return 0
-  fi
-
-  if [ -z "$recorded" ] && grep -qF "$AGENTIC_MARKER" "$abs" 2>/dev/null; then
-    do_rm "$abs"
-    _manifest_drop "$rel"
-    removed "$rel (legacy kit marker, no manifest)"
-    return 0
-  fi
-
-  skip "$rel (modified or unknown — hash mismatch or not kit-managed)"
-}
-
-# Remove a copied skill tree if manifest hash matches (or matches live kit source).
-teardown_managed_tree() {
-  local rel="$1"
-  local kit_src="$2"
-  local abs="$PROJECT_ROOT/$rel"
-  local recorded have want
-
-  if [ ! -e "$abs" ] && [ ! -L "$abs" ]; then
-    _manifest_drop "$rel"
-    return 0
-  fi
-
-  if [ -L "$abs" ] && kit_symlink_points_into_kit "$abs"; then
-    do_rm_rf "$abs"
-    _manifest_drop "$rel"
-    removed "$rel (legacy symlink)"
-    return 0
-  fi
-
-  if [ ! -d "$abs" ] || [ -L "$abs" ]; then
-    skip "$rel (not a directory — delete manually)"
-    return 1
-  fi
-
-  have=$(kit_sha256_tree "$abs") || true
-  recorded=$(manifest_get_hash "$rel" || true)
-
-  if [ -n "$recorded" ] && [ -n "$have" ] && [ "$have" = "$recorded" ]; then
-    do_rm_rf "$abs"
-    _manifest_drop "$rel"
-    removed "$rel"
-    return 0
-  fi
-
-  if [ -z "$recorded" ] && [ -d "$kit_src" ]; then
-    want=$(kit_sha256_tree "$kit_src") || true
-    if [ -n "$want" ] && [ -n "$have" ] && [ "$have" = "$want" ]; then
-      do_rm_rf "$abs"
-      _manifest_drop "$rel"
-      removed "$rel (matches kit source, no manifest)"
-      return 0
-    fi
-  fi
-
-  skip "$rel (modified locally — hash mismatch)"
-}
-
-# Strip the kit-managed include block from $rel (a project-relative path).
-# Behaviour:
-#   * if the manifest entry says "stub:<sha>" and the file still matches that
-#     stub byte-for-byte (we created it), remove the whole file
-#   * else strip just the marked block and keep the rest of the file
-#   * always drop the manifest entry
-teardown_include_block() {
-  local rel="$1"
-  local abs="$PROJECT_ROOT/$rel"
-  local recorded prefix value have
-
-  if [ ! -f "$abs" ]; then
-    _manifest_drop "$rel"
-    return 0
-  fi
-
-  recorded=$(manifest_get_hash "$rel" || true)
-  prefix="${recorded%%:*}"
-  value="${recorded#*:}"
-
-  if [ "$prefix" = "stub" ] && [ -n "$value" ]; then
-    have=$(kit_sha256_file "$abs" || true)
-    if [ -n "$have" ] && [ "$have" = "$value" ]; then
-      do_rm "$abs"
-      _manifest_drop "$rel"
-      removed "$rel (kit-created stub)"
-      return 0
-    fi
-  fi
-
-  if agentic_block_present "$abs"; then
-    if $DRY_RUN; then
-      info "would strip managed include block from: $rel"
-      return 0
-    fi
-    if agentic_block_strip "$abs"; then
-      _manifest_drop "$rel"
-      removed "$rel (managed block stripped, file kept)"
-      return 0
-    fi
-    warn "$rel (failed to strip block — left as-is)"
-    return 1
-  fi
-
-  if [ -n "$recorded" ]; then
-    skip "$rel (no managed block found — manifest entry dropped)"
-    _manifest_drop "$rel"
-    return 0
-  fi
-
-  skip "$rel (no managed block — leaving file alone)"
-}
-
 # Strip the managed block from .gitignore.
 teardown_gitignore_block() {
   local rel=".gitignore"
@@ -271,7 +106,7 @@ teardown_gitignore_block() {
       # If we just emptied .gitignore (file existed only because we created it
       # for the block), remove it.
       if [ ! -s "$abs" ]; then
-        do_rm "$abs"
+        kit_rm "$abs"
         removed ".gitignore (was empty after strip)"
       fi
       return 0
@@ -288,9 +123,9 @@ teardown_gitignore_block() {
 # 1. Strip include blocks from entry-point files
 # ---------------------------------------------------------------------------
 header "Entry-point files (managed include blocks)"
-teardown_include_block "CLAUDE.md"
-teardown_include_block "AGENTS.md"
-teardown_include_block ".github/copilot-instructions.md"
+kit_include_block_remove "CLAUDE.md"
+kit_include_block_remove "AGENTS.md"
+kit_include_block_remove ".github/copilot-instructions.md"
 
 # ---------------------------------------------------------------------------
 # 2. Remove Claude agents (copies)
@@ -300,7 +135,7 @@ header "Agents"
 for agent in "$SCRIPT_DIR/agents/"*.md; do
   [ -e "$agent" ] || continue
   name=$(basename "$agent")
-  teardown_managed_file ".claude/agents/$name"
+  kit_managed_file_remove ".claude/agents/$name"
 done
 if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.claude/agents" ] && [ -z "$(ls -A "$PROJECT_ROOT/.claude/agents" 2>/dev/null)" ]; then
   rmdir "$PROJECT_ROOT/.claude/agents" 2>/dev/null && removed ".claude/agents/ (empty dir)" || true
@@ -314,7 +149,7 @@ header "Skills"
 for skill_dir in "$SCRIPT_DIR/skills/"*/; do
   [ -d "$skill_dir" ] || continue
   name=$(basename "$skill_dir")
-  teardown_managed_tree ".claude/skills/$name" "${skill_dir%/}"
+  kit_managed_tree_remove ".claude/skills/$name" "${skill_dir%/}"
 done
 if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.claude/skills" ] && [ -z "$(ls -A "$PROJECT_ROOT/.claude/skills" 2>/dev/null)" ]; then
   rmdir "$PROJECT_ROOT/.claude/skills" 2>/dev/null && removed ".claude/skills/ (empty dir)" || true
@@ -331,7 +166,7 @@ header "Cursor"
 for skill_dir in "$SCRIPT_DIR/skills/"*/; do
   [ -d "$skill_dir" ] || continue
   name=$(basename "$skill_dir")
-  teardown_managed_tree ".cursor/skills/$name" "${skill_dir%/}"
+  kit_managed_tree_remove ".cursor/skills/$name" "${skill_dir%/}"
 done
 if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.cursor/skills" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/skills" 2>/dev/null)" ]; then
   rmdir "$PROJECT_ROOT/.cursor/skills" 2>/dev/null && removed ".cursor/skills/ (empty dir)" || true
@@ -340,7 +175,7 @@ fi
 if [ -d "$PROJECT_ROOT/.cursor/agents" ]; then
   for sf in "$PROJECT_ROOT/.cursor/agents/"*.md; do
     [ -e "$sf" ] || continue
-    teardown_managed_file ".cursor/agents/$(basename "$sf")"
+    kit_managed_file_remove ".cursor/agents/$(basename "$sf")"
   done
   if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.cursor/agents" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/agents" 2>/dev/null)" ]; then
     rmdir "$PROJECT_ROOT/.cursor/agents" 2>/dev/null && removed ".cursor/agents/ (empty dir)" || true
@@ -352,7 +187,7 @@ fi
 if [ -d "$PROJECT_ROOT/.cursor/rules" ]; then
   for mdc in "$PROJECT_ROOT/.cursor/rules/"*.mdc; do
     [ -e "$mdc" ] || continue
-    teardown_managed_file ".cursor/rules/$(basename "$mdc")"
+    kit_managed_file_remove ".cursor/rules/$(basename "$mdc")"
   done
   if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.cursor/rules" ] && [ -z "$(ls -A "$PROJECT_ROOT/.cursor/rules" 2>/dev/null)" ]; then
     rmdir "$PROJECT_ROOT/.cursor/rules" 2>/dev/null && removed ".cursor/rules/ (empty dir)" || true
@@ -374,7 +209,7 @@ GITHUB_DIR="$PROJECT_ROOT/.github"
 if [ -d "$GITHUB_DIR/agents" ]; then
   for f in "$GITHUB_DIR/agents/"*.agent.md; do
     [ -e "$f" ] || continue
-    teardown_managed_file ".github/agents/$(basename "$f")"
+    kit_managed_file_remove ".github/agents/$(basename "$f")"
   done
   if ! $DRY_RUN; then
     [ -z "$(ls -A "$GITHUB_DIR/agents" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/agents" 2>/dev/null && removed ".github/agents/ (empty dir)" || true
@@ -386,7 +221,7 @@ fi
 if [ -d "$GITHUB_DIR/instructions" ]; then
   for f in "$GITHUB_DIR/instructions/"*.instructions.md; do
     [ -e "$f" ] || continue
-    teardown_managed_file ".github/instructions/$(basename "$f")"
+    kit_managed_file_remove ".github/instructions/$(basename "$f")"
   done
   if ! $DRY_RUN; then
     [ -z "$(ls -A "$GITHUB_DIR/instructions" 2>/dev/null)" ] && rmdir "$GITHUB_DIR/instructions" 2>/dev/null && removed ".github/instructions/ (empty dir)" || true
@@ -402,7 +237,7 @@ fi
 # 6. Remove .akt/PIPELINE.md (kit-managed copy)
 # ---------------------------------------------------------------------------
 header "$ARTEFACTS_DIR_NAME/ (canonical pipeline copy)"
-teardown_managed_file "$ARTEFACTS_DIR_NAME/PIPELINE.md"
+kit_managed_file_remove "$ARTEFACTS_DIR_NAME/PIPELINE.md"
 
 # ---------------------------------------------------------------------------
 # 7. Strip managed .gitignore block
@@ -418,7 +253,7 @@ if $REMOVE_SUBMODULE && ! $DRY_RUN; then
   cd "$PROJECT_ROOT"
   git submodule deinit -f "$SUBMODULE_DIR" 2>/dev/null || true
   git rm -f "$SUBMODULE_DIR" 2>/dev/null || true
-  do_rm_rf ".git/modules/$SUBMODULE_DIR"
+  kit_rm_rf ".git/modules/$SUBMODULE_DIR"
   removed "submodule $SUBMODULE_DIR"
 elif $REMOVE_SUBMODULE && $DRY_RUN; then
   header "Submodule"
@@ -473,7 +308,7 @@ if $FULL_CLEAN; then
   # Unlike memory/features/archive it carries no user state, so --full-clean
   # always sweeps it away.
   if [ -d "$ARTEFACTS_DIR/scratch" ]; then
-    do_rm_rf "$ARTEFACTS_DIR/scratch"
+    kit_rm_rf "$ARTEFACTS_DIR/scratch"
     $DRY_RUN || removed "$ARTEFACTS_DIR_NAME/scratch/"
   fi
 

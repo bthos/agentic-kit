@@ -361,3 +361,171 @@ agentic_gitignore_strip() {
   rm -f "$tmp"
   return 0
 }
+
+# ---------------------------------------------------------------------------
+# Managed-file teardown helpers (shared by teardown.sh and update.sh).
+# Callers may set DRY_RUN=true to preview without touching the filesystem.
+# ---------------------------------------------------------------------------
+
+kit_rm() {
+  if [ "${DRY_RUN:-false}" = "true" ]; then
+    info "would remove: $1"
+  else
+    rm "$1"
+  fi
+}
+
+kit_rm_rf() {
+  if [ "${DRY_RUN:-false}" = "true" ]; then
+    info "would remove: $1"
+  else
+    rm -rf "$1"
+  fi
+}
+
+_manifest_drop() {
+  if [ "${DRY_RUN:-false}" != "true" ]; then manifest_remove_entry "$1"; fi
+}
+
+# Remove a regular file if the manifest hash matches (or legacy kit marker, no manifest).
+kit_managed_file_remove() {
+  local rel="$1"
+  local abs="$PROJECT_ROOT/$rel"
+  local recorded have
+
+  if [ ! -e "$abs" ] && [ ! -L "$abs" ]; then
+    _manifest_drop "$rel"
+    return 0
+  fi
+
+  if [ -L "$abs" ] && kit_symlink_points_into_kit "$abs"; then
+    kit_rm "$abs"
+    _manifest_drop "$rel"
+    removed "$rel (legacy symlink)"
+    return 0
+  fi
+
+  if [ ! -f "$abs" ] || [ -L "$abs" ]; then
+    skip "$rel (not a regular file — delete manually)"
+    return 1
+  fi
+
+  have=$(kit_sha256_file "$abs") || true
+  recorded=$(manifest_get_hash "$rel" || true)
+
+  if [ -n "$recorded" ] && [ -n "$have" ] && [ "$have" = "$recorded" ]; then
+    kit_rm "$abs"
+    _manifest_drop "$rel"
+    removed "$rel"
+    return 0
+  fi
+
+  if [ -z "$recorded" ] && grep -qF "$AGENTIC_MARKER" "$abs" 2>/dev/null; then
+    kit_rm "$abs"
+    _manifest_drop "$rel"
+    removed "$rel (legacy kit marker, no manifest)"
+    return 0
+  fi
+
+  skip "$rel (modified or unknown — hash mismatch or not kit-managed)"
+}
+
+# Remove a copied tree if the manifest hash matches (or matches live kit source).
+kit_managed_tree_remove() {
+  local rel="$1"
+  local kit_src="$2"
+  local abs="$PROJECT_ROOT/$rel"
+  local recorded have want
+
+  if [ ! -e "$abs" ] && [ ! -L "$abs" ]; then
+    _manifest_drop "$rel"
+    return 0
+  fi
+
+  if [ -L "$abs" ] && kit_symlink_points_into_kit "$abs"; then
+    kit_rm_rf "$abs"
+    _manifest_drop "$rel"
+    removed "$rel (legacy symlink)"
+    return 0
+  fi
+
+  if [ ! -d "$abs" ] || [ -L "$abs" ]; then
+    skip "$rel (not a directory — delete manually)"
+    return 1
+  fi
+
+  have=$(kit_sha256_tree "$abs") || true
+  recorded=$(manifest_get_hash "$rel" || true)
+
+  if [ -n "$recorded" ] && [ -n "$have" ] && [ "$have" = "$recorded" ]; then
+    kit_rm_rf "$abs"
+    _manifest_drop "$rel"
+    removed "$rel"
+    return 0
+  fi
+
+  if [ -z "$recorded" ] && [ -d "$kit_src" ]; then
+    want=$(kit_sha256_tree "$kit_src") || true
+    if [ -n "$want" ] && [ -n "$have" ] && [ "$have" = "$want" ]; then
+      kit_rm_rf "$abs"
+      _manifest_drop "$rel"
+      removed "$rel (matches kit source, no manifest)"
+      return 0
+    fi
+  fi
+
+  skip "$rel (modified locally — hash mismatch)"
+}
+
+# Strip the kit-managed include block from $rel (a project-relative path).
+# Behaviour:
+#   * if the manifest entry says "stub:<sha>" and the file still matches that
+#     stub byte-for-byte (we created it), remove the whole file
+#   * else strip just the marked block and keep the rest of the file
+#   * always drop the manifest entry
+kit_include_block_remove() {
+  local rel="$1"
+  local abs="$PROJECT_ROOT/$rel"
+  local recorded prefix value have
+
+  if [ ! -f "$abs" ]; then
+    _manifest_drop "$rel"
+    return 0
+  fi
+
+  recorded=$(manifest_get_hash "$rel" || true)
+  prefix="${recorded%%:*}"
+  value="${recorded#*:}"
+
+  if [ "$prefix" = "stub" ] && [ -n "$value" ]; then
+    have=$(kit_sha256_file "$abs" || true)
+    if [ -n "$have" ] && [ "$have" = "$value" ]; then
+      kit_rm "$abs"
+      _manifest_drop "$rel"
+      removed "$rel (kit-created stub)"
+      return 0
+    fi
+  fi
+
+  if agentic_block_present "$abs"; then
+    if [ "${DRY_RUN:-false}" = "true" ]; then
+      info "would strip managed include block from: $rel"
+      return 0
+    fi
+    if agentic_block_strip "$abs"; then
+      _manifest_drop "$rel"
+      removed "$rel (managed block stripped, file kept)"
+      return 0
+    fi
+    warn "$rel (failed to strip block — left as-is)"
+    return 1
+  fi
+
+  if [ -n "$recorded" ]; then
+    skip "$rel (no managed block found — manifest entry dropped)"
+    _manifest_drop "$rel"
+    return 0
+  fi
+
+  skip "$rel (no managed block — leaving file alone)"
+}
