@@ -9,10 +9,7 @@
 To set up agentic-kit in a project, run from the **project root** (the directory that contains `agentic-kit/`):
 
 ```bash
-agentic-kit/tools/init.sh --non-interactive --ide=claude    # Claude Code
-agentic-kit/tools/init.sh --non-interactive --ide=cursor   # Cursor
-agentic-kit/tools/init.sh --non-interactive --ide=github  # Copilot
-agentic-kit/tools/init.sh --non-interactive --ide=all      # all three (alias: --ide=both)
+agentic-kit/tools/init.sh --non-interactive
 ```
 
 Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script prints a **`[AGENT ACTION REQUIRED]`** block instead of spawning a nested CLI to edit `.akt/PROJECT.md`.
@@ -23,29 +20,28 @@ Non-interactive flags: `-n`, `--non-interactive`, `--yes`, or `-y`. The script p
 
 ```
 project root/
-├── .akt/        ← single home for kit-managed docs + state
+├── .akt/                          ← single home for kit-managed docs + state
 │   ├── PIPELINE.md                ← canonical pipeline (kit-managed; refreshed on init)
 │   ├── PROJECT.md                 ← project-specific config (you edit this)
 │   ├── memory/                    ← layered memory (auto-managed)
 │   ├── features/                  ← active feature folders (created per /vadavik)
-│   └── archive/                   ← completed features (moved by Zlydni)
-├── CLAUDE.md / AGENTS.md / .github/copilot-instructions.md
-│                                  ← thin stub OR your existing file with a managed
-│                                    include block <!-- agentic-kit:start --> … --end -->
-├── .claude/  .cursor/  .github/   ← agent + skill copies (one folder per IDE)
-└── .gitignore                     ← managed block ignores .akt/{memory,features,archive,…}
+│   ├── archive/                   ← completed features (moved by Zlydni)
+│   └── scratch/                   ← ephemeral runtime files (auto-managed)
+├── CLAUDE.md                      ← Claude Code entry-point with managed include block
+├── AGENTS.md                      ← cross-IDE entry-point with the same include block
+├── .claude/                       ← agent + skill copies
+└── .gitignore                     ← managed block ignores .akt/{memory,features,archive,scratch,…}
 ```
 
-Everything kit-touched is either inside `.akt/`, the IDE folder (`.claude/`, `.cursor/`, `.github/`), or wrapped in a removable `<!-- agentic-kit:start --> … <!-- agentic-kit:end -->` block. `agentic-kit/tools/teardown.sh` either strips the block or removes the file when its SHA-256 still matches the kit copy.
+Everything kit-touched is either inside `.akt/`, inside `.claude/`, or wrapped in a removable `<!-- agentic-kit:start --> … <!-- agentic-kit:end -->` block in `CLAUDE.md` / `AGENTS.md` / `.gitignore`. `agentic-kit/tools/teardown.sh` either strips the block or removes the file when its SHA-256 still matches the kit copy.
 
-**What each `--ide` produces:**
+**What `init.sh` produces:**
 
-| Target | Skills | Agents | Pipeline entry-point |
-|--------|--------|--------|----------------------|
-| `claude` | Copies → `.claude/skills/` | Copies → `.claude/agents/` | `CLAUDE.md` (managed include block → `@.akt/PIPELINE.md`) |
-| `cursor` | Copies → `.cursor/skills/` (and `.claude/skills/` for bundled scripts) | Generated `.cursor/agents/*.md` ([subagents](https://cursor.com/docs/context/subagents)) | `AGENTS.md` (managed include block) |
-| `github` | `.github/instructions/*.instructions.md` | `.github/agents/*.agent.md` | `.github/copilot-instructions.md` (managed include block) |
-| `all` | All of the above | All of the above | All of the above |
+- Skills copied to `.claude/skills/`
+- Agents copied to `.claude/agents/`
+- Pipeline entry-point: managed include block in `CLAUDE.md` and `AGENTS.md`, both pointing to `@.akt/PIPELINE.md`
+
+Any workspace-aware IDE discovers the kit through `CLAUDE.md` or `AGENTS.md` (the cross-IDE convention). One install covers all of them.
 
 ---
 
@@ -82,26 +78,14 @@ Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
 
 ### Invocation
 
-The kit uses the **same role names** in every IDE. What changes is only the **control** your editor exposes (slash menu, `@` rules, agent picker, and so on).
-
-**Roles**
-
 | Kind | Names |
 |------|--------|
-| **Skills** | `vadavik`, `lojma`, `laznik`, `cmok` (mockups only for `cmok`) |
-| **Agents** | `bagnik`, `cmok` (implementation after gates), `mokash`, `veles` (autoresearch), `zlydni` |
+| Skills | `/vadavik`, `/lojma`, `/laznik`, `/cmok` |
+| Agents | `@bagnik`, `@cmok` (build), `@mokash`, `@veles`, `@zlydni` |
 
-**Mockups vs Cmok build:** the **skill** `cmok` is mockups only. **Implementation** after Bagnik is the **agent** `cmok` in Claude/Copilot; in Cursor that agent is the subagent **`/cmok-build`** (stem from `cursor_rule_name` / `cursor_subagent_name`) so it does not clash with the **`cmok`** skill.
+The build implementation after Bagnik passes is the `@cmok` agent. The mockup phase uses the `/cmok` skill. They share a name because they share the role; the kit no longer maintains per-IDE shims to disambiguate.
 
-**How to invoke (by IDE)**
-
-| IDE | Skills | Agents |
-|-----|--------|--------|
-| **Claude Code** | Slash in chat: **`/vadavik`**, **`/lojma`**, **`/laznik`**, **`/cmok`** | **`@bagnik`**, **`@cmok`**, **`@mokash`**, **`@zlydni`**, or the Agent / subagent flow with those names |
-| **Cursor** | In **Agent** chat, type **`/`** and pick the skill by name (discovered automatically; see [Agent Skills](https://cursor.com/docs/context/skills)). Optional: type **`/vadavik`**-style if your build resolves it the same way. | [Custom subagents](https://cursor.com/docs/context/subagents): **`/bagnik`**, **`/cmok-build`**, **`/mokash`**, **`/zlydni`**, or ask Agent to delegate. Handoff protocol: root **`AGENTS.md`** (which includes this pipeline). |
-| **GitHub Copilot** (VS Code) | No Claude-style slash; workspace instructions apply broadly—refer to **Vadavik / Lojma / Laznik / Cmok** by name in the prompt. | Open the **agents** control in Copilot Chat and choose the workspace agent (**bagnik**, **cmok**, **mokash**, **zlydni**); labels match each agent file's `name:` field (see [Custom agents in VS Code](https://code.visualstudio.com/docs/copilot/customization/custom-chat-modes)). If your build offers **`@`** participants for those agents, you can use the same names there. |
-
-The **Handoff Map** below uses **`/…`** and **`@…`** as **short labels** for those same roles (Claude-style). Translate using the table above.
+The **Handoff Map** below uses the same `/…` and `@…` tokens.
 
 ---
 
@@ -129,7 +113,7 @@ Agents hand off to each other without user intervention where possible. Flow sto
 | Bagnik (code QA fail) → Cmok | yes | — |
 | Zlydni → End | — | Optional — user may push |
 
-**Parallel docs (Mokash):** In Claude Code, Mokash is often launched with `background: true` so it runs alongside Lojma or Cmok. In Cursor / Copilot, still pass the same handoff context to Mokash in parallel when the flow calls for docs + design or docs + build — your UI may not expose “background” the same way.
+**Parallel docs (Mokash):** Mokash runs alongside Lojma or Cmok whenever the flow calls for docs + design or docs + build. In Claude Code this is enabled with `background: true`; other IDEs may not expose a background flag, but the same handoff context should still be passed in parallel.
 
 ### Principles
 
@@ -160,7 +144,7 @@ When handing off to another agent, include:
 - **Blockers:** [None | List if any]
 
 ### Next Agent
-**Invoke:** name the next **role** from the Handoff Map (e.g. `/vadavik`, `/laznik`, `@bagnik`, `@cmok` for build, `@mokash`, `@zlydni`) — those tokens are Claude shortcuts; use the **How to invoke** table for Cursor and Copilot.
+**Invoke:** name the next **role** from the Handoff Map (e.g. `/vadavik`, `/laznik`, `@bagnik`, `@cmok` for build, `@mokash`, `@zlydni`).
 **Why:** [One-line justification for this agent]
 **Prompt:** [Suggested prompt for next agent]
 ```
@@ -196,7 +180,7 @@ When handing off to another agent, include:
 | Bagnik (code QA fail) | Cmok | `@cmok` | yes |
 | Zlydni | End | — | Optional push |
 
-*The **Invocation** column is Claude-style shorthand (`/` skills, `@` agents). Same roles elsewhere: **Cursor** — `/` skill picker and **`/subagent-name`** for kit agents (**`/cmok-build`** for implementation). **Copilot** — agents menu (**cmok** agent for build).*
+*The **Invocation** column uses `/` for skills and `@` for agents — the kit's universal shorthand.*
 
 **Bagnik context inference:** Bagnik determines its role from who invoked it. From Laznik = test gate (fail → Laznik, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bagnik passes — no iteration limit.
 
@@ -209,7 +193,7 @@ When handing off to another agent, include:
 
 ### Handoff Log
 
-Each feature folder contains a `handoff-log.md` created by **`.claude/skills/vadavik/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh` whenever the kit sets up Claude paths — modes `claude`, `cursor`, `github`, or `all`). Every agent appends one entry before handing off:
+Each feature folder contains a `handoff-log.md` created by **`.claude/skills/vadavik/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh`). Every agent appends one entry before handing off:
 
 ```markdown
 ## HH:MM [From] → [To] [context]
