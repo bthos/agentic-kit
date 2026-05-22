@@ -151,12 +151,12 @@ register_actions() {
        "$KIT/tools/bump-version.sh::patch"
   add bump-min 2 maint "Bump version (minor)"            "Increment Y, reset Z. Run before commit when shipping a new feature." \
        "$KIT/tools/bump-version.sh::minor"
-  add mem-roll 2 maint "Memory rollover"                 "Empty stale L1 in-flight decisions; compact L2 daily files older than 7 days into a weekly stub." \
-       "$KIT/memory/tools/rollover.sh"
-  add mem-prom 2 maint "Memory promote (2-strike)"       "Run the L2→L3 promotion state machine; rebuild MEMORY.md root index." \
-       "$KIT/memory/tools/promote.sh"
   add distill  2 maint "Distill lessons from archive"    "Read every archived feature's LESSONS.md and append to today's L2 daily memory." \
        "$KIT/tools/distill-lessons.sh"
+  add mem-prom 2 maint "Memory promote (2-strike)"       "Run the L2→L3 promotion state machine; rebuild MEMORY.md root index." \
+       "$KIT/memory/tools/promote.sh"
+  add mem-roll 2 maint "Memory rollover"                 "Empty stale L1 in-flight decisions; compact L2 daily files older than 7 days into a weekly stub." \
+       "$KIT/memory/tools/rollover.sh"
     add claude-check 2 maint "Audit Claude install"       "Run a lightweight check of local Claude/skills/plugins/settings." \
       "$KIT/tools/lean-claude.sh"
   add patches  2 maint "Review proposed patches"         "Walk through $ARTEFACTS_NAME/proposed-patches/ interactively; accept or skip each." \
