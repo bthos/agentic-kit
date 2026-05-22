@@ -479,6 +479,17 @@ if [ -x "$_mem_init" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Statusline: pipeline-aware status bar for Claude Code
+# ---------------------------------------------------------------------------
+_sl_install="$SCRIPT_DIR/tools/install-statusline.sh"
+if [ -x "$_sl_install" ]; then
+  info "Configuring pipeline-aware statusline…"
+  if ! ( cd "$PROJECT_ROOT" && "$_sl_install" ); then
+    warn "install-statusline.sh exited non-zero — statusline not configured."
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${GREEN}  ✓ Done.${RESET}\n\n"
@@ -488,6 +499,7 @@ printf "  ${DIM}%-38s${RESET} %s\n" "Project config:"    "${CYAN}$PROJECT_REL${R
 printf "  ${DIM}%-38s${RESET} %s\n" "Entry points:"      "${CYAN}CLAUDE.md, AGENTS.md${RESET} (managed include blocks)"
 printf "  ${DIM}%-38s${RESET} %s\n" "Agents installed:"  "${CYAN}.claude/agents/${RESET}"
 printf "  ${DIM}%-38s${RESET} %s\n" "Skills installed:"  "${CYAN}.claude/skills/${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Statusline:"        "${CYAN}.claude/settings.json (statusLine)${RESET}"
 
 printf "\n  ${BOLD}Next steps${RESET}\n"
 printf "  ${DIM}%-38s${RESET} %s\n" "Start a feature:"       "${CYAN}/vadavik${RESET}"
