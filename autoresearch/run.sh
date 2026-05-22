@@ -26,8 +26,8 @@ if [ -n "${LOG_FILE:-}" ]; then
   exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
 fi
 
-KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEMPLATES_DIR="$(cd "$KIT_DIR/../templates/autoresearch" && pwd)"
+PKG_DIR="$(cd "$(dirname "$0")" && pwd)"
+TEMPLATES_DIR="$(cd "$PKG_DIR/../templates/autoresearch" && pwd)"
 PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 
@@ -77,7 +77,7 @@ if $INIT; then
     echo "  Kept existing: $METRICS_SCRIPT"
   fi
 
-  ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/build-eval-set.sh"
+  ARTEFACTS_DIR="$ARTEFACTS" "$PKG_DIR/tools/build-eval-set.sh"
   echo "OK. Eval entries:"
   ls -1 "$EVAL_DIR" 2>/dev/null || echo "  (none yet — archive a feature first)"
   exit 0
@@ -90,7 +90,7 @@ if [ ! -f "$PROGRAM" ]; then
 fi
 
 # Build any new eval-set entries from archive (idempotent, never edits existing)
-ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/build-eval-set.sh" >/dev/null
+ARTEFACTS_DIR="$ARTEFACTS" "$PKG_DIR/tools/build-eval-set.sh" >/dev/null
 
 # Default candidate set: all installed kit agents/skills
 candidates=()
@@ -132,7 +132,7 @@ for ((round=1; round <= ROUNDS; round++)); do
   echo "── Round $round/$ROUNDS — target: $target"
 
   set +e
-  round_id=$(ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/mutate-agent.sh" --target "$target" --reason "round $round" 2>&1)
+  round_id=$(ARTEFACTS_DIR="$ARTEFACTS" "$PKG_DIR/tools/mutate-agent.sh" --target "$target" --reason "round $round" 2>&1)
   rc=$?
   set -e
   if [ $rc -ne 0 ] || [ -z "$round_id" ]; then
@@ -143,7 +143,7 @@ for ((round=1; round <= ROUNDS; round++)); do
   fi
 
   set +e
-  out=$(ARTEFACTS_DIR="$ARTEFACTS" "$KIT_DIR/tools/ratchet.sh" --round-id "$round_id" --target "$target")
+  out=$(ARTEFACTS_DIR="$ARTEFACTS" "$PKG_DIR/tools/ratchet.sh" --round-id "$round_id" --target "$target")
   rc=$?
   set -e
   echo "  $out"

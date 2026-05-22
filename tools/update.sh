@@ -77,7 +77,7 @@ done
 kit_banner "agentic-kit update"
 info "project root: $PROJECT_ROOT"
 info "submodule:    $SUBMODULE_DIR/"
-info "artefacts:    $ARTEFACTS_DIR_NAME/  (PIPELINE.md will be refreshed; PROJECT.md kept)"
+info "artefacts:    $ARTEFACTS_NAME/  (PIPELINE.md will be refreshed; PROJECT.md kept)"
 
 cd "$PROJECT_ROOT"
 
@@ -99,14 +99,14 @@ fi
 # Drift check: warn if the canonical pipeline copy is out of sync with the
 # submodule template (init.sh refreshes it, but a heads-up makes the upcoming
 # overwrite less surprising).
-PIPELINE_CANONICAL="$ARTEFACTS_DIR/PIPELINE.md"
+PIPELINE_CANONICAL="$ARTEFACTS/PIPELINE.md"
 PIPELINE_TEMPLATE="$SCRIPT_DIR/templates/PIPELINE.md.template"
 if [ -f "$PIPELINE_CANONICAL" ] && [ -f "$PIPELINE_TEMPLATE" ]; then
   _have=$(kit_sha256_file "$PIPELINE_CANONICAL" || true)
   _want=$(kit_sha256_file "$PIPELINE_TEMPLATE" || true)
   if [ -n "$_have" ] && [ -n "$_want" ] && [ "$_have" != "$_want" ]; then
-    info "Pipeline drift detected — $ARTEFACTS_DIR_NAME/PIPELINE.md will be refreshed by init.sh."
-    info "Diff:    diff $ARTEFACTS_DIR_NAME/PIPELINE.md $SUBMODULE_DIR/templates/PIPELINE.md.template"
+    info "Pipeline drift detected — $ARTEFACTS_NAME/PIPELINE.md will be refreshed by init.sh."
+    info "Diff:    diff $ARTEFACTS_NAME/PIPELINE.md $SUBMODULE_DIR/templates/PIPELINE.md.template"
   fi
 fi
 

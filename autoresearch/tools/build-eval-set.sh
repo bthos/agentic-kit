@@ -17,7 +17,7 @@ if [ "${VERBOSE:-}" = "1" ] || [ "${DEBUG:-}" = "1" ]; then
   set -x
 fi
 
-KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PKG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 

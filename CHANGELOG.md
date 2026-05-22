@@ -10,6 +10,37 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ## [Unreleased]
 
+### Fixed
+- **Standalone `memory/tools/init.sh` failed to seed template stubs.** After
+  templates were relocated to the kit-root `templates/memory/`, the script still
+  resolved its template dir one level too shallow (`memory/templates/memory`),
+  so `cp` aborted under `set -e`. The main `init.sh` swallowed this as a
+  non-fatal warning, leaving the memory tree without its `SCHEMA.md` and L3
+  stubs. The script now resolves the kit root correctly and seeds all stubs.
+
+### Changed
+- **Unified directory-path variable names** in the subpackage scripts. `KIT_DIR`
+  previously named three different directories depending on the script's
+  location (the kit root in `tools/`, but `autoresearch/` and `memory/` in those
+  subpackages). Now `KIT_DIR` always means the kit/submodule root; the
+  autoresearch scripts use **`PKG_DIR`** for their own package directory.
+  `tools/apply-patches.sh` dropped a redundant local recompute in favour of the
+  `SCRIPT_DIR` already provided by `lib.sh`, and `agentic-kit.sh` renamed its
+  `ROOT` local to `PROJECT_ROOT` to match the rest of the codebase.
+- **Unified artefacts-directory variable names** across all shell entry points.
+  The codebase previously used three schemes for two concepts. Now: the public
+  override env var is **`ARTEFACTS_DIR`** everywhere (unchanged for the
+  memory/autoresearch scripts that already used it); the resolved-path local is
+  **`ARTEFACTS`**; the dir-name-only local is **`ARTEFACTS_NAME`**. `lib.sh`,
+  `init.sh`, `update.sh`, `teardown.sh`, and `agentic-kit.sh` dropped the old
+  `ARTEFACTS_DIR_NAME` / `ART` / `ART_NAME` names.
+- **BREAKING (minor):** the `ARTEFACTS_DIR_NAME` environment variable is no
+  longer honored. It was only ever read by the `lib.sh`-based tools
+  (`init`/`update`/`teardown`/launcher); they now read `ARTEFACTS_DIR` like
+  every other script. If you exported `ARTEFACTS_DIR_NAME` to relocate the
+  artefacts directory, export `ARTEFACTS_DIR` instead. The `.agentic-kit.cfg`
+  key remains `ARTEFACTS_DIR` (unchanged).
+
 ### Added
 - **Yaga (Яга)** — diagnostic side-loop for hard bugs. Ships as both a skill
   (`/yaga`, hypothesis design) and an agent (`@yaga`, instrument → observe →

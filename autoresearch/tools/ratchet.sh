@@ -27,12 +27,12 @@ fi
 # shellcheck source=../../tools/lib.sh
 source "$(cd "$(dirname "$0")/../.." && pwd)/tools/lib.sh"
 
-KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PKG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 
 PROGRAM="$ARTEFACTS/autoresearch/program.md"
-JUDGE_TPL="$KIT_DIR/judge.md"          # kit law — stays in submodule
+JUDGE_TPL="$PKG_DIR/judge.md"          # kit law — stays in submodule
 EVAL_DIR="$ARTEFACTS/autoresearch/eval-set"
 VARIANTS_DIR="$ARTEFACTS/autoresearch/variants"
 RUNS_DIR="$ARTEFACTS/autoresearch/runs"
@@ -89,7 +89,7 @@ score_variant() {
     out=$(awk '/^## Reference output/,0' "$entry" | sed '/^## Reference output/d')
     [ -z "$req$out" ] && continue
     local v
-    v=$("$KIT_DIR/tools/judge.sh" --requirement "$req" --output "$out" 2>/dev/null || echo 0)
+    v=$("$PKG_DIR/tools/judge.sh" --requirement "$req" --output "$out" 2>/dev/null || echo 0)
     [ "$v" = "1" ] && hits=$((hits+1))
   done
   shopt -u nullglob
@@ -147,7 +147,7 @@ if awk -v a="$comp_prop" -v b="$comp_base" 'BEGIN{exit !(a >= b)}'; then
   echo "ACCEPT  baseline=$comp_base  proposal=$comp_prop  Δ=$delta"
 
   # Log the accepted mutation as an L2 memory entry
-  MEM_PROMOTE="$(cd "$KIT_DIR/.." && pwd)/memory/tools/promote.sh"
+  MEM_PROMOTE="$(cd "$PKG_DIR/.." && pwd)/memory/tools/promote.sh"
   TODAY=$(date +%Y-%m-%d)
   DAILY="$ARTEFACTS/memory/$TODAY.md"
   if [ -d "$ARTEFACTS/memory" ]; then

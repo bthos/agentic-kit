@@ -23,7 +23,7 @@
 
 set -euo pipefail
 
-KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+KIT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 TPL_DIR="$KIT_DIR/templates/memory"
 ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
 MEM_DIR="$ARTEFACTS/memory"

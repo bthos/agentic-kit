@@ -53,8 +53,8 @@ if [ -z "$req" ] || [ -z "$out" ]; then
   exit 2
 fi
 
-KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-JUDGE_TEMPLATE="$KIT_DIR/judge.md"
+PKG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+JUDGE_TEMPLATE="$PKG_DIR/judge.md"
 
 if [ ! -f "$JUDGE_TEMPLATE" ]; then
   echo "judge.md not found at $JUDGE_TEMPLATE — autoresearch loop is not initialised." >&2

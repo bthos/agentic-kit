@@ -10,13 +10,13 @@
 # Colors & output
 # ---------------------------------------------------------------------------
 if [ -t 1 ]; then
-  BOLD='\033[1m'
-  DIM='\033[2m'
-  CYAN='\033[36m'
-  GREEN='\033[32m'
-  YELLOW='\033[33m'
-  RED='\033[31m'
-  RESET='\033[0m'
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  CYAN=$'\033[36m'
+  GREEN=$'\033[32m'
+  YELLOW=$'\033[33m'
+  RED=$'\033[31m'
+  RESET=$'\033[0m'
 else
   BOLD='' DIM='' CYAN='' GREEN='' YELLOW='' RED='' RESET=''
 fi
@@ -66,28 +66,28 @@ AGENTIC_BLOCK_END='<!-- agentic-kit:end -->'
 AGENTIC_GITIGNORE_BEGIN='# >>> agentic-kit (managed) >>>'
 AGENTIC_GITIGNORE_END='# <<< agentic-kit (managed) <<<'
 
-ARTEFACTS_DIR_NAME="${ARTEFACTS_DIR_NAME:-.akt}"
+ARTEFACTS_NAME="${ARTEFACTS_DIR:-.akt}"
 
 _LIB_SELFDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$(cd "$_LIB_SELFDIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
-ARTEFACTS_DIR="$PROJECT_ROOT/$ARTEFACTS_DIR_NAME"
-KIT_CFG="$ARTEFACTS_DIR/.agentic-kit.cfg"
-KIT_FILES_MANIFEST="$ARTEFACTS_DIR/.agentic-kit.files"
+ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"
+KIT_CFG="$ARTEFACTS/.agentic-kit.cfg"
+KIT_FILES_MANIFEST="$ARTEFACTS/.agentic-kit.files"
 
 # One-time migration from older layouts (manifest + cfg at project root).
 kit_migrate_legacy_root_state() {
-  mkdir -p "$ARTEFACTS_DIR"
+  mkdir -p "$ARTEFACTS"
   local lc="$PROJECT_ROOT/.agentic-kit.cfg"
   local lm="$PROJECT_ROOT/.agentic-kit.files"
   if [ -f "$lc" ] && [ ! -f "$KIT_CFG" ]; then
     mv "$lc" "$KIT_CFG"
-    info "migrated .agentic-kit.cfg → $ARTEFACTS_DIR_NAME/.agentic-kit.cfg"
+    info "migrated .agentic-kit.cfg → $ARTEFACTS_NAME/.agentic-kit.cfg"
   fi
   if [ -f "$lm" ] && [ ! -f "$KIT_FILES_MANIFEST" ]; then
     mv "$lm" "$KIT_FILES_MANIFEST"
-    info "migrated .agentic-kit.files → $ARTEFACTS_DIR_NAME/.agentic-kit.files"
+    info "migrated .agentic-kit.files → $ARTEFACTS_NAME/.agentic-kit.files"
   fi
 }
 
@@ -401,7 +401,7 @@ $AGENTIC_BLOCK_BEGIN
 
 > **Agentic Kit pipeline** — read [\`$pipeline_rel\`]($pipeline_rel) before any task.
 > It defines the agent roles, handoff protocol, and quality gates used in this project.
-> Project-specific config: [\`$ARTEFACTS_DIR_NAME/PROJECT.md\`]($ARTEFACTS_DIR_NAME/PROJECT.md).
+> Project-specific config: [\`$ARTEFACTS_NAME/PROJECT.md\`]($ARTEFACTS_NAME/PROJECT.md).
 
 @$pipeline_rel
 $AGENTIC_BLOCK_END
@@ -446,24 +446,24 @@ $AGENTIC_GITIGNORE_BEGIN
 # are overwritten on init.
 #
 # --- Runtime / ephemeral (pipeline scratch; usually not committed) ---
-$ARTEFACTS_DIR_NAME/memory/
-$ARTEFACTS_DIR_NAME/features/
-$ARTEFACTS_DIR_NAME/archive/
-$ARTEFACTS_DIR_NAME/proposed-patches/
-$ARTEFACTS_DIR_NAME/scratch/
-$ARTEFACTS_DIR_NAME/SESSION-STATE.md
-$ARTEFACTS_DIR_NAME/MEMORY.md
-$ARTEFACTS_DIR_NAME/PROJECT_PROFILE.md
+$ARTEFACTS_NAME/memory/
+$ARTEFACTS_NAME/features/
+$ARTEFACTS_NAME/archive/
+$ARTEFACTS_NAME/proposed-patches/
+$ARTEFACTS_NAME/scratch/
+$ARTEFACTS_NAME/SESSION-STATE.md
+$ARTEFACTS_NAME/MEMORY.md
+$ARTEFACTS_NAME/PROJECT_PROFILE.md
 #
 # --- Per-machine kit bookkeeping (usually not committed) ---
-$ARTEFACTS_DIR_NAME/.agentic-kit.cfg
-$ARTEFACTS_DIR_NAME/.agentic-kit.files
+$ARTEFACTS_NAME/.agentic-kit.cfg
+$ARTEFACTS_NAME/.agentic-kit.files
 #
-# Optional — ignore all of $ARTEFACTS_DIR_NAME/ except PIPELINE.md + PROJECT.md (uncomment all 4 lines):
-# $ARTEFACTS_DIR_NAME/**
-# !$ARTEFACTS_DIR_NAME/
-# !$ARTEFACTS_DIR_NAME/PIPELINE.md
-# !$ARTEFACTS_DIR_NAME/PROJECT.md
+# Optional — ignore all of $ARTEFACTS_NAME/ except PIPELINE.md + PROJECT.md (uncomment all 4 lines):
+# $ARTEFACTS_NAME/**
+# !$ARTEFACTS_NAME/
+# !$ARTEFACTS_NAME/PIPELINE.md
+# !$ARTEFACTS_NAME/PROJECT.md
 #
 $AGENTIC_GITIGNORE_END
 EOF

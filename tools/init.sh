@@ -45,8 +45,8 @@ source "$_TOOLS_DIR/install-helpers.sh"
 kit_migrate_legacy_root_state
 
 # Canonical project-local locations (after migration from .artefacts/)
-PIPELINE_REL="$ARTEFACTS_DIR_NAME/PIPELINE.md"
-PROJECT_REL="$ARTEFACTS_DIR_NAME/PROJECT.md"
+PIPELINE_REL="$ARTEFACTS_NAME/PIPELINE.md"
+PROJECT_REL="$ARTEFACTS_NAME/PROJECT.md"
 PIPELINE_TARGET="$PROJECT_ROOT/$PIPELINE_REL"
 PROJECT_TARGET="$PROJECT_ROOT/$PROJECT_REL"
 PIPELINE_TEMPLATE="$SCRIPT_DIR/templates/PIPELINE.md.template"
@@ -279,8 +279,8 @@ setup_kit() {
 # .akt/ (canonical home for PIPELINE.md and PROJECT.md)
 # ---------------------------------------------------------------------------
 setup_artefacts_dir() {
-  header "$ARTEFACTS_DIR_NAME/ (pipeline + project config)"
-  mkdir -p "$ARTEFACTS_DIR"
+  header "$ARTEFACTS_NAME/ (pipeline + project config)"
+  mkdir -p "$ARTEFACTS"
 
   # PIPELINE.md — kit-managed copy of the template, refreshed on update.
   install_kit_copy_file "$PIPELINE_REL" "$PIPELINE_REL" "$PIPELINE_TEMPLATE" || true
@@ -347,7 +347,7 @@ setup_gitignore() {
 kit_banner "agentic-kit"
 info "project root: $PROJECT_ROOT"
 info "kit location: $SUBMODULE_DIR/"
-info "artefacts:    $ARTEFACTS_DIR_NAME/  (pipeline doc, project config, memory, features)"
+info "artefacts:    $ARTEFACTS_NAME/  (pipeline doc, project config, memory, features)"
 
 # Template drift detection: warn if PIPELINE.md.template changed since last init.
 _saved_sha=$(kit_cfg_get PIPELINE_SHA 2>/dev/null || true)
@@ -445,7 +445,7 @@ kit_cfg_set_many \
   INIT_DATE       "$(date +%Y-%m-%d)" \
   KIT_VERSION     "$_kit_version" \
   PIPELINE_SHA    "$_pipeline_sha" \
-  ARTEFACTS_DIR   "$ARTEFACTS_DIR_NAME" \
+  ARTEFACTS_DIR   "$ARTEFACTS_NAME" \
   KIT_ROOT        "$SCRIPT_DIR" \
   PROJECT_ROOT    "$PROJECT_ROOT" \
   SUBMODULE_DIR   "$SUBMODULE_DIR"
@@ -456,10 +456,10 @@ kit_cfg_set_many \
 if $TUNE; then
   _probe="$SCRIPT_DIR/tools/probe-project.sh"
   if [ -x "$_probe" ]; then
-    info "Probing project to write $ARTEFACTS_DIR_NAME/PROJECT_PROFILE.md (--tune)…"
+    info "Probing project to write $ARTEFACTS_NAME/PROJECT_PROFILE.md (--tune)…"
     _probe_args=( "--force" )
     if $NON_INTERACTIVE; then _probe_args+=( "--quick" ); fi
-    if ! ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_DIR_NAME" "$_probe" "${_probe_args[@]}" ); then
+    if ! ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_NAME" "$_probe" "${_probe_args[@]}" ); then
       warn "probe-project.sh exited non-zero — PROJECT_PROFILE.md may be incomplete or missing."
     fi
   else
@@ -472,8 +472,8 @@ fi
 # ---------------------------------------------------------------------------
 _mem_init="$SCRIPT_DIR/memory/tools/init.sh"
 if [ -x "$_mem_init" ]; then
-  info "Initialising layered memory tree at $ARTEFACTS_DIR_NAME/memory/…"
-  if ! ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_DIR_NAME" "$_mem_init" ); then
+  info "Initialising layered memory tree at $ARTEFACTS_NAME/memory/…"
+  if ! ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_NAME" "$_mem_init" ); then
     warn "memory/tools/init.sh exited non-zero — memory tree may be missing files. Re-run: $SUBMODULE_DIR/memory/tools/init.sh"
   fi
 fi

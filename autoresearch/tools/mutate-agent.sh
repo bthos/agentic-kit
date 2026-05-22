@@ -24,7 +24,7 @@ if [ -n "${LOG_FILE:-}" ]; then
   exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
 fi
 
-KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PKG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 
@@ -69,7 +69,7 @@ if [ -f "$REJECT_LOG" ]; then
 fi
 
 MEMORY_HITS=""
-MEM_SEARCH="$(cd "$KIT_DIR/.." && pwd)/memory/tools/search.sh"
+MEM_SEARCH="$(cd "$PKG_DIR/.." && pwd)/memory/tools/search.sh"
 if [ -x "$MEM_SEARCH" ]; then
   query="$(basename "$target") $reason"
   MEMORY_HITS=$("$MEM_SEARCH" "$query" --top-k 5 2>/dev/null | head -n 60 || true)

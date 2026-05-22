@@ -17,13 +17,13 @@
 set -euo pipefail
 
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$KIT/.." && pwd)"
-ART_NAME="${ARTEFACTS_DIR_NAME:-.akt}"
-ART="$ROOT/$ART_NAME"
-CFG="$ART/.agentic-kit.cfg"
-PROJECT_MD="$ART/PROJECT.md"
+PROJECT_ROOT="$(cd "$KIT/.." && pwd)"
+ARTEFACTS_NAME="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"
+CFG="$ARTEFACTS/.agentic-kit.cfg"
+PROJECT_MD="$ARTEFACTS/PROJECT.md"
 
-cd "$ROOT"
+cd "$PROJECT_ROOT"
 
 # ---------------------------------------------------------------------------
 # CLI arg parsing — single positional action lets CI / agents bypass the menu
@@ -70,7 +70,7 @@ rule() { printf "  %s───────────────────�
 # Stage detection
 # ---------------------------------------------------------------------------
 detect_stage() {
-  if [ ! -d "$ART" ] || [ ! -f "$CFG" ]; then
+  if [ ! -d "$ARTEFACTS" ] || [ ! -f "$CFG" ]; then
     echo 0; return
   fi
   if [ ! -f "$PROJECT_MD" ] || grep -qF ':** `<' "$PROJECT_MD" 2>/dev/null; then
@@ -90,7 +90,7 @@ stage_badge() {
 stage_hint() {
   case "$1" in
     0) printf "Run %s1) init%s to install the kit into this project." "$BOLD" "$RESET" ;;
-    1) printf "Edit %s%s/PROJECT.md%s, then run %svalidate%s." "$CYAN" "$ART_NAME" "$RESET" "$BOLD" "$RESET" ;;
+    1) printf "Edit %s%s/PROJECT.md%s, then run %svalidate%s." "$CYAN" "$ARTEFACTS_NAME" "$RESET" "$BOLD" "$RESET" ;;
     2) printf "All systems go. Pick any action below." ;;
   esac
 }
@@ -98,7 +98,7 @@ stage_hint() {
 print_header() {
   local stage="$1" ide=""
   banner
-  printf "  %sproject%s   %s\n" "$DIM" "$RESET" "$ROOT"
+  printf "  %sproject%s   %s\n" "$DIM" "$RESET" "$PROJECT_ROOT"
   printf "  %skit%s       %s\n" "$DIM" "$RESET" "$KIT"
   if [ -f "$CFG" ]; then
     ide=$(grep '^IDE=' "$CFG" 2>/dev/null | cut -d= -f2- || true)
@@ -129,9 +129,9 @@ register_actions() {
   # ---- setup ----
   add init     0 setup "Install / refresh kit"           "Run init.sh — copy agents, skills, IDE entry-point block, .gitignore block. Safe to re-run; your edits are preserved." \
        "$KIT/tools/init.sh"
-  add probe    1 setup "Probe project (--tune)"          "Inspect repo (package.json, pyproject.toml, Cargo.toml, …) and write $ART_NAME/PROJECT_PROFILE.md so agents self-tune." \
+  add probe    1 setup "Probe project (--tune)"          "Inspect repo (package.json, pyproject.toml, Cargo.toml, …) and write $ARTEFACTS_NAME/PROJECT_PROFILE.md so agents self-tune." \
        "$KIT/tools/probe-project.sh::--force"
-  add edit-pm  1 setup "Edit PROJECT.md"                 "Open $ART_NAME/PROJECT.md in \$EDITOR (fallback: vi). Fill in stack, test/build commands, version files." \
+  add edit-pm  1 setup "Edit PROJECT.md"                 "Open $ARTEFACTS_NAME/PROJECT.md in \$EDITOR (fallback: vi). Fill in stack, test/build commands, version files." \
        "::edit-project-md"
   add validate 1 setup "Validate PROJECT.md"             "Fail if PROJECT.md still has <placeholder> values. Run after editing." \
        "$KIT/tools/validate-config.sh"
@@ -141,7 +141,7 @@ register_actions() {
        "::teardown-prompt"
 
   # ---- daily ----
-  add status   2 daily "Feature pipeline status"         "Show spec / UX / tech-plan / handoff state for every active feature under $ART_NAME/features/." \
+  add status   2 daily "Feature pipeline status"         "Show spec / UX / tech-plan / handoff state for every active feature under $ARTEFACTS_NAME/features/." \
        "$KIT/tools/feature-status.sh"
   add memory   2 daily "Search memory"                   "Top-k retrieval across all memory layers (L1..L4). Prompts for a query." \
        "::memory-prompt"
@@ -159,7 +159,7 @@ register_actions() {
        "$KIT/tools/distill-lessons.sh"
     add claude-check 2 maint "Audit Claude install"       "Run a lightweight check of local Claude/skills/plugins/settings." \
       "$KIT/tools/lean-claude.sh"
-  add patches  2 maint "Review proposed patches"         "Walk through $ART_NAME/proposed-patches/ interactively; accept or skip each." \
+  add patches  2 maint "Review proposed patches"         "Walk through $ARTEFACTS_NAME/proposed-patches/ interactively; accept or skip each." \
        "$KIT/tools/apply-patches.sh"
 }
 
@@ -182,7 +182,7 @@ print_menu() {
   for cat in setup daily maint; do
     local printed_header=false
     for row in "${ACTIONS[@]}"; do
-      IFS='|' read -r key min rcat label _desc _cmd <<<"$row"
+      IFS='|' read -r key min rcat label desc _cmd <<<"$row"
       [ "$rcat" = "$cat" ] || continue
       [ "$min" -le "$stage" ] || continue
       if ! $printed_header; then
@@ -193,6 +193,7 @@ print_menu() {
       MENU_KEYS+=("$key")
       printf "    %s%2d%s  %s%-30s%s  %s%s%s\n" \
         "$BOLD$GREEN" "$i" "$RESET" "$BOLD" "$label" "$RESET" "$DIM" "$key" "$RESET"
+      printf "        %s%s%s\n" "$DIM" "$desc" "$RESET"
     done
     $printed_header && printf '\n'
   done

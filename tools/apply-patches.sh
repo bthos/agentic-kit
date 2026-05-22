@@ -19,7 +19,7 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
-ARTEFACTS="${ARTEFACTS_DIR:-$ARTEFACTS_DIR_NAME}"
+ARTEFACTS="${ARTEFACTS_DIR:-$ARTEFACTS_NAME}"
 PATCHES_DIR="$ARTEFACTS/proposed-patches"
 
 ACCEPT_ALL=false
@@ -124,8 +124,7 @@ $DRY_RUN || rmdir "$PATCHES_DIR" 2>/dev/null || true
 # Refresh memory index after hardening so MEMORY.md reflects the new state
 # (supersedes-resolver, counters, regenerated L4 root).
 if ! $DRY_RUN && [ "$ACCEPTED" -gt 0 ]; then
-  KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-  PROMOTE="$KIT_DIR/memory/tools/promote.sh"
+  PROMOTE="$SCRIPT_DIR/memory/tools/promote.sh"
   if [ -x "$PROMOTE" ] && [ -d "$PROJECT_ROOT/$ARTEFACTS/memory" ]; then
     info "Refreshing memory index (memory-promote.sh)…"
     ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS" "$PROMOTE" >/dev/null ) || true

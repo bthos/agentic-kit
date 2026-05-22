@@ -80,7 +80,7 @@ done
 # ---------------------------------------------------------------------------
 kit_banner "agentic-kit teardown"
 info "project root: $PROJECT_ROOT"
-info "artefacts:    $ARTEFACTS_DIR_NAME/"
+info "artefacts:    $ARTEFACTS_NAME/"
 $DRY_RUN && warn "Dry run — no files will be removed."
 
 # Strip the managed block from .gitignore.
@@ -233,8 +233,8 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Remove .akt/PIPELINE.md (kit-managed copy)
 # ---------------------------------------------------------------------------
-header "$ARTEFACTS_DIR_NAME/ (canonical pipeline copy)"
-kit_managed_file_remove "$ARTEFACTS_DIR_NAME/PIPELINE.md"
+header "$ARTEFACTS_NAME/ (canonical pipeline copy)"
+kit_managed_file_remove "$ARTEFACTS_NAME/PIPELINE.md"
 
 # ---------------------------------------------------------------------------
 # 5. Strip managed .gitignore block
@@ -261,7 +261,7 @@ fi
 # 7. Optionally remove PROJECT.md and the artefacts dir (--full-clean)
 # ---------------------------------------------------------------------------
 if $FULL_CLEAN; then
-  header "Full clean — $ARTEFACTS_DIR_NAME/PROJECT.md and friends"
+  header "Full clean — $ARTEFACTS_NAME/PROJECT.md and friends"
   _confirm_remove() {
     local rel="$1"
     local abs="$PROJECT_ROOT/$rel"
@@ -297,32 +297,32 @@ if $FULL_CLEAN; then
     fi
   }
 
-  _confirm_remove "$ARTEFACTS_DIR_NAME/PROJECT.md"
-  _manifest_drop "$ARTEFACTS_DIR_NAME/PROJECT.md"
+  _confirm_remove "$ARTEFACTS_NAME/PROJECT.md"
+  _manifest_drop "$ARTEFACTS_NAME/PROJECT.md"
 
   # scratch/ holds only ephemeral kit runtime files (commit messages, PR
   # bodies, request payloads written to dodge the Windows command-line cap).
   # Unlike memory/features/archive it carries no user state, so --full-clean
   # always sweeps it away.
-  if [ -d "$ARTEFACTS_DIR/scratch" ]; then
-    kit_rm_rf "$ARTEFACTS_DIR/scratch"
-    $DRY_RUN || removed "$ARTEFACTS_DIR_NAME/scratch/"
+  if [ -d "$ARTEFACTS/scratch" ]; then
+    kit_rm_rf "$ARTEFACTS/scratch"
+    $DRY_RUN || removed "$ARTEFACTS_NAME/scratch/"
   fi
 
   # Try to remove the artefacts directory if empty (it usually still has
   # memory/, features/, archive/ — those are user state, not kit-managed).
-  if [ -d "$ARTEFACTS_DIR" ] && ! $DRY_RUN; then
-    rmdir "$ARTEFACTS_DIR" 2>/dev/null \
-      && removed "$ARTEFACTS_DIR_NAME/ (empty dir)" \
-      || info "$ARTEFACTS_DIR_NAME/ kept (still contains memory/features/archive — delete manually if desired)"
+  if [ -d "$ARTEFACTS" ] && ! $DRY_RUN; then
+    rmdir "$ARTEFACTS" 2>/dev/null \
+      && removed "$ARTEFACTS_NAME/ (empty dir)" \
+      || info "$ARTEFACTS_NAME/ kept (still contains memory/features/archive — delete manually if desired)"
   elif $DRY_RUN; then
-    info "would attempt rmdir $ARTEFACTS_DIR_NAME/ (kept if non-empty)"
+    info "would attempt rmdir $ARTEFACTS_NAME/ (kept if non-empty)"
   fi
 
   if [ -f "$KIT_CFG" ] && ! $DRY_RUN; then
     rm "$KIT_CFG" && removed ".akt/.agentic-kit.cfg"
   elif [ -f "$KIT_CFG" ] && $DRY_RUN; then
-    info "would remove: $ARTEFACTS_DIR_NAME/.agentic-kit.cfg"
+    info "would remove: $ARTEFACTS_NAME/.agentic-kit.cfg"
   fi
 fi
 
@@ -331,7 +331,7 @@ fi
 # ---------------------------------------------------------------------------
 if ! $DRY_RUN; then
   if [ -f "$KIT_FILES_MANIFEST" ] && [ ! -s "$KIT_FILES_MANIFEST" ]; then
-    rm "$KIT_FILES_MANIFEST" && removed "$ARTEFACTS_DIR_NAME/.agentic-kit.files (empty)"
+    rm "$KIT_FILES_MANIFEST" && removed "$ARTEFACTS_NAME/.agentic-kit.files (empty)"
   fi
 fi
 
@@ -340,7 +340,7 @@ fi
 # ---------------------------------------------------------------------------
 printf "\n${BOLD}${GREEN}  ✓ Done.${RESET}\n"
 if ! $FULL_CLEAN; then
-  info "$ARTEFACTS_DIR_NAME/PROJECT.md kept — use --full-clean to remove it."
+  info "$ARTEFACTS_NAME/PROJECT.md kept — use --full-clean to remove it."
 fi
 if ! $REMOVE_SUBMODULE; then
   info "Submodule kept — use --remove-submodule to deinit."
