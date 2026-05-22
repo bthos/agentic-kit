@@ -135,7 +135,7 @@ ask_conflict() {
   if [ ! -t 0 ]; then return 1; fi
   while true; do
     printf "  ${YELLOW}exists${RESET} %s — " "$label"
-    printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  overwrite ${BOLD}a${RESET}ll  skip ${BOLD}r${RESET}est  "
+    printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  overwrite [${BOLD}a${RESET}]ll  skip [${BOLD}r${RESET}]est  "
     read -r -n1 choice
     printf '\n'
     case "$choice" in

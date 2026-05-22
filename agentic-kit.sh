@@ -182,7 +182,7 @@ print_menu() {
   for cat in setup daily maint; do
     local printed_header=false
     for row in "${ACTIONS[@]}"; do
-      IFS='|' read -r key min rcat label desc _cmd <<<"$row"
+      IFS='|' read -r key min rcat label _desc _cmd <<<"$row"
       [ "$rcat" = "$cat" ] || continue
       [ "$min" -le "$stage" ] || continue
       if ! $printed_header; then
@@ -193,7 +193,6 @@ print_menu() {
       MENU_KEYS+=("$key")
       printf "    %s%2d%s  %s%-30s%s  %s%s%s\n" \
         "$BOLD$GREEN" "$i" "$RESET" "$BOLD" "$label" "$RESET" "$DIM" "$key" "$RESET"
-      printf "        %s%s%s\n" "$DIM" "$desc" "$RESET"
     done
     $printed_header && printf '\n'
   done
