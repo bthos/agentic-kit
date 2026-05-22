@@ -74,11 +74,7 @@ for arg in "$@"; do
   esac
 done
 
-printf "\n"
-printf "${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
-printf "${BOLD}${CYAN}  │     agentic-kit update      │${RESET}\n"
-printf "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
-printf "\n"
+kit_banner "agentic-kit update"
 info "project root: $PROJECT_ROOT"
 info "submodule:    $SUBMODULE_DIR/"
 info "artefacts:    $ARTEFACTS_DIR_NAME/  (PIPELINE.md will be refreshed; PROJECT.md kept)"

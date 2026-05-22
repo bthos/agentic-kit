@@ -1,0 +1,7 @@
+// YAGA probe — Go
+// Investigation: {{INVESTIGATION_ID}}
+// Port: replace <PORT> with the value from server.json. Inline as a literal.
+// Strip: removed by agentic-kit/tools/yaga-strip.sh on cleanup.
+// Requires: "bytes", "net/http" (likely already imported by the file).
+
+go func() { _, _ = http.Post("http://127.0.0.1:<PORT>/log", "application/json", bytes.NewReader([]byte(`{"id":"YAGA:{{INVESTIGATION_ID}}","probe":"p1","vars":{}}`))) }()  // YAGA:{{INVESTIGATION_ID}}

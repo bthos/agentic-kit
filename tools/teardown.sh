@@ -78,9 +78,7 @@ done
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-printf "\n${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
-printf "${BOLD}${CYAN}  │    agentic-kit teardown     │${RESET}\n"
-printf "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
+kit_banner "agentic-kit teardown"
 info "project root: $PROJECT_ROOT"
 info "artefacts:    $ARTEFACTS_DIR_NAME/"
 $DRY_RUN && warn "Dry run — no files will be removed."

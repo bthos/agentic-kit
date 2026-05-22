@@ -1,0 +1,6 @@
+# YAGA probe — Bash
+# Investigation: {{INVESTIGATION_ID}}
+# Port: replace <PORT> with the value from server.json. Inline as a literal.
+# Strip: removed by agentic-kit/tools/yaga-strip.sh on cleanup.
+
+curl -s -X POST "http://127.0.0.1:<PORT>/log" -H 'content-type: application/json' --data "{\"id\":\"YAGA:{{INVESTIGATION_ID}}\",\"probe\":\"p1\",\"file\":\"${BASH_SOURCE[0]}\",\"line\":${LINENO},\"vars\":{}}" >/dev/null 2>&1 || true  # YAGA:{{INVESTIGATION_ID}}

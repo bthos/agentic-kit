@@ -36,8 +36,11 @@
 
 set -euo pipefail
 
+_TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib.sh
-source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+source "$_TOOLS_DIR/lib.sh"
+# shellcheck source=install-helpers.sh
+source "$_TOOLS_DIR/install-helpers.sh"
 
 kit_migrate_legacy_root_state
 
@@ -190,151 +193,7 @@ should_overwrite() {
   ask_conflict "$label"
 }
 
-# Copy kit file into project; record SHA-256 in .akt/.agentic-kit.files for teardown.
-# Usage: install_kit_copy_file <label> <rel_path> <src_file_abs>
-install_kit_copy_file() {
-  local label="$1" rel_path="$2" src_file="$3"
-  local target="$PROJECT_ROOT/$rel_path"
-  local want have recorded
-
-  want=$(kit_sha256_file "$src_file") || return 1
-  mkdir -p "$(dirname "$target")"
-  recorded=$(manifest_get_hash "$rel_path" || true)
-
-  if [ -L "$target" ] || [ ! -e "$target" ]; then
-    if [ -e "$target" ] || [ -L "$target" ]; then
-      if ! should_overwrite "$label"; then
-        skip "$label (exists — use --force to replace)"
-        return 1
-      fi
-      rm -rf "$target"
-    fi
-    cp "$src_file" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
-    success "$label"
-    return 0
-  fi
-
-  if [ ! -f "$target" ]; then
-    if ! should_overwrite "$label"; then skip "$label (not a regular file)"; return 1; fi
-    rm -rf "$target"
-    cp "$src_file" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
-    success "$label"
-    return 0
-  fi
-
-  have=$(kit_sha256_file "$target")
-  if [ "$have" = "$want" ]; then
-    manifest_set_hash "$rel_path" "$want"
-    info "$label (matches kit)"
-    return 0
-  fi
-  if [ -n "$recorded" ] && [ "$have" = "$recorded" ]; then
-    if ! should_overwrite "$label"; then
-      skip "$label (kit updated in submodule — use --force to refresh)"
-      return 1
-    fi
-    rm -f "$target"
-    cp "$src_file" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
-    success "$label (refreshed from kit)"
-    return 0
-  fi
-  if [ -n "$recorded" ] && [ "$have" != "$recorded" ]; then
-    if ! should_overwrite "$label"; then
-      skip "$label (modified locally — use --force to replace)"
-      return 1
-    fi
-    rm -f "$target"
-    cp "$src_file" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
-    success "$label (overwritten)"
-    return 0
-  fi
-  if ! should_overwrite "$label"; then
-    skip "$label (exists — use --force)"
-    return 1
-  fi
-  rm -f "$target"
-  cp "$src_file" "$target"
-  manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
-  success "$label (overwritten)"
-  return 0
-}
-
-# Copy skill directory tree; record aggregate SHA-256 of all files.
-# Usage: install_kit_copy_tree <label> <rel_path> <src_dir_abs>
-install_kit_copy_tree() {
-  local label="$1" rel_path="$2" src_dir="$3"
-  local target="$PROJECT_ROOT/$rel_path"
-  local want have recorded
-
-  want=$(kit_sha256_tree "$src_dir") || return 1
-  mkdir -p "$(dirname "$target")"
-  recorded=$(manifest_get_hash "$rel_path" || true)
-
-  if [ -L "$target" ] || [ ! -e "$target" ]; then
-    if [ -e "$target" ] || [ -L "$target" ]; then
-      if ! should_overwrite "$label"; then
-        skip "$label (exists — use --force to replace)"
-        return 1
-      fi
-      rm -rf "$target"
-    fi
-    cp -R "$src_dir" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
-    success "$label"
-    return 0
-  fi
-
-  if [ ! -d "$target" ] || [ -L "$target" ]; then
-    if ! should_overwrite "$label"; then skip "$label (not a directory)"; return 1; fi
-    rm -rf "$target"
-    cp -R "$src_dir" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
-    success "$label"
-    return 0
-  fi
-
-  have=$(kit_sha256_tree "$target")
-  if [ "$have" = "$want" ]; then
-    manifest_set_hash "$rel_path" "$want"
-    info "$label (matches kit)"
-    return 0
-  fi
-  if [ -n "$recorded" ] && [ "$have" = "$recorded" ]; then
-    if ! should_overwrite "$label"; then
-      skip "$label (kit skill updated — use --force)"
-      return 1
-    fi
-    rm -rf "$target"
-    cp -R "$src_dir" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
-    success "$label (refreshed from kit)"
-    return 0
-  fi
-  if [ -n "$recorded" ] && [ "$have" != "$recorded" ]; then
-    if ! should_overwrite "$label"; then
-      skip "$label (modified locally — use --force)"
-      return 1
-    fi
-    rm -rf "$target"
-    cp -R "$src_dir" "$target"
-    manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
-    success "$label (overwritten)"
-    return 0
-  fi
-  if ! should_overwrite "$label"; then
-    skip "$label (exists — use --force)"
-    return 1
-  fi
-  rm -rf "$target"
-  cp -R "$src_dir" "$target"
-  manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
-  success "$label (overwritten)"
-  return 0
-}
+# install_kit_copy_file and install_kit_copy_tree live in install-helpers.sh.
 
 # ---------------------------------------------------------------------------
 # Managed include block — entry-point files (CLAUDE.md and AGENTS.md)
@@ -485,36 +344,30 @@ setup_gitignore() {
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-printf "\n${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
-printf "${BOLD}${CYAN}  │       agentic-kit           │${RESET}\n"
-printf "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
+kit_banner "agentic-kit"
 info "project root: $PROJECT_ROOT"
 info "kit location: $SUBMODULE_DIR/"
 info "artefacts:    $ARTEFACTS_DIR_NAME/  (pipeline doc, project config, memory, features)"
 
 # Template drift detection: warn if PIPELINE.md.template changed since last init.
-_cfg_file="$KIT_CFG"
-if [ -f "$_cfg_file" ]; then
-  _saved_sha=$(grep '^PIPELINE_SHA=' "$_cfg_file" 2>/dev/null | cut -d= -f2- || true)
-  if [ -n "$_saved_sha" ]; then
-    _current_sha=""
-    if command -v sha256sum &>/dev/null; then
-      _current_sha=$(sha256sum "$PIPELINE_TEMPLATE" | awk '{print $1}')
-    elif command -v shasum &>/dev/null; then
-      _current_sha=$(shasum -a 256 "$PIPELINE_TEMPLATE" | awk '{print $1}')
-    fi
-    if [ -n "$_current_sha" ] && [ "$_current_sha" != "$_saved_sha" ]; then
-      warn "PIPELINE.md.template has changed since last init."
-      info "Review:  diff $PIPELINE_TARGET $PIPELINE_TEMPLATE"
-      info "Refresh: $SUBMODULE_DIR/tools/init.sh --force"
-    fi
+_saved_sha=$(kit_cfg_get PIPELINE_SHA 2>/dev/null || true)
+if [ -n "$_saved_sha" ]; then
+  _current_sha=$(kit_sha256_file "$PIPELINE_TEMPLATE" 2>/dev/null || true)
+  if [ -n "$_current_sha" ] && [ "$_current_sha" != "$_saved_sha" ]; then
+    warn "PIPELINE.md.template has changed since last init."
+    info "Review:  diff $PIPELINE_TARGET $PIPELINE_TEMPLATE"
+    info "Refresh: $SUBMODULE_DIR/tools/init.sh --force"
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# Run setups
+# Run setups — wrapped in a manifest transaction so all SHA updates land in one
+# atomic write at the end (instead of rewriting .agentic-kit.files per entry).
 # ---------------------------------------------------------------------------
 FRESH_PROJECT_MD=false
+
+manifest_begin
+trap 'manifest_abort; _kit_cleanup_temps' ERR
 
 # Always set up the artefacts dir first — it is referenced by the entry-point files.
 setup_artefacts_dir
@@ -522,6 +375,9 @@ setup_artefacts_dir
 setup_kit
 
 setup_gitignore
+
+manifest_commit
+trap _kit_cleanup_temps EXIT
 
 # ---------------------------------------------------------------------------
 # PROJECT.md autofill (CLI nudge or [AGENT ACTION REQUIRED] hint)
@@ -579,22 +435,20 @@ if [ "$FRESH_PROJECT_MD" = true ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Write .akt/.agentic-kit.cfg (persist template sha + kit version for drift detection)
+# Write .akt/.agentic-kit.cfg (persist template sha + kit version + resolved
+# paths so other tools/agents can read them without re-running discovery).
 # ---------------------------------------------------------------------------
-_pipeline_sha=""
-if command -v sha256sum &>/dev/null; then
-  _pipeline_sha=$(sha256sum "$PIPELINE_TEMPLATE" | awk '{print $1}')
-elif command -v shasum &>/dev/null; then
-  _pipeline_sha=$(shasum -a 256 "$PIPELINE_TEMPLATE" | awk '{print $1}')
-fi
-_kit_version=""
+_pipeline_sha=$(kit_sha256_file "$PIPELINE_TEMPLATE" 2>/dev/null || true)
 _kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || true)
-{
-  printf 'INIT_DATE=%s\n' "$(date +%Y-%m-%d)"
-  printf 'KIT_VERSION=%s\n' "$_kit_version"
-  printf 'PIPELINE_SHA=%s\n' "$_pipeline_sha"
-  printf 'ARTEFACTS_DIR=%s\n' "$ARTEFACTS_DIR_NAME"
-} > "$KIT_CFG"
+
+kit_cfg_set_many \
+  INIT_DATE       "$(date +%Y-%m-%d)" \
+  KIT_VERSION     "$_kit_version" \
+  PIPELINE_SHA    "$_pipeline_sha" \
+  ARTEFACTS_DIR   "$ARTEFACTS_DIR_NAME" \
+  KIT_ROOT        "$SCRIPT_DIR" \
+  PROJECT_ROOT    "$PROJECT_ROOT" \
+  SUBMODULE_DIR   "$SUBMODULE_DIR"
 
 # ---------------------------------------------------------------------------
 # Project probe (--tune): write .akt/PROJECT_PROFILE.md so agents self-tune

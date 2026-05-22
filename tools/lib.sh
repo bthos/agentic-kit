@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # Shared helpers for agentic-kit shell scripts.
-# Source from tools/init.sh / tools/update.sh / tools/teardown.sh (siblings in tools/):
-#     source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 # Source from tools/<script>.sh siblings:
 #     source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 # Source from autoresearch/tools/<script>.sh:
@@ -31,33 +29,51 @@ err()     { printf "  ${RED}✗${RESET} %s\n" "$*"; }
 header()  { printf "\n${BOLD}${CYAN}  %s${RESET}\n" "$*"; }
 removed() { printf "  ${RED}✗${RESET} %s\n" "$*"; }
 
+# Centred banner box for top-level scripts. Width of the inside is 29 chars.
+kit_banner() {
+  local title="$1"
+  local pad_total=$(( 29 - ${#title} ))
+  [ $pad_total -lt 0 ] && pad_total=0
+  local left=$(( pad_total / 2 ))
+  local right=$(( pad_total - left ))
+  local ls="" rs="" i
+  for ((i=0; i<left;  i++)); do ls+=" "; done
+  for ((i=0; i<right; i++)); do rs+=" "; done
+  printf "\n${BOLD}${CYAN}  ╭─────────────────────────────╮${RESET}\n"
+  printf   "${BOLD}${CYAN}  │%s%s%s│${RESET}\n" "$ls" "$title" "$rs"
+  printf   "${BOLD}${CYAN}  ╰─────────────────────────────╯${RESET}\n"
+}
+
+# Standard "yes / non-interactive" flag check. Returns 0 if any of the canonical
+# yes aliases is in "$@".
+kit_arg_is_yes() {
+  local a
+  for a in "$@"; do
+    case "$a" in
+      --yes|-y|--non-interactive|-n) return 0 ;;
+    esac
+  done
+  return 1
+}
+
 # ---------------------------------------------------------------------------
 # Kit paths & marker (kit directory = directory containing this file)
 # ---------------------------------------------------------------------------
 AGENTIC_MARKER='<!-- agentic-kit managed -->'
 
-# Marker block delimiters used inside CLAUDE.md / AGENTS.md
-# and inside .gitignore. The marker form is intentionally distinctive so users (and
-# teardown.sh) can grep for it; never edit the markers by hand.
 AGENTIC_BLOCK_BEGIN='<!-- agentic-kit:start -->'
 AGENTIC_BLOCK_END='<!-- agentic-kit:end -->'
 AGENTIC_GITIGNORE_BEGIN='# >>> agentic-kit (managed) >>>'
 AGENTIC_GITIGNORE_END='# <<< agentic-kit (managed) <<<'
 
-# Single home for all kit-managed project artefacts (memory, features, archive,
-# pipeline copy, project config). Override with $ARTEFACTS_DIR_NAME if a downstream
-# project ever needs a different folder name.
 ARTEFACTS_DIR_NAME="${ARTEFACTS_DIR_NAME:-.akt}"
 
-# This file lives at agentic-kit/tools/lib.sh — SCRIPT_DIR is always the kit root
-# (the directory that contains init.sh, teardown.sh, templates/, agents/, …).
 _LIB_SELFDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$(cd "$_LIB_SELFDIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
 ARTEFACTS_DIR="$PROJECT_ROOT/$ARTEFACTS_DIR_NAME"
 KIT_CFG="$ARTEFACTS_DIR/.agentic-kit.cfg"
-# Tab-separated: relative_path<TAB>sha256 — paths relative to PROJECT_ROOT, `/` separators
 KIT_FILES_MANIFEST="$ARTEFACTS_DIR/.agentic-kit.files"
 
 # One-time migration from older layouts (manifest + cfg at project root).
@@ -76,25 +92,72 @@ kit_migrate_legacy_root_state() {
 }
 
 # ---------------------------------------------------------------------------
-# SHA-256 + install manifest (copies instead of symlinks)
+# Temp-file tracking with auto-cleanup
 # ---------------------------------------------------------------------------
-kit_sha256_file() {
-  local f="$1"
-  if [ ! -f "$f" ] || [ -L "$f" ]; then
-    printf ''
-    return 1
+_KIT_TEMP_FILES=()
+
+_kit_cleanup_temps() {
+  local f
+  for f in "${_KIT_TEMP_FILES[@]:-}"; do
+    [ -n "$f" ] && [ -e "$f" ] && rm -rf -- "$f" 2>/dev/null || true
+  done
+  _KIT_TEMP_FILES=()
+}
+
+# Make a tracked temp file/dir. Auto-removed on script EXIT.
+# Usage: tmp=$(kit_mktemp [label])  or  tmp=$(kit_mktemp -d [label])
+kit_mktemp() {
+  local as_dir=false
+  if [ "${1:-}" = "-d" ]; then as_dir=true; shift; fi
+  local label="${1:-akt}"
+  local base="${TMPDIR:-/tmp}"
+  [ -d "$base" ] || base="."
+  local t
+  if $as_dir; then
+    t=$(mktemp -d "$base/${label}.XXXXXX") || return 1
+  else
+    t=$(mktemp "$base/${label}.XXXXXX") || return 1
   fi
+  _KIT_TEMP_FILES+=( "$t" )
+  printf '%s' "$t"
+}
+
+# Only install our trap if the caller hasn't already set one.
+if [ -z "$(trap -p EXIT 2>/dev/null)" ]; then
+  trap _kit_cleanup_temps EXIT
+fi
+
+# ---------------------------------------------------------------------------
+# SHA-256 helpers
+# ---------------------------------------------------------------------------
+_KIT_SHA_CMD=""
+_kit_resolve_sha_cmd() {
+  [ -n "$_KIT_SHA_CMD" ] && return 0
   if command -v sha256sum &>/dev/null; then
-    sha256sum "$f" | awk '{print $1}'
+    _KIT_SHA_CMD="sha256sum"
   elif command -v shasum &>/dev/null; then
-    shasum -a 256 "$f" | awk '{print $1}'
+    _KIT_SHA_CMD="shasum -a 256"
   else
     err "Neither sha256sum nor shasum found — install coreutils."
     return 1
   fi
 }
 
-# Deterministic aggregate hash of all regular files under dir (relative paths sorted).
+kit_sha256_file() {
+  local f="$1"
+  if [ ! -f "$f" ] || [ -L "$f" ]; then
+    printf ''
+    return 1
+  fi
+  _kit_resolve_sha_cmd || return 1
+  $_KIT_SHA_CMD "$f" | awk '{print $1}'
+}
+
+kit_sha256_stream_aggregate() {
+  _kit_resolve_sha_cmd || return 1
+  $_KIT_SHA_CMD | awk '{print $1}'
+}
+
 kit_sha256_tree() {
   local dir="$1"
   if [ ! -d "$dir" ] || [ -L "$dir" ]; then
@@ -109,44 +172,146 @@ kit_sha256_tree() {
   ) | kit_sha256_stream_aggregate
 }
 
-kit_sha256_stream_aggregate() {
-  if command -v sha256sum &>/dev/null; then
-    sha256sum | awk '{print $1}'
-  elif command -v shasum &>/dev/null; then
-    shasum -a 256 | awk '{print $1}'
-  fi
+kit_sha256_string() {
+  _kit_resolve_sha_cmd || return 1
+  printf '%s' "$1" | $_KIT_SHA_CMD | awk '{print $1}'
 }
 
-# Hash an arbitrary string (used for tracking managed include blocks).
-kit_sha256_string() {
-  local s="$1"
-  if command -v sha256sum &>/dev/null; then
-    printf '%s' "$s" | sha256sum | awk '{print $1}'
-  elif command -v shasum &>/dev/null; then
-    printf '%s' "$s" | shasum -a 256 | awk '{print $1}'
-  else
-    err "Neither sha256sum nor shasum found — install coreutils."
-    return 1
-  fi
+# ---------------------------------------------------------------------------
+# Git-tracked predicate (used to skip rehashing untouched, tracked files)
+# ---------------------------------------------------------------------------
+# True if $rel (project-relative) is tracked AND has no working-tree/index diff.
+kit_is_git_clean() {
+  local rel="$1"
+  command -v git &>/dev/null || return 1
+  ( cd "$PROJECT_ROOT" 2>/dev/null \
+    && git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    && git ls-files --error-unmatch -- "$rel" >/dev/null 2>&1 \
+    && git diff --quiet -- "$rel" 2>/dev/null \
+    && git diff --cached --quiet -- "$rel" 2>/dev/null )
 }
+
+# ---------------------------------------------------------------------------
+# .akt/.agentic-kit.cfg — flat KEY=VALUE store
+# ---------------------------------------------------------------------------
+kit_cfg_get() {
+  local key="$1"
+  [ -f "$KIT_CFG" ] || return 1
+  awk -F= -v k="$key" 'BEGIN{found=0} $1 == k { sub(/^[^=]+=/, ""); print; found=1; exit } END{ exit !found }' "$KIT_CFG"
+}
+
+kit_cfg_set() {
+  local key="$1" value="$2"
+  mkdir -p "$(dirname "$KIT_CFG")"
+  touch "$KIT_CFG"
+  local tmp
+  tmp=$(kit_mktemp "akt-cfg") || return 1
+  awk -F= -v k="$key" '$1 != k' "$KIT_CFG" > "$tmp"
+  printf '%s=%s\n' "$key" "$value" >> "$tmp"
+  mv "$tmp" "$KIT_CFG"
+}
+
+# Write multiple key=value pairs in one rewrite. Args: key1 val1 key2 val2 ...
+kit_cfg_set_many() {
+  mkdir -p "$(dirname "$KIT_CFG")"
+  touch "$KIT_CFG"
+  local -a keys=() vals=()
+  while [ $# -ge 2 ]; do
+    keys+=( "$1" ); vals+=( "$2" ); shift 2
+  done
+  local pat="" k
+  for k in "${keys[@]}"; do pat+="|^${k}="; done
+  pat="${pat#|}"
+  local tmp
+  tmp=$(kit_mktemp "akt-cfg") || return 1
+  if [ -n "$pat" ]; then
+    awk -v pat="$pat" '$0 !~ pat' "$KIT_CFG" > "$tmp" || true
+  else
+    cat "$KIT_CFG" > "$tmp"
+  fi
+  local i
+  for i in "${!keys[@]}"; do
+    printf '%s=%s\n' "${keys[$i]}" "${vals[$i]}" >> "$tmp"
+  done
+  mv "$tmp" "$KIT_CFG"
+}
+
+# ---------------------------------------------------------------------------
+# Install manifest (.akt/.agentic-kit.files: relpath<TAB>hash)
+#
+# Two modes:
+#   * Direct (default): each set/remove rewrites the file. Fine for one-shot ops.
+#   * Transactional: wrap a batch in manifest_begin / manifest_commit. Edits go
+#     to an in-memory map; one atomic write happens at commit. Init.sh uses this.
+# ---------------------------------------------------------------------------
+declare -A _KIT_MANIFEST_BUF=()
+_KIT_MANIFEST_DIRTY=false
+_KIT_MANIFEST_LOADED=false
 
 manifest_ensure_file() {
-  touch "$KIT_FILES_MANIFEST" 2>/dev/null || mkdir -p "$(dirname "$KIT_FILES_MANIFEST")"
+  mkdir -p "$(dirname "$KIT_FILES_MANIFEST")" 2>/dev/null || true
   touch "$KIT_FILES_MANIFEST"
 }
 
-# Remove line starting with rel_path<TAB>
+manifest_begin() {
+  _KIT_MANIFEST_BUF=()
+  _KIT_MANIFEST_DIRTY=false
+  _KIT_MANIFEST_LOADED=true
+  manifest_ensure_file
+  local path hash
+  while IFS=$'\t' read -r path hash; do
+    [ -z "$path" ] && continue
+    _KIT_MANIFEST_BUF["$path"]="$hash"
+  done < "$KIT_FILES_MANIFEST"
+}
+
+manifest_commit() {
+  $_KIT_MANIFEST_LOADED || return 0
+  if $_KIT_MANIFEST_DIRTY; then
+    manifest_ensure_file
+    local tmp k
+    tmp=$(kit_mktemp "akt-manifest") || return 1
+    for k in "${!_KIT_MANIFEST_BUF[@]}"; do
+      printf '%s\t%s\n' "$k" "${_KIT_MANIFEST_BUF[$k]}" >> "$tmp"
+    done
+    LC_ALL=C sort "$tmp" -o "$tmp"
+    mv "$tmp" "$KIT_FILES_MANIFEST"
+  fi
+  _KIT_MANIFEST_BUF=()
+  _KIT_MANIFEST_DIRTY=false
+  _KIT_MANIFEST_LOADED=false
+}
+
+# Abort a transaction without writing. Useful in error paths.
+manifest_abort() {
+  _KIT_MANIFEST_BUF=()
+  _KIT_MANIFEST_DIRTY=false
+  _KIT_MANIFEST_LOADED=false
+}
+
 manifest_remove_entry() {
   local rel="$1"
+  if $_KIT_MANIFEST_LOADED; then
+    if [ -n "${_KIT_MANIFEST_BUF[$rel]+x}" ]; then
+      unset "_KIT_MANIFEST_BUF[$rel]"
+      _KIT_MANIFEST_DIRTY=true
+    fi
+    return 0
+  fi
   manifest_ensure_file
   local tmp
-  tmp=$(mktemp "${KIT_FILES_MANIFEST}.XXXXXX")
+  tmp=$(kit_mktemp "akt-manifest") || return 1
   awk -F'\t' -v p="$rel" 'BEGIN{FS=OFS="\t"} $1 != p || NF < 2 {print}' "$KIT_FILES_MANIFEST" >"$tmp"
   mv "$tmp" "$KIT_FILES_MANIFEST"
 }
 
 manifest_set_hash() {
   local rel="$1" hash="$2"
+  if $_KIT_MANIFEST_LOADED; then
+    _KIT_MANIFEST_BUF["$rel"]="$hash"
+    _KIT_MANIFEST_DIRTY=true
+    return 0
+  fi
   manifest_remove_entry "$rel"
   manifest_ensure_file
   printf '%s\t%s\n' "$rel" "$hash" >>"$KIT_FILES_MANIFEST"
@@ -154,6 +319,10 @@ manifest_set_hash() {
 
 manifest_get_hash() {
   local rel="$1"
+  if $_KIT_MANIFEST_LOADED; then
+    printf '%s' "${_KIT_MANIFEST_BUF[$rel]:-}"
+    return 0
+  fi
   [ -f "$KIT_FILES_MANIFEST" ] || return 1
   awk -F'\t' -v p="$rel" '$1 == p {print $2}' "$KIT_FILES_MANIFEST" | tail -n1
 }
@@ -171,19 +340,55 @@ kit_symlink_points_into_kit() {
 }
 
 # ---------------------------------------------------------------------------
-# Managed include blocks (CLAUDE.md / AGENTS.md)
+# Managed blocks (CLAUDE.md / AGENTS.md / .gitignore)
 #
-# Strategy: instead of overwriting (or even creating from scratch) full pipeline
-# documents at the project root, we maintain a small, clearly-marked block inside
-# the IDE's entry-point file. The block points at .akt/PIPELINE.md
-# (the canonical, kit-refreshable copy). Existing user content in the entry-point
-# file is preserved verbatim; teardown.sh strips only the marked block.
+# Single strip implementation parameterised by begin/end markers; thin wrappers
+# preserve the prior API (agentic_block_*, agentic_gitignore_*).
 # ---------------------------------------------------------------------------
 
-# Build the include block. Args:
-#   $1 — relative path to the canonical pipeline file (e.g. .akt/PIPELINE.md)
-# The same block is written to CLAUDE.md and AGENTS.md; the embedded comment
-# names agentic-kit so the source of truth is obvious to any reader.
+_kit_block_present() {
+  local file="$1" begin="$2"
+  [ -f "$file" ] || return 1
+  grep -qF "$begin" "$file" 2>/dev/null
+}
+
+# Strip a managed block bounded by begin/end markers (idempotent).
+# Returns 0 if a block was removed, 1 if no block was present, 2 on error.
+_kit_strip_block() {
+  local file="$1" begin="$2" end="$3"
+  [ -f "$file" ] || return 1
+  _kit_block_present "$file" "$begin" || return 1
+
+  local tmp trimmed
+  tmp=$(kit_mktemp "akt-strip") || return 2
+
+  awk -v b="$begin" -v e="$end" '
+    BEGIN { skip=0 }
+    {
+      if (skip == 0 && index($0, b) > 0) { skip=1; next }
+      if (skip == 1) {
+        if (index($0, e) > 0) { skip=2; next }
+        next
+      }
+      if (skip == 2) { skip=3; if ($0 == "") next }
+      print
+    }
+  ' "$file" > "$tmp" || return 2
+
+  trimmed=$(kit_mktemp "akt-strip") || return 2
+  awk '
+    { lines[NR]=$0 }
+    END {
+      n=NR
+      while (n > 0 && lines[n] ~ /^[[:space:]]*$/) n--
+      for (i=1; i<=n; i++) print lines[i]
+    }
+  ' "$tmp" > "$trimmed" || return 2
+  mv "$trimmed" "$file"
+  return 0
+}
+
+# Render the include block. Arg: pipeline_rel (relative path).
 agentic_block_render() {
   local pipeline_rel="$1"
   cat <<EOF
@@ -203,58 +408,9 @@ $AGENTIC_BLOCK_END
 EOF
 }
 
-# True (0) when $file already contains a kit-managed include block.
-agentic_block_present() {
-  local file="$1"
-  [ -f "$file" ] || return 1
-  grep -qF "$AGENTIC_BLOCK_BEGIN" "$file" 2>/dev/null
-}
+agentic_block_present() { _kit_block_present "$1" "$AGENTIC_BLOCK_BEGIN"; }
+agentic_block_strip()   { _kit_strip_block  "$1" "$AGENTIC_BLOCK_BEGIN" "$AGENTIC_BLOCK_END"; }
 
-# Strip the kit-managed include block from $file (idempotent). Also collapses
-# the blank lines around it so we don't leave gaping holes. Echoes a status to
-# stderr; returns 0 if a block was removed, 1 if no block was present, 2 on error.
-agentic_block_strip() {
-  local file="$1"
-  [ -f "$file" ] || return 1
-  agentic_block_present "$file" || return 1
-
-  local tmp
-  tmp=$(mktemp "${file}.agentic.XXXXXX") || return 2
-
-  awk -v b="$AGENTIC_BLOCK_BEGIN" -v e="$AGENTIC_BLOCK_END" '
-    BEGIN { skip=0 }
-    {
-      if (skip == 0 && index($0, b) > 0) { skip=1; next }
-      if (skip == 1) {
-        if (index($0, e) > 0) { skip=2; next }
-        next
-      }
-      # Drop a single blank line immediately after the closing marker so the
-      # surrounding document keeps its original cadence.
-      if (skip == 2) { skip=3; if ($0 == "") next }
-      print
-    }
-  ' "$file" > "$tmp" || { rm -f "$tmp"; return 2; }
-
-  # Trim trailing blank lines that may now be stranded at EOF.
-  local trimmed
-  trimmed=$(mktemp "${file}.agentic.XXXXXX") || { rm -f "$tmp"; return 2; }
-  awk '
-    { lines[NR]=$0 }
-    END {
-      n=NR
-      while (n > 0 && lines[n] ~ /^[[:space:]]*$/) n--
-      for (i=1; i<=n; i++) print lines[i]
-    }
-  ' "$tmp" > "$trimmed" || { rm -f "$tmp" "$trimmed"; return 2; }
-  mv "$trimmed" "$file"
-  rm -f "$tmp"
-  return 0
-}
-
-# Write a fresh "stub" entry-point file (used when no CLAUDE.md / AGENTS.md
-# exists yet). We put the include block at the top so the user's later edits
-# accumulate naturally below it.
 agentic_block_write_stub() {
   local file="$1" pipeline_rel="$2"
   mkdir -p "$(dirname "$file")"
@@ -266,9 +422,6 @@ agentic_block_write_stub() {
   } > "$file"
 }
 
-# Append the include block to an existing user-owned entry-point file. We add a
-# leading blank line if the existing file does not already end with one, so the
-# diff is small and reviewable.
 agentic_block_append() {
   local file="$1" pipeline_rel="$2"
   if [ -s "$file" ]; then
@@ -285,11 +438,6 @@ agentic_block_append() {
 # ---------------------------------------------------------------------------
 # Managed .gitignore block
 # ---------------------------------------------------------------------------
-# Same idea as the include block above but for .gitignore. We never touch the
-# user's existing entries; we maintain a single clearly-marked block at the end
-# of the file. Teardown removes the block; everything outside it is preserved.
-
-# Args: $1 — relative path to .gitignore (typically "$PROJECT_ROOT/.gitignore")
 agentic_gitignore_render() {
   cat <<EOF
 $AGENTIC_GITIGNORE_BEGIN
@@ -321,44 +469,8 @@ $AGENTIC_GITIGNORE_END
 EOF
 }
 
-agentic_gitignore_present() {
-  local file="$1"
-  [ -f "$file" ] || return 1
-  grep -qF "$AGENTIC_GITIGNORE_BEGIN" "$file" 2>/dev/null
-}
-
-agentic_gitignore_strip() {
-  local file="$1"
-  [ -f "$file" ] || return 1
-  agentic_gitignore_present "$file" || return 1
-  local tmp
-  tmp=$(mktemp "${file}.agentic.XXXXXX") || return 2
-  awk -v b="$AGENTIC_GITIGNORE_BEGIN" -v e="$AGENTIC_GITIGNORE_END" '
-    BEGIN { skip=0 }
-    {
-      if (skip == 0 && index($0, b) > 0) { skip=1; next }
-      if (skip == 1) {
-        if (index($0, e) > 0) { skip=2; next }
-        next
-      }
-      if (skip == 2) { skip=3; if ($0 == "") next }
-      print
-    }
-  ' "$file" > "$tmp" || { rm -f "$tmp"; return 2; }
-  local trimmed
-  trimmed=$(mktemp "${file}.agentic.XXXXXX") || { rm -f "$tmp"; return 2; }
-  awk '
-    { lines[NR]=$0 }
-    END {
-      n=NR
-      while (n > 0 && lines[n] ~ /^[[:space:]]*$/) n--
-      for (i=1; i<=n; i++) print lines[i]
-    }
-  ' "$tmp" > "$trimmed" || { rm -f "$tmp" "$trimmed"; return 2; }
-  mv "$trimmed" "$file"
-  rm -f "$tmp"
-  return 0
-}
+agentic_gitignore_present() { _kit_block_present "$1" "$AGENTIC_GITIGNORE_BEGIN"; }
+agentic_gitignore_strip()   { _kit_strip_block  "$1" "$AGENTIC_GITIGNORE_BEGIN" "$AGENTIC_GITIGNORE_END"; }
 
 # ---------------------------------------------------------------------------
 # Managed-file teardown helpers (shared by teardown.sh and update.sh).

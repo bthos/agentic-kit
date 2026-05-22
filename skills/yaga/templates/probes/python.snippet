@@ -1,0 +1,8 @@
+# YAGA probe — Python
+# Investigation: {{INVESTIGATION_ID}}
+# Port: replace <PORT> with the value from server.json. Inline as a literal.
+# Strip: removed by agentic-kit/tools/yaga-strip.sh on cleanup.
+
+import json as _yaga_json, urllib.request as _yaga_req  # YAGA:{{INVESTIGATION_ID}}
+try: _yaga_req.urlopen(_yaga_req.Request("http://127.0.0.1:<PORT>/log", data=_yaga_json.dumps({"id":"YAGA:{{INVESTIGATION_ID}}","probe":"p1","file":__file__,"vars":{ }}).encode(), headers={"content-type":"application/json"}), timeout=0.2)  # YAGA:{{INVESTIGATION_ID}}
+except Exception: pass  # YAGA:{{INVESTIGATION_ID}}

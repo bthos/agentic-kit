@@ -76,6 +76,16 @@ When receiving handoff from Bagnik (code QA failed): Fix the issues using the fa
 
 **Loop until Bagnik passes.** Repeat as many times as needed. No iteration limit. Do not give up or hand off to Zlydni until Bagnik explicitly passes. Each fix cycle: analyze → fix → run build command + test command (see `.akt/PROJECT.md`) → fix until clean → invoke Bagnik → if fail, receive handoff and fix again.
 
+### Escalate to Yaga when stuck
+
+If the **user reports the same bug ≥2 times** (different sessions or the same session after a previous "fixed" claim), or if you have made two fix attempts on the same failure without convergence, **stop guessing and suggest `@yaga`**:
+
+```
+This bug has resisted two fix attempts. I recommend handing off to @yaga for hypothesis-driven investigation. Yaga will instrument the relevant code via the local log server, identify the root cause from runtime evidence, and hand the fix back to me with a verified mechanism. Proceed?
+```
+
+Do not invoke Yaga without user confirmation — the decision is theirs. When the user agrees, hand off the bug description, affected files, and the failing test command. After Yaga returns `findings.md`, read it as a mini-spec, implement the **smallest** change that resolves the named mechanism, and do not expand scope.
+
 ### Long-running builds
 
 When handoff includes "long-running" or task scope suggests multi-hour work:

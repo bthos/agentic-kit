@@ -55,6 +55,10 @@ Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
      → Laznik (arch + tests) → Bagnik (test gate)
      → Cmok /agent/ (build) + Mokash (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
+
+    [side-loop] Yaga — invoked ad-hoc on hard bugs:
+       /yaga (hypothesis) → @yaga (instrument + observe) → @cmok (fix)
+       → @bagnik (gate) → @yaga (strip instrumentation) → @zlydni
 ```
 
 ### Agents
@@ -65,6 +69,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
 | Cmok | **Цмок** | Build | Sonnet | Белорусский дракон — справедливый строитель сокровищ. |
 | Mokash | **Мокаш** | Documentation | Sonnet | Богиня прядения — ткёт нити знаний. |
 | Veles | **Вялес** | AutoResearch ratchet (self-improve) | Sonnet | Хозяин Яви/Нави/Прави — ratchet loop в трёх мирах. |
+| Yaga | **Яга** | Debugging side-loop (hypothesis → instrument → observe → strip) | Opus | Баба Яга — видит сокрытое, требует ответов прежде чем помочь. |
 | Zlydni | **Злыдні** | Commits & version control | Haiku | Духи дома — тихо делают неизбежную работу. |
 
 ### Skills
@@ -75,13 +80,14 @@ Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
 | Lojma     | UX design                     |
 | Cmok      | UX mockups                    |
 | Laznik    | Architecture & tests          |
+| Yaga      | Hypothesis design for hard bugs |
 
 ### Invocation
 
 | Kind | Names |
 |------|--------|
-| Skills | `/vadavik`, `/lojma`, `/laznik`, `/cmok` |
-| Agents | `@bagnik`, `@cmok` (build), `@mokash`, `@veles`, `@zlydni` |
+| Skills | `/vadavik`, `/lojma`, `/laznik`, `/cmok`, `/yaga` |
+| Agents | `@bagnik`, `@cmok` (build), `@mokash`, `@veles`, `@yaga`, `@zlydni` |
 
 The build implementation after Bagnik passes is the `@cmok` agent. The mockup phase uses the `/cmok` skill. They share a name because they share the role; the kit no longer maintains per-IDE shims to disambiguate.
 
@@ -93,7 +99,7 @@ The **Handoff Map** below uses the same `/…` and `@…` tokens.
 
 Structured handoff format for agent-to-agent transitions. Explicit handoffs reduce context loss.
 
-*Agents: Vadavik, Lojma, Laznik, Cmok, Bagnik, Zlydni, Mokash, Veles.*
+*Agents: Vadavik, Lojma, Laznik, Cmok, Bagnik, Zlydni, Mokash, Veles, Yaga.*
 
 ### Autonomous Flow
 
@@ -179,6 +185,9 @@ When handing off to another agent, include:
 | Bagnik (test gate fail) | Laznik | `/laznik` | yes |
 | Bagnik (code QA fail) | Cmok | `@cmok` | yes |
 | Zlydni | End | — | Optional push |
+| *(side-loop)* User / Cmok / Bagnik | Yaga | `/yaga` then `@yaga` | **STOP** (user authorises) |
+| Yaga (findings) | Cmok | `@cmok` (fix) | yes |
+| Bagnik (Yaga-originated pass) | Yaga | `@yaga` (strip) | yes |
 
 *The **Invocation** column uses `/` for skills and `@` for agents — the kit's universal shorthand.*
 

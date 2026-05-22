@@ -136,6 +136,16 @@ Bagnik failed code QA. Feature path: [path]. Context: code QA. Failed: [check]. 
 
 **Loop until pass.** Each fail → fix agent → Bagnik repeats until Bagnik passes. No iteration limit. Do not give up.
 
+### Escalate to Yaga on opaque repeat failures
+
+When the **same gate fails twice** on the same test or check for non-obvious reasons (i.e., the failure output does not clearly point at a specific fix), surface `@yaga` to the user in your fail handoff:
+
+```
+Bagnik has failed this gate twice on [test/check] with non-obvious root cause. I recommend the user authorise @yaga to instrument the relevant code path and identify the mechanism before further fix attempts. Continuing to bounce between Cmok and Bagnik without evidence will burn iterations.
+```
+
+Do not invoke Yaga directly — Yaga is a user-authorised side-loop. Continue the standard fix loop while flagging the recommendation; the user (or Cmok responding to the same heuristic in its own prompt) chooses whether to splice Yaga in.
+
 ## Output
 
 - Test results (pass/fail counts)

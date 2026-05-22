@@ -10,6 +10,22 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ## [Unreleased]
 
+### Added
+- **Yaga (Яга)** — diagnostic side-loop for hard bugs. Ships as both a skill
+  (`/yaga`, hypothesis design) and an agent (`@yaga`, instrument → observe →
+  hand-to-Cmok → strip). Includes a single-file Python 3 **Yaga log server**
+  (`tools/yaga-log-server.py`, loopback-only HTTP, `/log` `/console` `/network`
+  `/tail` `/stream` `/shutdown`, JSONL output), a bash/netcat fallback
+  (`tools/yaga-log-server.sh`), a sentinel-based strip helper
+  (`tools/yaga-strip.sh`), paste-ready probe snippets for JS/TS, Python, Bash,
+  Go, and Java/Kotlin, plus a browser bootstrap that hooks `console.*`,
+  `window.onerror`, `unhandledrejection`, `fetch`, and `XMLHttpRequest`.
+  Investigations live in `.akt/debug/YYYY-MM-DD-<slug>/` and archive to
+  `.akt/archive/debug/<slug>/`. Cmok and Bagnik now suggest `@yaga` when the
+  same bug recurs or the gate fails twice for non-obvious reasons. Pipeline
+  template documents Yaga as a side-loop that splices into the main flow only
+  when invoked.
+
 ### Removed (BREAKING)
 - **`--ide=` flag** and all Cursor / GitHub Copilot generation. Previously
   `init.sh`, `update.sh`, and `teardown.sh` produced and managed three parallel

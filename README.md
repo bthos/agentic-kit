@@ -26,6 +26,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
 | Cmok | **Цмок** | Build | Sonnet | Белорусский дракон — добродушный, справедливый, одаривает сокровищами. |
 | Mokash | **Мокаш** | Documentation | Sonnet | Богиня прядения и учёта — ткёт нити знаний. |
 | Veles | **Вялес** | AutoResearch ratchet (self-improve) | Sonnet | Хозяин Яви, Нави и Прави — управляет рatchet loop в трёх мирах. |
+| Yaga | **Яга** | Debugging side-loop (hypothesis → instrument → observe → strip) | Opus | Баба Яга видит сокрытое — но требует, чтобы вы ответили на её загадки прежде, чем поможет. |
 | Zlydni | **Злыдні** | Commits & version control | Haiku | Маленькие духи дома — тихо делают неизбежную работу. |
 
 ### Skills
@@ -36,6 +37,7 @@ Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
 | Lojma    | UX design                    |
 | Cmok     | UX mockups                   |
 | Laznik   | Architecture & tests         |
+| Yaga     | Hypothesis design for hard bugs |
 
 ## Quick start
 
@@ -309,6 +311,8 @@ Vadavik creates the feature folder automatically when starting a new spec.
 | Run test gate or code QA | `@bagnik` |
 | Build | `@cmok` |
 | Write docs | `@mokash` |
+| Investigate a hard bug (hypothesis) | `/yaga` |
+| Investigate a hard bug (instrument + observe + strip) | `@yaga` |
 | Commit | `@zlydni` |
 
 ## Scripts
@@ -321,6 +325,7 @@ Each skill bundles its own script. Shared scripts live in `agentic-kit/tools/`. 
 |--------|-----------|--------------|
 | `.claude/skills/vadavik/new-feature.sh <slug>` | Vadavik | Creates `.akt/features/YYYY-MM-DD-<slug>/` with `spec.md` skeleton and `handoff-log.md` |
 | `.claude/skills/laznik/check-coverage.sh [feature-path]` | Laznik | Runs test command, prints results, appends coverage entry to `handoff-log.md` |
+| `.claude/skills/yaga/new-investigation.sh <slug>` | Yaga | Creates `.akt/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, `handoff-log.md` skeletons. Probe snippets live under `.claude/skills/yaga/templates/probes/`. |
 
 ### Shared tools
 
@@ -329,6 +334,9 @@ Each skill bundles its own script. Shared scripts live in `agentic-kit/tools/`. 
 | `agentic-kit/tools/bump-version.sh patch\|minor` | Bumps version in all files listed in `.akt/PROJECT.md` (Cmok uses `patch`, Zlydni uses `minor`) — run from project root |
 | `agentic-kit/tools/validate-config.sh` | Checks `.akt/PROJECT.md` for unfilled `<placeholder>` values — run after `init.sh` |
 | `agentic-kit/tools/feature-status.sh` | Shows pipeline status for active features in `.akt/features/` |
+| `agentic-kit/tools/yaga-log-server.py` | Yaga's local debug log server (Python 3 stdlib, loopback only). Captures runtime probes from instrumented code into `<investigation>/runtime.jsonl`. Endpoints: `/log`, `/console`, `/network`, `/tail`, `/stream`, `/shutdown`. |
+| `agentic-kit/tools/yaga-log-server.sh` | Degraded `nc`-based fallback when `python3` is unavailable. Same investigation contract, no SSE. |
+| `agentic-kit/tools/yaga-strip.sh <id>` | Removes every line carrying the `YAGA:<id>` sentinel. Self-blocks (non-zero exit) if residue remains. |
 
 ### Lifecycle scripts
 
