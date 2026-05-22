@@ -49,7 +49,7 @@ Note start time on entry: `start=$(date +%s)`
 
 ## Commands
 
-Run the project test command defined in `PROJECT.md` (Project-Specific Configuration → Test command).
+Run the project test command defined in `.akt/PROJECT.md` (Project-Specific Configuration → Test command).
 
 ## Rules
 
