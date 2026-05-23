@@ -92,6 +92,11 @@ show_help() {
     --force, --overwrite-all
                             Overwrite all existing kit-managed files without prompting.
 
+    --with-autoresearch     Set up the autoresearch metrics system (eval-set,
+                            program.md, record-metrics.sh). If autoresearch is
+                            already initialised, always refreshes without prompting.
+    --no-autoresearch       Skip autoresearch setup even if already initialised.
+
     --tune                  After install, probe the project (stack, frameworks,
                             test/build commands, conventions) and write
                             .akt/PROJECT_PROFILE.md so agents can self-tune.
@@ -151,6 +156,7 @@ ask_conflict() {
 MODE=""
 NON_INTERACTIVE=false
 TUNE=false
+AUTORESEARCH=""  # "yes" | "no" | "" (auto-detect)
 
 for arg in "$@"; do
   case "$arg" in
@@ -166,6 +172,8 @@ for arg in "$@"; do
       ;;
     --tune)                          TUNE=true ;;
     --no-tune)                       TUNE=false ;;
+    --with-autoresearch)             AUTORESEARCH="yes" ;;
+    --no-autoresearch)               AUTORESEARCH="no" ;;
   esac
 done
 
@@ -476,6 +484,44 @@ if [ -x "$_mem_init" ]; then
   if ! ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_NAME" "$_mem_init" ); then
     warn "memory/tools/init.sh exited non-zero — memory tree may be missing files. Re-run: $SUBMODULE_DIR/memory/tools/init.sh"
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# Autoresearch: metrics system (eval-set, program.md, record-metrics.sh)
+# ---------------------------------------------------------------------------
+_ar_run="$SCRIPT_DIR/autoresearch/run.sh"
+_ar_program="$ARTEFACTS/autoresearch/program.md"
+_ar_setup=false
+
+if [ "$AUTORESEARCH" = "yes" ]; then
+  _ar_setup=true
+elif [ "$AUTORESEARCH" = "no" ]; then
+  _ar_setup=false
+elif [ -f "$_ar_program" ]; then
+  # Already initialised — always refresh (idempotent)
+  _ar_setup=true
+else
+  # Not initialised and no explicit flag — ask the user
+  if $NON_INTERACTIVE; then
+    info "Autoresearch not initialised (pass --with-autoresearch to enable)"
+  elif [ -t 0 ]; then
+    printf '\n'
+    printf "  Set up ${BOLD}autoresearch${RESET} metrics system (eval-set + Veles ratchet)? [y/${BOLD}N${RESET}] "
+    read -r yn; yn="${yn:-N}"
+    [[ "$yn" =~ ^[Yy]$ ]] && _ar_setup=true
+  fi
+fi
+
+if $_ar_setup && [ -x "$_ar_run" ]; then
+  header "Autoresearch (metrics system)"
+  if ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS_NAME" "$_ar_run" --init ); then
+    success "Autoresearch initialised at $ARTEFACTS_NAME/autoresearch/"
+  else
+    warn "autoresearch/run.sh --init exited non-zero."
+    info "Re-run: $SUBMODULE_DIR/autoresearch/run.sh --init"
+  fi
+elif $_ar_setup && [ ! -x "$_ar_run" ]; then
+  warn "autoresearch/run.sh not found at $_ar_run — skipping."
 fi
 
 # ---------------------------------------------------------------------------

@@ -55,6 +55,7 @@ agentic-kit / update.sh
       --non-interactive, -n, --yes, -y
       --skip-all | --overwrite-all | --force
       --tune | --no-tune
+      --with-autoresearch | --no-autoresearch
 
     The --ide=* flag was removed; agentic-kit now installs a single
     Claude-shaped layout. See CHANGELOG.md.
