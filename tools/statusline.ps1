@@ -2,6 +2,7 @@
 # Line 1 (always): agent | feature [STAGE] | context bar | cost | lines
 # Line 2 (alerts): only rendered when something needs attention
 $ErrorActionPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $stream = [Console]::OpenStandardInput()
 $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $true, 8192)
