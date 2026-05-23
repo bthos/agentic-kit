@@ -23,15 +23,14 @@ done
 SETTINGS_DIR="$PROJECT_ROOT/.claude"
 SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 
-# Detect OS and pick the right statusline command
-case "$(uname -s 2>/dev/null || echo Windows)" in
-  MINGW*|MSYS*|CYGWIN*|Windows*|windows*)
-    SL_COMMAND="pwsh -NoProfile -File ${SUBMODULE_DIR}/tools/statusline.ps1"
-    ;;
-  *)
-    SL_COMMAND="bash ${SUBMODULE_DIR}/tools/statusline.sh"
-    ;;
-esac
+# Bash works everywhere (Git Bash on Windows, native on macOS/Linux).
+# Use --powershell flag to force the PowerShell variant on Windows.
+SL_COMMAND="bash ${SUBMODULE_DIR}/tools/statusline.sh"
+for arg in "$@"; do
+  case "$arg" in
+    --powershell|--ps) SL_COMMAND="pwsh -NoProfile -File ${SUBMODULE_DIR}/tools/statusline.ps1" ;;
+  esac
+done
 
 # Check if jq is available
 if ! command -v jq &>/dev/null; then
