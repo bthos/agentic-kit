@@ -24,7 +24,7 @@ ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 EVAL_DIR="$ARTEFACTS/autoresearch/eval-set"
 ARCHIVE_DIR="$ARTEFACTS/archive"
 
-mkdir -p "${ARTEFACTS_ROOT}" "$EVAL_DIR"
+mkdir -p "$EVAL_DIR"
 
 if [ ! -d "$ARCHIVE_DIR" ]; then
   echo "No $ARCHIVE_DIR yet — archive a feature first."
