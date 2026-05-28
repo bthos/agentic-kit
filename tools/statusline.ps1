@@ -13,7 +13,6 @@ $data = $raw | ConvertFrom-Json
 
 # --- JSON fields ---
 $model = if ($data.model.display_name) { $data.model.display_name } else { "?" }
-$agentName = $data.agent.name
 $projectDir = if ($data.workspace.project_dir) { $data.workspace.project_dir } else { $data.workspace.current_dir }
 $pct = if ($null -ne $data.context_window.used_percentage) { [math]::Floor([double]$data.context_window.used_percentage) } else { 0 }
 $cost = if ($null -ne $data.cost.total_cost_usd) { [double]$data.cost.total_cost_usd } else { 0.0 }
@@ -28,7 +27,7 @@ $bold    = "$e[1m";  $reset   = "$e[0m"
 
 # --- Pipeline state ---
 $aktDir = Join-Path $projectDir ".akt"
-$activeAgent = $agentName
+$activeAgent = $null
 $slug = ""; $stage = ""; $featCount = 0; $featPath = ""
 
 if (Test-Path $aktDir) {

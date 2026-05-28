@@ -9,7 +9,6 @@ input=$(cat)
 
 # --- JSON fields ---
 MODEL=$(echo "$input" | jq -r '.model.display_name // "?"')
-AGENT=$(echo "$input" | jq -r '.agent.name // empty')
 PROJECT_DIR=$(echo "$input" | jq -r '.workspace.project_dir // .workspace.current_dir // "."')
 PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
 COST=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
@@ -22,7 +21,7 @@ D='\033[2m'; B='\033[1m'; Z='\033[0m'
 
 # --- Pipeline state ---
 AKT="$PROJECT_DIR/.akt"
-ACTIVE_AGENT="${AGENT}"
+ACTIVE_AGENT=""
 SLUG=""
 STAGE=""
 FEAT_COUNT=0
