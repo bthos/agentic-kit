@@ -111,6 +111,7 @@ show_help() {
       o  overwrite this file
       a  overwrite all remaining files
       r  skip rest (this file and every later conflict)
+      d  show diff (current vs. incoming) — only when both are plain files
 
   AGENT INVOCATION
     agentic-kit/tools/init.sh --non-interactive
@@ -135,12 +136,20 @@ OVERWRITE_ALL=false
 SKIP_ALL=false
 ask_conflict() {
   local label="$1"
+  local current="${2:-}"   # existing file path (for diff)
+  local incoming="${3:-}"  # new/kit file path (for diff)
   if $OVERWRITE_ALL; then return 0; fi
   if $SKIP_ALL; then return 1; fi
   if [ ! -t 0 ]; then return 1; fi
+  local _can_diff=false
+  [ -n "$current" ] && [ -n "$incoming" ] && [ -f "$current" ] && [ -f "$incoming" ] && _can_diff=true
   while true; do
     printf "  ${YELLOW}exists${RESET} %s — " "$label"
-    printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  overwrite [${BOLD}a${RESET}]ll  skip [${BOLD}r${RESET}]est  "
+    if $_can_diff; then
+      printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  overwrite [${BOLD}a${RESET}]ll  skip [${BOLD}r${RESET}]est  [${BOLD}d${RESET}]iff  "
+    else
+      printf "[${BOLD}s${RESET}]kip  [${BOLD}o${RESET}]verwrite  overwrite [${BOLD}a${RESET}]ll  skip [${BOLD}r${RESET}]est  "
+    fi
     read -r -n1 choice
     printf '\n'
     case "$choice" in
@@ -148,6 +157,7 @@ ask_conflict() {
       a|A) OVERWRITE_ALL=true; return 0 ;;
       r|R) SKIP_ALL=true; return 1 ;;
       s|S|"") return 1 ;;
+      d|D) $_can_diff && diff -u "$current" "$incoming" || true ;;
       *) ;;
     esac
   done
@@ -190,6 +200,8 @@ if [ "$MODE" = "force" ]; then OVERWRITE_ALL=true; fi
 
 should_overwrite() {
   local label="$1"
+  local current="${2:-}"
+  local incoming="${3:-}"
   if [ "$MODE" = "skip" ]; then
     skip "$label (use --force or --overwrite-all to overwrite)"
     return 1
@@ -198,7 +210,7 @@ should_overwrite() {
     skip "$label (skip rest)"
     return 1
   fi
-  ask_conflict "$label"
+  ask_conflict "$label" "$current" "$incoming"
 }
 
 # install_kit_copy_file and install_kit_copy_tree live in install-helpers.sh.

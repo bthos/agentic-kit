@@ -50,21 +50,21 @@ install_kit_copy_file() {
       return 0
     fi
     if [ -n "$recorded" ] && [ "$have" = "$recorded" ]; then
-      if ! should_overwrite "$label"; then
+      if ! should_overwrite "$label" "$target" "$src_file"; then
         skip "$label (kit updated in submodule — use --force to refresh)"
         return 1
       fi
       rm -f "$target"; copy_now=true
       _post_label="(refreshed from kit)"
     elif [ -n "$recorded" ] && [ "$have" != "$recorded" ]; then
-      if ! should_overwrite "$label"; then
+      if ! should_overwrite "$label" "$target" "$src_file"; then
         skip "$label (modified locally — use --force to replace)"
         return 1
       fi
       rm -f "$target"; copy_now=true
       _post_label="(overwritten)"
     else
-      if ! should_overwrite "$label"; then
+      if ! should_overwrite "$label" "$target" "$src_file"; then
         skip "$label (exists — use --force)"
         return 1
       fi
