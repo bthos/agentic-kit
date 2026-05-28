@@ -45,28 +45,74 @@ for dir in "$ARCHIVE_DIR"/*/; do
     skipped=$((skipped+1))
     continue
   fi
+  # Skip features without a handoff-log — they produce empty reference outputs
+  # that always score 0 and corrupt the baseline.
+  if [ ! -f "$handoff" ]; then
+    skipped=$((skipped+1))
+    continue
+  fi
   if [ -f "$out" ]; then
     skipped=$((skipped+1))
     continue
   fi
 
-  # Extract acceptance criteria block (best effort: lines after "Acceptance criteria"
-  # heading, until next heading). Falls back to the whole spec if no AC section.
+  # Extract acceptance criteria block.
+  # Stops only at a top-level (##) heading, so ### sub-sections under ACs are included.
   criteria=$(awk '
     BEGIN{cap=0}
-    /^#+\s*[Aa]cceptance/ {cap=1; next}
-    cap==1 && /^#+\s/ {cap=0}
+    /^##\s+[Aa]cceptance/ {cap=1; next}
+    cap==1 && /^##\s/ {cap=0}
     cap==1 {print}
-  ' "$spec" | sed '/^\s*$/d')
+  ' "$spec")
+
+  # Strip leading/trailing blank lines
+  criteria=$(printf '%s\n' "$criteria" | sed '/./,$!d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
 
   if [ -z "$criteria" ]; then
-    criteria=$(head -n 50 "$spec")
+    # Fallback: any heading containing "Acceptance" at any level
+    criteria=$(awk '
+      BEGIN{cap=0}
+      /^#+\s*[Aa]cceptance/ {cap=1; next}
+      cap==1 && /^#\s/ {cap=0}
+      cap==1 {print}
+    ' "$spec" | sed '/./,$!d')
   fi
 
-  # Extract "What was built" line(s) from handoff-log.md if present
+  if [ -z "$criteria" ]; then
+    criteria="(no Acceptance Criteria section found — see full spec)"
+  fi
+
+  # Extract the Bagnik → Zlydni code QA pass entry from handoff-log.
+  # This section contains per-AC verification with file:line evidence,
+  # test results, security/PII checks — exactly what the judge needs.
   built=""
   if [ -f "$handoff" ]; then
-    built=$(grep -E -i 'what was built|implemented:' "$handoff" | head -n 5 || true)
+    built=$(awk '
+      /Bagnik[^→]*→[^[]*\[code QA/ { cap=1; print; next }
+      cap==1 && /^## / { cap=0 }
+      cap==1 { print }
+    ' "$handoff")
+  fi
+
+  # Fallback: look for any "PASS" Bagnik entry
+  if [ -z "$built" ] && [ -f "$handoff" ]; then
+    built=$(awk '
+      /Bagnik.*PASS/ { cap=1; print; next }
+      cap==1 && /^## / { cap=0 }
+      cap==1 { print }
+    ' "$handoff" | head -n 40)
+  fi
+
+  # Last resort: grab "What was built" lines
+  if [ -z "$built" ] && [ -f "$handoff" ]; then
+    built=$(grep -E -i 'what was built|implemented:|AC[0-9]' "$handoff" | head -n 10 || true)
+  fi
+
+  # Skip if we couldn't extract a meaningful reference output — it will always
+  # score 0 and corrupt the baseline signal.
+  if [ -z "$built" ]; then
+    skipped=$((skipped+1))
+    continue
   fi
 
   {
@@ -78,13 +124,9 @@ for dir in "$ARCHIVE_DIR"/*/; do
     echo ""
     printf '%s\n' "$criteria"
     echo ""
-    echo "## Reference output (what was actually built)"
+    echo "## Reference output"
     echo ""
-    if [ -n "$built" ]; then
-      printf '%s\n' "$built"
-    else
-      echo "_No 'What was built' entry found in handoff-log.md — judge against the requirements directly._"
-    fi
+    printf '%s\n' "$built"
   } > "$out"
 
   added=$((added+1))

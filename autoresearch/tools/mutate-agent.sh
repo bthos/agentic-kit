@@ -112,7 +112,7 @@ Top memory hits relevant to this target (read for context — apply only what fi
 ${MEMORY_HITS:-(none)}
 \`\`\`
 
-Produce a NEW version of the file with **one focused, small change** that you believe improves the composite metric. Examples of valid changes:
+Make **one focused, small change** that you believe improves the composite metric. Examples of valid changes:
 
 - Add ONE concrete rule to a guardrail or 'When to Use' section.
 - Tighten a vague instruction into a measurable one.
@@ -125,14 +125,23 @@ Do NOT:
 - Touch tests, eval-set, judge.md, or program.md.
 - Add anything that simplifies acceptance criteria or weakens guardrails.
 - Change role names or hand-off targets.
+- Use Write, Edit, Bash, or any other tool. I will save the output myself.
 
-Output ONLY the full new file content (no preamble, no diff format)."
+CRITICAL: Your entire response must be the raw file content only — the complete text of the modified file, starting from line 1. No markdown fences, no explanation, no preamble, no diff. Just the file. If you add ANY commentary before or after the file content, the output will be unusable."
 
 mkdir -p "$prop_dir/$(dirname "$rel")"
-claude -p --allowedTools '' "$mutate_prompt" > "$prop_dir/$rel" 2>/dev/null || true
+printf '%s\n' "$mutate_prompt" | claude -p --allowedTools 'none' > "$prop_dir/$rel" 2>/dev/null || true
 
 if [ ! -s "$prop_dir/$rel" ]; then
   echo "Mutation produced empty output — aborting round." >&2
+  exit 3
+fi
+
+# Reject if output looks like a tool-blocked description rather than file content
+first_line=$(head -n1 "$prop_dir/$rel")
+if printf '%s\n' "$first_line" | grep -qiE '(requires permission|proposed mutation|the change|rationale:|change:|the edit|i cannot|i will|here is|here'"'"'s|below is)'; then
+  echo "Mutation produced description text instead of file content — aborting round." >&2
+  echo "First line: $first_line" >&2
   exit 3
 fi
 

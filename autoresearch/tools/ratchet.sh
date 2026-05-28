@@ -78,6 +78,7 @@ program_pre=$(kit_sha256_file "$PROGRAM")
 # ---------------------------------------------------------------------------
 score_variant() {
   local variant_label="$1"  # baseline | proposal
+  echo "  scoring $variant_label:" >&2
   local count=0 hits=0
 
   shopt -s nullglob
@@ -90,7 +91,14 @@ score_variant() {
     [ -z "$req$out" ] && continue
     local v
     v=$("$PKG_DIR/tools/judge.sh" --requirement "$req" --output "$out" 2>/dev/null || echo 0)
-    [ "$v" = "1" ] && hits=$((hits+1))
+    local entry_name
+    entry_name=$(basename "$entry" .md)
+    if [ "$v" = "1" ]; then
+      hits=$((hits+1))
+      echo "    [1] $entry_name" >&2
+    else
+      echo "    [0] $entry_name" >&2
+    fi
   done
   shopt -u nullglob
 

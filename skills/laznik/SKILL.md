@@ -37,6 +37,16 @@ Note start time on entry: `start=$(date +%s)`
 - **UX states to cover:** [from ux-design.md] — empty, loading, error, success, retry.
 - When Lojma documents a11y requirements, add corresponding test assertions in tech plan.
 
+### AC-to-Test Traceability (mandatory)
+
+Before handing off to Bagnik, produce an **AC-to-test mapping table** in the tech plan:
+
+| Acceptance Criterion | Test file | Test name/describe block | Status |
+|----------------------|-----------|--------------------------|--------|
+| [criterion from spec] | [path] | [describe/it block] | written / pending |
+
+Every acceptance criterion from `spec.md` must appear in this table with a corresponding test. If a criterion has no test, mark it `pending` and add it to the Known gaps section — Bagnik will block on untested criteria. This mapping prevents the most common source of composite regression: building code that satisfies spec requirements but has no test coverage for them.
+
 ## Feature Path
 
 When handoff specifies a feature path (`.akt/features/YYYY-MM-DD-feature-name/`), write tech plan and architecture docs there. Include this path in handoffs.
@@ -82,7 +92,7 @@ Skip silently if `.akt/autoresearch/tools/record-metrics.sh` does not exist.
 
 - **Always include:** "Coverage summary: [what tests cover]. Known gaps: [what's not yet tested]."
 - Format: "Context: test gate. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."
-- **Use the Agent tool** to launch agent `bagnik` with prompt: `"Run test gate. Feature path: [path]. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."`
+- **Use the Agent tool** to launch agent `bagnik` with prompt: `"Run test gate. Feature path: [path]. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. AC-to-test map at [tech-plan path]. Block if fail."`
 
 ## Effort Scaling
 
@@ -91,7 +101,7 @@ Match depth of work to task complexity. Do not over-invest.
 | Task type | Expected scope |
 |-----------|----------------|
 | Bug fix | 1 targeted test + 1 fix. No arch review unless root cause is structural. |
-| New feature | Full arch review + component diagram + coverage check. |
+| New feature | Full arch review + component diagram + coverage check + AC-to-test map. |
 | Refactor | Dependency graph first. Tests before touching code. |
 | Minor change (typo, label, config) | Skip arch review. 1–2 tests max if behaviour changes. |
 

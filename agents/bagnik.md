@@ -94,7 +94,10 @@ Bagnik passed. Context: code QA. Feature path: [path]. Changed files: [list]. Sa
 ```
 ## HH:MM Bagnik → [next] [pass|fail]
 Context: [test gate | code QA]. Result: [PASS|FAIL]. Issues: [summary or "none"].
+AC evidence (code QA pass only): [list each AC with file:line that satisfies it, e.g. "✅ POST /api/messages → workers/api.ts:42"]
 ```
+
+**Evidence requirement (code QA pass):** When passing code QA, the handoff-log entry MUST include a brief AC evidence list — one line per acceptance criterion with the file:line reference from the built code. This ensures the feature record contains concrete evidence the judge can verify, not just a summary assertion. Use the AC verification table from Cmok's handoff as the starting point; add file:line detail where Cmok left gaps.
 
 **Fail handoff — enrich:** Always include "Context: [test gate | code QA]. Failed: [test name or check]. Error: [output]. Affected files: [list]. Suggested fix: [if known]."
 **Security block:** "Block reason: [security | PII]. Location: [file:line]. Issue: [description]. Fix: [concrete step]."

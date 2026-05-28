@@ -56,6 +56,14 @@ done
 
 mkdir -p "$EVAL_DIR" "$RUNS_DIR" "$VARIANTS_DIR" "$TOOLS_DIR"
 
+# Default log file: .akt/autoresearch/runs/YYYYMMDD-HH.log
+if [ -z "${LOG_FILE:-}" ]; then
+  LOG_FILE="$RUNS_DIR/$(date -u +%Y%m%d-%H).log"
+fi
+mkdir -p "$(dirname "$LOG_FILE")"
+exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
+echo "── run.sh started $(date -u +%Y-%m-%dT%H:%M:%SZ)  rounds=$ROUNDS  log=$LOG_FILE"
+
 if $INIT; then
   echo "Initialising autoresearch loop…"
 
@@ -142,11 +150,21 @@ for ((round=1; round <= ROUNDS; round++)); do
     continue
   fi
 
+  # Show what changed in the proposal vs baseline
+  base_file="$VARIANTS_DIR/$round_id/baseline/${target#./}"
+  prop_file="$VARIANTS_DIR/$round_id/proposal/${target#./}"
+  if [ -f "$base_file" ] && [ -f "$prop_file" ]; then
+    echo "  diff (baseline → proposal):"
+    diff "$base_file" "$prop_file" | grep '^[<>]' | head -20 | sed 's/^/    /' || true
+  fi
+
   set +e
-  out=$(ARTEFACTS_DIR="$ARTEFACTS" "$PKG_DIR/tools/ratchet.sh" --round-id "$round_id" --target "$target")
+  out=$(ARTEFACTS_DIR="$ARTEFACTS" "$PKG_DIR/tools/ratchet.sh" --round-id "$round_id" --target "$target" 2>&1)
   rc=$?
   set -e
-  echo "  $out"
+  # per-entry [0]/[1] lines go to log; print only the verdict line to console
+  echo "$out" | grep -v '^\s*\[' | grep -E '^\s*(ACCEPT|REJECT)' | sed 's/^/  /' || true
+  echo "$out" | grep '^\s*\[' | sed 's/^/  /' || true
 
   if [[ "$out" =~ ^ACCEPT ]]; then
     accepted=$((accepted+1)); consecutive_rejects=0
