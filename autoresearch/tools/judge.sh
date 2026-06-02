@@ -73,7 +73,7 @@ prompt=$(awk -v req="$req" -v out="$out" '
 
 # Resolve judge command:
 #   1) .akt/PROJECT.md  →  - **Judge command:** `<cmd>`
-#   2) `claude -p --allowedTools ''`
+#   2) `claude -p --allowedTools none`
 PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 JUDGE_CMD=""
@@ -85,7 +85,7 @@ fi
 
 if [ -z "$JUDGE_CMD" ]; then
   if command -v claude &>/dev/null; then
-    JUDGE_CMD="claude -p --allowedTools ''"
+    JUDGE_CMD="claude -p --allowedTools none"
   else
     echo "No judge command available (no .akt/PROJECT.md override and no claude CLI)." >&2
     exit 2

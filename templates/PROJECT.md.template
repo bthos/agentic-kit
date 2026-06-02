@@ -10,7 +10,8 @@
 - **Build command:** `<your build command, e.g. npm run build or make>`
 - **Version files:** `<comma-separated list of files to version-bump, or "none", e.g. package.json, manifest.json>`
 - **Artifacts directory:** `.akt/`
-- **Judge command:** `<optional: CLI for LLM-as-judge in autoresearch loop. Defaults to `claude -p --allowedTools ''`. Set to e.g. `gemini -p` to swap providers.>`
+- **Design system directory:** `design-system/`
+- **Judge command:** `<optional: CLI for LLM-as-judge in autoresearch loop. Defaults to `claude -p --allowedTools none`. Set to e.g. `gemini -p` to swap providers.>`
 
 ## Project Context
 

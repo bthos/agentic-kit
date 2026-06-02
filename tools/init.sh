@@ -438,7 +438,7 @@ if [ "$FRESH_PROJECT_MD" = true ]; then
 
     if $run_fill; then
       info "Running Claude..."
-      ( cd "$PROJECT_ROOT" && claude -p --allowedTools 'Edit,Write,Read,Glob,Grep,Bash' "$project_md_fill_prompt" )
+      ( cd "$PROJECT_ROOT" && printf '%s\n' "$project_md_fill_prompt" | claude -p --allowedTools 'Edit,Write,Read,Glob,Grep,Bash' )
       success "$PROJECT_REL filled in"
       info "Run ${SUBMODULE_DIR}/tools/validate-config.sh to verify."
     else

@@ -135,7 +135,7 @@ Rules:
 
   echo "Distilling to $daily_file…"
   local new_entries
-  new_entries=$(claude -p --allowedTools '' "$distill_prompt" 2>/dev/null || true)
+new_entries=$(printf '%s\n' "$distill_prompt" | claude -p --allowedTools none 2>/dev/null || true)
 
   if [ -z "$new_entries" ] || [[ "$new_entries" =~ ^NO_ENTRIES[[:space:]]*$ ]]; then
     echo "Nothing new to add to today's daily file."
@@ -204,7 +204,7 @@ Output only the fenced patch blocks (or NO_PATCHES). No preamble."
 
   echo "Proposing per-agent patches to $PATCHES_DIR/…"
   local raw
-  raw=$(claude -p --allowedTools '' "$patch_prompt" 2>/dev/null || true)
+  raw=$(printf '%s\n' "$patch_prompt" | claude -p --allowedTools none 2>/dev/null || true)
 
   if [ -z "$raw" ] || [[ "$raw" =~ NO_PATCHES ]]; then
     echo "No actionable agent patches proposed."

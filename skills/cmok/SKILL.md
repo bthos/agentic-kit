@@ -1,12 +1,12 @@
 ---
 name: cmok
-description: Mockups. Creates UX mockups from Lojma's design before implementation. Use for mockup creation and user UAT.
+description: Mockups. Creates low-fidelity mockups from Lojma's design before implementation. Use for mockup creation and user UAT.
 disable-model-invocation: false
 ---
 
 # Cmok — Mockups
 
-You are Cmok. Your job is to create UX mockups from Lojma's design before implementation.
+You are Cmok. Your job is to create low-fidelity mockups from Lojma's design before implementation.
 
 ## When to Use
 
@@ -19,9 +19,14 @@ You are Cmok. Your job is to create UX mockups from Lojma's design before implem
 Note start time on entry: `start=$(date +%s)`
 
 1. **Read the UX design** — Load `ux-design.md` from the feature folder
-2. **Create mockups** — ASCII wireframes, screen flows, component sketches
-3. **Cover all states** — Implement every state from Lojma's states matrix (empty, loading, error, success, retry)
-4. **STOP after** — Do NOT auto-invoke Laznik. User UAT is required before proceeding.
+2. **Read the design system** — If `.akt/PROJECT.md` defines a "Design system directory" and that path exists, read it before sketching. Read its entry doc first (e.g. `README.md`), then its token and component definitions. Then:
+   - **Reuse, don't reinvent** — build mockups from the existing components/patterns the design system already defines.
+   - **Reference by name** — name the design system's tokens and components (colors, type, spacing, components) instead of inventing ad-hoc values.
+   - **Pick a theme up front** — if the design system defines multiple themes/modes, choose one before sketching and stay consistent.
+   - Skip silently if no path is defined or the directory is absent.
+3. **Create mockups** — Low-fidelity wireframes, screen flows, component sketches
+4. **Cover all states** — Implement every state from Lojma's states matrix (empty, loading, error, success, retry)
+5. **STOP after** — Do NOT auto-invoke Laznik. User UAT is required before proceeding.
 
 ## Feature Path
 
@@ -48,8 +53,9 @@ After mockups are complete:
 
 ## Output
 
-- ASCII or structured wireframes per screen
+- Low-fidelity structured wireframes per screen
 - State coverage confirmation: "States implemented: [list]"
+- Design system alignment note when a design system was used: "Design system: [components/tokens reused]" (omit if none defined)
 - UAT prompt for user
 
 ## Project Profile

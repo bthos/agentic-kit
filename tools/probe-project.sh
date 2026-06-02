@@ -181,7 +181,7 @@ Rules:
 - Skip anything you cannot ground in the samples — silence is better than guessing.
 - Do not duplicate facts already in the heuristic profile."
 
-addition=$(claude -p --allowedTools '' "$enrich_prompt" 2>/dev/null || true)
+addition=$(printf '%s\n' "$enrich_prompt" | claude -p --allowedTools none 2>/dev/null || true)
 
 if [ -n "$addition" ]; then
   printf '\n%s\n' "$addition" >> "$PROFILE_FILE"
