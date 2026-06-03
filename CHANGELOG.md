@@ -10,7 +10,50 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ## [Unreleased]
 
+### Added
+- **Test suite (`tests/`).** Zero-dependency bash harness (`tests/lib.sh`) + runner
+  (`tests/run.sh`) covering the lifecycle layer (`lib.sh` managed blocks, manifest,
+  SHA-gated teardown, init↔teardown round-trip), memory (init/promote/rollover/
+  search + the new writers), autoresearch (build-eval-set, judge, ratchet incl. the
+  invariant guard, mutate-agent guards), and structural lint (frontmatter, the
+  no-plugin-dependency invariant, `bash -n`). GitHub Actions matrix
+  (`.github/workflows/tests.yml`): ubuntu + macos + windows, plus a no-python job.
+  `.gitattributes` pins `*.sh`/`*.py` to LF so Windows checkouts don't corrupt shebangs.
+- **Memory writer seams.** `memory/tools/log.sh` (append a validated L2 entry and
+  auto-run promote) and `memory/tools/session.sh` (write L1 SESSION-STATE: active
+  feature/agent/in-flight decisions) replace the old "hand-edit YAML" prose so the
+  memory tree actually fills. `memory/tools/tick.sh` runs promote + rollover for
+  schedulers.
+- **Single-shot curation** in `memory/tools/promote.sh`: a `confidence: high` L2
+  entry promotes to L3 immediately (the schema treats `high` as a rule), instead of
+  waiting for the 2-strike rule — which previously left L3/L4/L1 perpetually empty.
+- **Opt-in memory maintenance hook.** `tools/memory-hook.sh` installs/removes a
+  Claude Code `Stop` hook running `tick.sh`; `init.sh` offers it (`--with-hook` /
+  `--no-hook`, prompt otherwise) and `teardown.sh` removes it. `tools/install-statusline.sh`
+  gained a matching `--remove`; teardown now strips both kit entries from
+  `.claude/settings.json` (preserving user hooks / a custom statusLine).
+- **`kit.sh` "Optional components" submenu.** Multi-level menu to install/remove
+  opt-in add-ons (statusline, AutoResearch, memory hook) with live `[installed]`/
+  `[off]` status — a new add-on is one registry row. The menu now pauses
+  (press-Enter) after an action so output isn't scrolled away by the redraw.
+- **README scheduling guide.** Per-OS recipes (Claude hook, cron, launchd, Windows
+  Task Scheduler) for `tick.sh`, plus a caveated opt-in section for AutoResearch.
+
+### Changed
+- **Renamed `agentic-kit.sh` → `kit.sh`.** Shorter and no longer repeats the folder
+  name (`agentic-kit/kit.sh`). Same interface — interactive menu and single-action
+  dispatch (`kit.sh status`, `--list-json`, `--help`).
+- **`.akt/PROJECT.md` is no longer part of the overwrite prompt.** It is meant to
+  diverge from the template, so init/update keep it silently and reset it only with
+  `--force`. A new `PROJECT_SHA` in `.agentic-kit.cfg` drives a non-noisy notice when
+  the *template* itself changes (new config fields). The conflict prompt's `[d]iff`
+  option is now documented.
+
 ### Fixed
+- **AutoResearch ratchet crashed on every run.** `ratchet.sh` and
+  `templates/autoresearch/tools/record-metrics.sh` referenced an undefined
+  `$ARTEFACTS_ROOT` under `set -u`, aborting before any scoring. Corrected to
+  `$ARTEFACTS`.
 - **Standalone `memory/tools/init.sh` failed to seed template stubs.** After
   templates were relocated to the kit-root `templates/memory/`, the script still
   resolved its template dir one level too shallow (`memory/templates/memory`),

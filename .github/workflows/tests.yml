@@ -1,0 +1,61 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Cross-platform run with python3 available. Catches GNU/BSD drift (macOS)
+  # and the user's real environment (Windows + Git Bash, where python3 is
+  # typically absent so the pure-bash fallbacks run).
+  unit:
+    name: unit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      # macOS ships bash 3.2 (no mapfile / associative arrays). The kit requires
+      # bash >= 4, so install a modern one and put it first on PATH.
+      - name: Install modern bash (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bash
+
+      # Exercise the python TF-IDF search backend + parity test on one OS.
+      - name: Install scikit-learn (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq python3-sklearn
+
+      - name: Run test suite
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then export PATH="$(brew --prefix)/bin:$PATH"; fi
+          bash --version | head -1
+          bash tests/run.sh
+
+  # Verify the pure-bash fallbacks work with NO python at all (debian-slim has
+  # bash + GNU coreutils but no python). The python-only memory tests skip
+  # cleanly here by design (awk_fallback / no-op).
+  no-python:
+    name: no-python (debian-slim)
+    runs-on: ubuntu-latest
+    container: debian:stable-slim
+    steps:
+      - name: Install minimal deps (bash, git, GNU coreutils — no python)
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq bash git coreutils findutils gawk grep sed ca-certificates >/dev/null
+      - uses: actions/checkout@v4
+      - name: Confirm python3 is absent
+        run: |
+          if command -v python3 >/dev/null 2>&1; then
+            echo "python3 unexpectedly present — this job must validate the no-python path"; exit 1
+          fi
+      - name: Run test suite (pure-bash paths)
+        run: bash tests/run.sh

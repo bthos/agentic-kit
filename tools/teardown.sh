@@ -243,6 +243,19 @@ header ".gitignore (managed block)"
 teardown_gitignore_block
 
 # ---------------------------------------------------------------------------
+# 5b. Remove kit-added entries from .claude/settings.json — the opt-in memory
+#     Stop hook and the kit statusLine. Both are no-ops if never installed, and
+#     both preserve everything else (user hooks, a custom statusLine, etc.).
+# ---------------------------------------------------------------------------
+_hook_remove="$SCRIPT_DIR/tools/memory-hook.sh"
+_sl_remove="$SCRIPT_DIR/tools/install-statusline.sh"
+if [ -x "$_hook_remove" ] || [ -x "$_sl_remove" ]; then
+  header ".claude/settings.json (kit entries)"
+  [ -x "$_hook_remove" ] && ( cd "$PROJECT_ROOT" && DRY_RUN="$DRY_RUN" "$_hook_remove" --remove ) || true
+  [ -x "$_sl_remove" ]   && ( cd "$PROJECT_ROOT" && DRY_RUN="$DRY_RUN" "$_sl_remove" --remove ) || true
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Optionally remove the submodule
 # ---------------------------------------------------------------------------
 if $REMOVE_SUBMODULE && ! $DRY_RUN; then

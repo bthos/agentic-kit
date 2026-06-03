@@ -65,7 +65,7 @@ If `.akt/PROJECT_PROFILE.md` exists, read it before drafting docs — it contain
 
 ### Mandatory write checklist
 
-Append to today's L2 file when any of these fire:
+Log via `agentic-kit/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to today's L2 file and runs promotion) when any of these fire:
 
 - [ ] **Doc style** decision (heading depth, code-fence language, screenshot policy) — `entity_type: pattern`
 - [ ] **Doc gap** discovered (something users will need but isn't documented) — `entity_type: anti-pattern`

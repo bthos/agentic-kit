@@ -122,7 +122,7 @@ Layered memory drives architecture and test choices (see `agentic-kit/templates/
 
 ### Mandatory write checklist
 
-Before handing off to Bagnik, append a bullet to today's L2 file when any of these fire:
+Before handing off to Bagnik, log via `agentic-kit/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to L2 and runs promotion) when any of these fire:
 
 - [ ] **Architectural decision** with explicit alternatives considered — `entity_type: decision`
 - [ ] **Test pattern** worth reusing or **anti-pattern** to avoid — `entity_type: pattern` / `anti-pattern`

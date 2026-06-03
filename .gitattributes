@@ -1,0 +1,8 @@
+# Shell scripts and Python must stay LF-terminated so they run under bash on
+# every platform (a CRLF `#!/usr/bin/env bash\r` shebang breaks on Linux/macOS
+# and Git Bash). Without this, a Windows checkout with autocrlf=true would
+# corrupt every script in the kit.
+*.sh    text eol=lf
+*.bash  text eol=lf
+*.py    text eol=lf
+*.snippet text eol=lf

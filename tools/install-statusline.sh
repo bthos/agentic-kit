@@ -14,9 +14,13 @@ _TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$_TOOLS_DIR/lib.sh"
 
 FORCE=false
+REMOVE=false
+DRY_RUN="${DRY_RUN:-false}"
 for arg in "$@"; do
   case "$arg" in
     --force|-f) FORCE=true ;;
+    --remove)   REMOVE=true ;;
+    --dry-run)  DRY_RUN=true ;;
   esac
 done
 
@@ -34,9 +38,28 @@ done
 
 # Check if jq is available
 if ! command -v jq &>/dev/null; then
+  if $REMOVE; then
+    warn "jq not found — remove the statusLine entry from $SETTINGS_FILE manually."
+    exit 0
+  fi
   err "jq is required but not found on PATH."
   err "Install: https://jqlang.github.io/jq/download/"
   exit 1
+fi
+
+# Remove only the kit's own statusLine (a command pointing at tools/statusline.*).
+# A user's custom statusLine is left untouched.
+if $REMOVE; then
+  [ -f "$SETTINGS_FILE" ] || { info "no .claude/settings.json — nothing to remove"; exit 0; }
+  has_sl=$(jq -r 'has("statusLine")' "$SETTINGS_FILE" 2>/dev/null || echo false)
+  if [ "$has_sl" != "true" ]; then skip "statusLine not present in .claude/settings.json"; exit 0; fi
+  is_ours=$(jq -r '((.statusLine.command // "") | (contains("tools/statusline.sh") or contains("tools/statusline.ps1")))' \
+            "$SETTINGS_FILE" 2>/dev/null || echo false)
+  if [ "$is_ours" != "true" ]; then skip "statusLine is not the kit's — leaving it untouched"; exit 0; fi
+  if [ "$DRY_RUN" = "true" ]; then info "would remove the kit statusLine from $SETTINGS_FILE"; exit 0; fi
+  jq 'del(.statusLine)' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+  removed "statusLine from .claude/settings.json"
+  exit 0
 fi
 
 mkdir -p "$SETTINGS_DIR"

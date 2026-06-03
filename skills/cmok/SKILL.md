@@ -70,7 +70,7 @@ If `.akt/PROJECT_PROFILE.md` exists, read it before creating mockups — it capt
 
 ### Mandatory write checklist
 
-Append a bullet to today's L2 file when any of these fire:
+Log via `agentic-kit/memory/tools/log.sh --type <t> [--confidence high] "…"` (it appends to today's L2 file and runs promotion) when any of these fire:
 
 - [ ] **Mockup pattern** that fits this project (or one to avoid) — `entity_type: pattern` / `anti-pattern`
 - [ ] **State** that emerged from UAT and was not in the spec — `entity_type: pattern`

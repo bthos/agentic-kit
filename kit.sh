@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# agentic-kit.sh — single entry point for all manual kit workflows.
+# kit.sh — single entry point for all manual kit workflows.
 #
 # Run from the project root (the directory that contains agentic-kit/).
 # Detects the current install stage and only offers actions that make sense:
@@ -66,6 +66,13 @@ banner() {
 
 rule() { printf "  %s────────────────────────────────────────────────────────%s\n" "$DIM" "$RESET"; }
 
+# Pause so command output stays on screen before the menu redraws over it.
+pause_for_user() {
+  [ -t 0 ] || return 0
+  printf "\n  %spress Enter to return to the menu…%s " "$DIM" "$RESET"
+  read -r _ || true
+}
+
 # ---------------------------------------------------------------------------
 # Stage detection
 # ---------------------------------------------------------------------------
@@ -119,7 +126,7 @@ print_header() {
 #
 # This registry is the single source of truth for action metadata. README.md's
 # "Lifecycle scripts" table should match it — when adding/removing/renaming an
-# action, also update README and CHANGELOG. `agentic-kit.sh --list-json` emits
+# action, also update README and CHANGELOG. `kit.sh --list-json` emits
 # the registry as JSON so doc generators can stay in sync.
 # ---------------------------------------------------------------------------
 register_actions() {
@@ -139,6 +146,10 @@ register_actions() {
        "$KIT/tools/update.sh"
   add teardown 1 setup "Uninstall (teardown)"            "Strip managed include blocks; remove kit-installed copies whose SHA-256 still matches the manifest. Asks for extra args." \
        "::teardown-prompt"
+
+  # ---- optional components (multi-level submenu) ----
+  add components 1 extras "Manage components ▸"          "Install / remove optional add-ons (statusline, AutoResearch, memory Stop hook) from a sub-menu with live status." \
+       "::components-menu"
 
   # ---- daily ----
   add status   2 daily "Feature pipeline status"         "Show spec / UX / tech-plan / handoff state for every active feature under $ARTEFACTS_NAME/features/." \
@@ -165,11 +176,14 @@ register_actions() {
 
 cat_label() {
   case "$1" in
-    setup) printf "%sSetup & lifecycle%s"        "$BOLD$MAGENTA" "$RESET" ;;
-    daily) printf "%sDaily work%s"               "$BOLD$BLUE"    "$RESET" ;;
-    maint) printf "%sMaintenance & memory%s"     "$BOLD$CYAN"    "$RESET" ;;
+    setup)  printf "%sSetup & lifecycle%s"       "$BOLD$MAGENTA" "$RESET" ;;
+    extras) printf "%sOptional components%s"     "$BOLD$GREEN"   "$RESET" ;;
+    daily)  printf "%sDaily work%s"              "$BOLD$BLUE"    "$RESET" ;;
+    maint)  printf "%sMaintenance & memory%s"    "$BOLD$CYAN"    "$RESET" ;;
   esac
 }
+
+CATEGORY_ORDER="setup extras daily maint"
 
 # ---------------------------------------------------------------------------
 # Render menu
@@ -179,7 +193,7 @@ print_menu() {
   local i=0 row key min cat label desc current=""
   MENU_KEYS=()
   printf '\n'
-  for cat in setup daily maint; do
+  for cat in $CATEGORY_ORDER; do
     local printed_header=false
     for row in "${ACTIONS[@]}"; do
       IFS='|' read -r key min rcat label _desc _cmd <<<"$row"
@@ -206,7 +220,7 @@ print_help() {
   local row key min cat label desc current=""
   printf '\n  %sActions available at this stage%s\n' "$BOLD" "$RESET"
   rule
-  for cat in setup daily maint; do
+  for cat in $CATEGORY_ORDER; do
     local printed_header=false
     for row in "${ACTIONS[@]}"; do
       IFS='|' read -r key min rcat label desc _cmd <<<"$row"
@@ -219,6 +233,132 @@ print_help() {
       printf "    %s%-12s%s %s\n" "$BOLD" "$key" "$RESET" "$label"
       printf "    %s%s%s\n\n" "$DIM" "$desc" "$RESET"
     done
+  done
+}
+
+# ---------------------------------------------------------------------------
+# Optional-components registry (multi-level submenu)
+#
+# Row format: key|label|install_cmd|remove_cmd|description
+#   *_cmd use the same "::" argv sentinel as the action registry.
+#   remove_cmd "::none" means the component has no automated removal.
+# Add a component = add one row here; the submenu and status pick it up.
+# ---------------------------------------------------------------------------
+register_components() {
+  COMPONENTS=()
+  cadd() { COMPONENTS+=("$1|$2|$3|$4|$5"); }
+
+  cadd statusline   "Statusline"           "$KIT/tools/install-statusline.sh"  "$KIT/tools/install-statusline.sh::--remove" \
+       "Pipeline-aware status bar in .claude/settings.json (statusLine)."
+  cadd autoresearch "AutoResearch (Veles)" "$KIT/autoresearch/run.sh::--init"  "::none" \
+       "Eval-set + program.md + ratchet self-tuning (builds eval-set from archived features)."
+  cadd memhook      "Memory Stop hook"     "$KIT/tools/memory-hook.sh"         "$KIT/tools/memory-hook.sh::--remove" \
+       "Claude Code Stop hook: runs memory promote + rollover when a session/subagent ends."
+}
+
+# component_installed KEY → return 0 if the component is currently active.
+component_installed() {
+  local sf="$PROJECT_ROOT/.claude/settings.json"
+  case "$1" in
+    statusline)   [ -f "$sf" ] && grep -q '"statusLine"' "$sf" 2>/dev/null ;;
+    autoresearch) [ -f "$ARTEFACTS/autoresearch/program.md" ] ;;
+    memhook)      [ -f "$sf" ] && grep -q 'memory/tools/tick.sh' "$sf" 2>/dev/null ;;
+    *) return 1 ;;
+  esac
+}
+
+# exec_cmd_field "a::b::c" → run argv (a b c) with no eval. Shared by run_action.
+exec_cmd_field() {
+  local rest="$1" head argv=()
+  while [ -n "$rest" ]; do
+    head="${rest%%::*}"; argv+=("$head")
+    [ "$head" = "$rest" ] && break
+    rest="${rest#*::}"
+  done
+  "${argv[@]}"
+}
+
+# Run a component command from the project root with ARTEFACTS_DIR exported.
+_run_component_cmd() {
+  ( cd "$PROJECT_ROOT" && export ARTEFACTS_DIR="$ARTEFACTS_NAME" && exec_cmd_field "$1" )
+}
+
+components_menu() {
+  if [ ! -t 0 ]; then
+    printf "  %s✗%s components manager needs a TTY (run 'kit.sh components' in a terminal).\n" "$RED" "$RESET"
+    return 1
+  fi
+  register_components
+  while true; do
+    local i=0 row key label inst rm desc badge
+    CKEYS=()
+    printf "\n  %b\n\n" "$(cat_label extras)"
+    for row in "${COMPONENTS[@]}"; do
+      IFS='|' read -r key label inst rm desc <<<"$row"
+      i=$((i + 1)); CKEYS+=("$key")
+      if component_installed "$key"; then badge="${GREEN}[installed]${RESET}"; else badge="${DIM}[off]${RESET}"; fi
+      printf "    %s%2d%s  %-22s %b\n" "$BOLD$GREEN" "$i" "$RESET" "$label" "$badge"
+    done
+    rule
+    printf "    %sb%s back    %sq%s quit    %sh%s help\n\n" "$BOLD" "$RESET" "$BOLD" "$RESET" "$BOLD" "$RESET"
+    printf "  %schoice%s: " "$BOLD" "$RESET"
+    local choice; read -r choice || return 0
+    case "$choice" in
+      ""|b|B) return 0 ;;
+      q|Q)    printf "\n  %sbye.%s\n\n" "$DIM" "$RESET"; exit 0 ;;
+      h|H)
+        printf '\n'
+        for row in "${COMPONENTS[@]}"; do
+          IFS='|' read -r key label inst rm desc <<<"$row"
+          printf "    %s%-14s%s %s\n    %s%s%s\n\n" "$BOLD" "$key" "$RESET" "$label" "$DIM" "$desc" "$RESET"
+        done
+        continue ;;
+    esac
+
+    local ckey
+    if [[ "$choice" =~ ^[0-9]+$ ]]; then
+      local idx=$((choice - 1))
+      if [ "$idx" -lt 0 ] || [ "$idx" -ge "${#CKEYS[@]}" ]; then
+        printf "  %s✗%s out of range: %s\n" "$RED" "$RESET" "$choice"; continue
+      fi
+      ckey="${CKEYS[$idx]}"
+    else
+      ckey="$choice"
+    fi
+
+    local found=""
+    for row in "${COMPONENTS[@]}"; do
+      IFS='|' read -r key label inst rm desc <<<"$row"
+      [ "$key" = "$ckey" ] && { found=1; break; }
+    done
+    [ -n "$found" ] || { printf "  %s✗%s unknown component: %s\n" "$RED" "$RESET" "$ckey"; continue; }
+
+    local act
+    if component_installed "$ckey"; then
+      if [ "$rm" != "::none" ]; then
+        printf "  %s%s%s is %s[installed]%s — [%sr%s]emove  [%si%s] reinstall  [%sc%s]ancel: " \
+          "$BOLD" "$label" "$RESET" "$GREEN" "$RESET" "$BOLD" "$RESET" "$BOLD" "$RESET" "$BOLD" "$RESET"
+      else
+        printf "  %s%s%s is %s[installed]%s — [%si%s] reinstall  [%sc%s]ancel: " \
+          "$BOLD" "$label" "$RESET" "$GREEN" "$RESET" "$BOLD" "$RESET" "$BOLD" "$RESET"
+      fi
+    else
+      printf "  %s%s%s is %s[off]%s — [%si%s]nstall  [%sc%s]ancel: " \
+        "$BOLD" "$label" "$RESET" "$DIM" "$RESET" "$BOLD" "$RESET" "$BOLD" "$RESET"
+    fi
+    read -r act; printf '\n'; rule
+    case "$act" in
+      i|I)
+        if _run_component_cmd "$inst"; then printf "  %s✓%s %s installed\n" "$GREEN" "$RESET" "$label"
+        else printf "  %s✗%s %s install failed\n" "$RED" "$RESET" "$label"; fi ;;
+      r|R)
+        if [ "$rm" = "::none" ]; then
+          printf "  %s→%s %s has no automated removal (remove it manually).\n" "$YELLOW" "$RESET" "$label"
+        elif _run_component_cmd "$rm"; then printf "  %s✓%s %s removed\n" "$GREEN" "$RESET" "$label"
+        else printf "  %s✗%s %s remove failed\n" "$RED" "$RESET" "$label"; fi ;;
+      *) printf "  %s→%s cancelled\n" "$YELLOW" "$RESET" ;;
+    esac
+    pause_for_user
   done
 }
 
@@ -247,7 +387,7 @@ run_action() {
       ;;
     ::memory-prompt)
       if [ ! -t 0 ]; then
-        printf "  %s✗%s memory action requires a TTY (or pass query as: agentic-kit.sh memory \"<query>\")\n" \
+        printf "  %s✗%s memory action requires a TTY (or pass query as: kit.sh memory \"<query>\")\n" \
           "$RED" "$RESET"
         return 1
       fi
@@ -258,6 +398,9 @@ run_action() {
         return 0
       fi
       "$KIT/memory/tools/search.sh" "$q"
+      ;;
+    ::components-menu)
+      components_menu
       ;;
     ::teardown-prompt)
       if [ ! -t 0 ]; then
@@ -279,14 +422,7 @@ run_action() {
       ;;
     *)
       # split on "::" sentinel without eval
-      local rest="$cmd_field" head argv=()
-      while [ -n "$rest" ]; do
-        head="${rest%%::*}"
-        argv+=("$head")
-        if [ "$head" = "$rest" ]; then break; fi
-        rest="${rest#*::}"
-      done
-      "${argv[@]}"
+      exec_cmd_field "$cmd_field"
       ;;
   esac
 }
@@ -296,13 +432,13 @@ run_action() {
 # ---------------------------------------------------------------------------
 print_top_help() {
   cat <<EOF
-agentic-kit.sh — single entry point for all manual kit workflows.
+kit.sh — single entry point for all manual kit workflows.
 
 USAGE
-  agentic-kit/agentic-kit.sh                     # interactive menu
-  agentic-kit/agentic-kit.sh <action>            # run a single action and exit
-  agentic-kit/agentic-kit.sh --list-json         # dump action registry as JSON
-  agentic-kit/agentic-kit.sh --help              # this help
+  agentic-kit/kit.sh                     # interactive menu
+  agentic-kit/kit.sh <action>            # run a single action and exit
+  agentic-kit/kit.sh --list-json         # dump action registry as JSON
+  agentic-kit/kit.sh --help              # this help
 
 ACTIONS (filtered by detected stage; see 'h' inside the menu)
 EOF
@@ -315,8 +451,11 @@ EOF
 
 STAGES
   0  not installed   → only 'init' is offered
-  1  needs config    → init, probe, edit-pm, validate, teardown
+  1  needs config    → init, probe, edit-pm, validate, teardown, components
   2  ready           → all actions
+
+  'components' opens a sub-menu of optional add-ons (statusline, AutoResearch,
+  memory Stop hook) with live [installed]/[off] status — install or remove each.
 
 NOTES
   Single-action mode auto-detects no-TTY and refuses interactive prompts
@@ -358,11 +497,11 @@ if [ -n "$ACTION_ARG" ]; then
     if [ "$key" = "$ACTION_ARG" ]; then found_row="$row"; found_min="$min"; break; fi
   done
   if [ -z "$found_row" ]; then
-    printf "agentic-kit.sh: unknown action '%s' (try --help)\n" "$ACTION_ARG" >&2
+    printf "kit.sh: unknown action '%s' (try --help)\n" "$ACTION_ARG" >&2
     exit 2
   fi
   if [ "$found_min" -gt "$STAGE" ]; then
-    printf "agentic-kit.sh: action '%s' requires stage >= %s (current: %s)\n" \
+    printf "kit.sh: action '%s' requires stage >= %s (current: %s)\n" \
       "$ACTION_ARG" "$found_min" "$STAGE" >&2
     exit 3
   fi
@@ -372,7 +511,7 @@ fi
 
 # No action arg → interactive menu requires a TTY.
 if [ ! -t 0 ] || [ ! -t 1 ]; then
-  printf "agentic-kit.sh: no TTY — pass an action name (e.g. 'agentic-kit.sh status') or --help\n" >&2
+  printf "kit.sh: no TTY — pass an action name (e.g. 'kit.sh status') or --help\n" >&2
   exit 2
 fi
 
@@ -386,7 +525,7 @@ while true; do
 
   case "$choice" in
     ""|q|Q) printf "\n  %sbye.%s\n\n" "$DIM" "$RESET"; exit 0 ;;
-    h|H)    print_help "$STAGE"; continue ;;
+    h|H)    print_help "$STAGE"; pause_for_user; continue ;;
   esac
 
   if [[ "$choice" =~ ^[0-9]+$ ]]; then
@@ -407,4 +546,5 @@ while true; do
     rule
     printf "  %s✗ action failed: %s%s\n" "$RED" "$chosen_key" "$RESET"
   fi
+  pause_for_user
 done

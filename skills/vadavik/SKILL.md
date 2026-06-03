@@ -106,17 +106,30 @@ The project has a layered memory tree (see `agentic-kit/templates/memory/SCHEMA.
 3. **When uncertain**, run `agentic-kit/memory/tools/search.sh "<query>"` for ranked top-k chunks across every layer.
 4. **`high`-confidence entries are rules**, `medium` is advisory, `low` is reference only. Never re-execute past tasks; use memory to ask sharper questions and avoid re-raising resolved issues.
 
+### On entry — set the session state (L1)
+
+You start the feature, so you set the hot state:
+
+```bash
+agentic-kit/memory/tools/session.sh feature <feature-slug>
+agentic-kit/memory/tools/session.sh agent vadavik
+```
+
 ### Mandatory write checklist
 
-Before handing off, append a bullet to today's L2 file (`.akt/memory/$(date +%Y-%m-%d).md`) for each trigger that fired during this session:
+Don't hand-edit YAML — call `log.sh` (it appends to today's L2 file **and** runs the promotion machine). Fire one for each trigger that occurred this session:
 
-- [ ] **New convention discovered** in spec — `entity_type: pattern`
-- [ ] **New tool/library proposed** — `entity_type: tool`
-- [ ] **Decision** that supersedes a prior one — `entity_type: decision` + `supersedes: mem_<id>`
-- [ ] **Anti-pattern** observed — `entity_type: anti-pattern`
-- [ ] **Project-level fact** that future features will reuse — `entity_type: project`
+```bash
+agentic-kit/memory/tools/log.sh --type pattern      "New convention: <…>"
+agentic-kit/memory/tools/log.sh --type tool         "Proposed dependency: <…>"
+agentic-kit/memory/tools/log.sh --type decision --confidence high "Decision: <…>"
+agentic-kit/memory/tools/log.sh --type anti-pattern "Failure mode to avoid: <…>"
+agentic-kit/memory/tools/log.sh --type project      "Reusable project fact: <…>"
+```
 
-Use `id: pending` (the promote script will hash it). Keep `text:` to one or two concrete sentences.
+- `--confidence high` lands the fact in L3 immediately (treat as a rule); omit it for advisory facts that should wait for the 2-strike rule.
+- Record in-flight decisions as you go: `agentic-kit/memory/tools/session.sh decision "Chose X over Y because …"`.
+- To supersede a prior decision, log it then add `supersedes: mem_<id>` to the new L3 entry (the resolver tags the old one rather than deleting it).
 
 ## Guardrails
 

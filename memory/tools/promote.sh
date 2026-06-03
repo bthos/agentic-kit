@@ -70,11 +70,15 @@ list_entries() {
       if (in_entry) emit()
       in_entry=1; start=NR
       id=$0; sub(/^- id:[[:space:]]*/, "", id)
-      etype=""; payload=""; in_text=0
+      etype=""; payload=""; in_text=0; conf=""
       next
     }
     in_entry==1 && /^[[:space:]]+entity_type:/ {
       etype=$0; sub(/^[[:space:]]+entity_type:[[:space:]]*/, "", etype)
+      next
+    }
+    in_entry==1 && /^[[:space:]]+confidence:/ {
+      conf=$0; sub(/^[[:space:]]+confidence:[[:space:]]*/, "", conf)
       next
     }
     in_entry==1 && /^[[:space:]]+text:[[:space:]]*\|[[:space:]]*$/ {
@@ -92,9 +96,9 @@ list_entries() {
       # already captured by the rule above
     }
     function emit() {
-      printf "%s\t%d\t%d\t%s\t%s\t%s\n", f, start, NR-1, payload, etype, id
+      printf "%s\t%d\t%d\t%s\t%s\t%s\t%s\n", f, start, NR-1, payload, etype, id, conf
     }
-    END { if (in_entry) printf "%s\t%d\t%d\t%s\t%s\t%s\n", f, start, NR, payload, etype, id }
+    END { if (in_entry) printf "%s\t%d\t%d\t%s\t%s\t%s\t%s\n", f, start, NR, payload, etype, id, conf }
   ' "$file"
 }
 
@@ -106,6 +110,42 @@ l3_target_for_type() {
     decision)                   echo "$MEM_DIR/decisions.md" ;;
     *)                          echo "$MEM_DIR/preferences.md" ;;
   esac
+}
+
+# normalise_key TEXT → lowercased, whitespace-collapsed key (matches the 2-strike key).
+normalise_key() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' '
+}
+
+# l3_has_key TARGET KEY → 0 if an L3 entry in TARGET already carries this key.
+l3_has_key() {
+  local target="$1" key="$2" f s e payload etype id conf k2
+  [ -f "$target" ] || return 1
+  while IFS=$'\t' read -r f s e payload etype id conf; do
+    k2=$(normalise_key "$payload")
+    [ "$k2" = "$key" ] && return 0
+  done < <(list_entries "$target")
+  return 1
+}
+
+# append_l3 TARGET ETYPE TEXT IDKEY CONFIDENCE SOURCE — append a curated L3 entry.
+# TEXT is stored verbatim; IDKEY (the normalised key) is used for the stable id.
+append_l3() {
+  local target="$1" etype="$2" text="$3" idkey="$4" conf="$5" source="$6"
+  local shared_id decided
+  shared_id="mem_$(sha8 "$idkey")"
+  decided=$(date +%Y-%m-%d)
+  {
+    echo ""
+    echo "- id: $shared_id"
+    echo "  decided: $decided"
+    echo "  entity_type: $etype"
+    echo "  entities: []"
+    echo "  confidence: $conf"
+    echo "  source: $source"
+    echo "  text: |"
+    printf '%s\n' "$text" | fold -s -w 100 | sed 's/^/    /'
+  } >> "$target"
 }
 
 # ---------------------------------------------------------------------------
@@ -143,8 +183,36 @@ for f in "$MEM_DIR"/preferences.md "$MEM_DIR"/system.md "$MEM_DIR"/projects.md "
   hash_pending_in_file "$f"
 done
 
+PROMOTED=0
+
 # ---------------------------------------------------------------------------
-# Step 2: 2-strike rule
+# Step 2a: single-shot curation — high-confidence L2 entries go straight to L3
+# (no 2-strike wait). The schema treats `confidence: high` as a rule, so an
+# agent that knows a fact matters can land it immediately via log.sh.
+# ---------------------------------------------------------------------------
+SINGLE=0
+shopt -s nullglob
+for daily in "$MEM_DIR"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md; do
+  while IFS=$'\t' read -r f s e payload etype id conf; do
+    [ -z "$payload" ] && continue
+    [ "$conf" = "high" ] || continue
+    key=$(normalise_key "$payload")
+    etype="${etype:-pattern}"
+    target=$(l3_target_for_type "$etype")
+    l3_has_key "$target" "$key" && continue
+    if $DRY_RUN; then
+      echo "  promote (high) → $target  : ${payload:0:80}…"
+      continue
+    fi
+    # Store the original payload verbatim; dedupe/id on the normalised key.
+    append_l3 "$target" "$etype" "$payload" "$key" "high" "$f:$s-$e (single-shot, high-confidence)"
+    SINGLE=$((SINGLE+1))
+  done < <(list_entries "$daily")
+done
+shopt -u nullglob
+
+# ---------------------------------------------------------------------------
+# Step 2b: 2-strike rule — same medium/low fact in 2+ daily files → L3 (medium)
 # ---------------------------------------------------------------------------
 declare -A TEXT_COUNT
 declare -A TEXT_SAMPLE_FILE
@@ -153,9 +221,9 @@ declare -A TEXT_SAMPLE_ID
 
 shopt -s nullglob
 for daily in "$MEM_DIR"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md; do
-  while IFS=$'\t' read -r f s e payload etype id; do
+  while IFS=$'\t' read -r f s e payload etype id conf; do
     [ -z "$payload" ] && continue
-    key=$(printf '%s' "$payload" | tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ')
+    key=$(normalise_key "$payload")
     TEXT_COUNT[$key]=$(( ${TEXT_COUNT[$key]:-0} + 1 ))
     TEXT_SAMPLE_FILE[$key]="$f:$s-$e"
     TEXT_SAMPLE_TYPE[$key]="${etype:-pattern}"
@@ -164,7 +232,6 @@ for daily in "$MEM_DIR"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md; do
 done
 shopt -u nullglob
 
-PROMOTED=0
 for key in "${!TEXT_COUNT[@]}"; do
   count=${TEXT_COUNT[$key]}
   [ "$count" -lt 2 ] && continue
@@ -172,32 +239,15 @@ for key in "${!TEXT_COUNT[@]}"; do
   etype=${TEXT_SAMPLE_TYPE[$key]}
   target=$(l3_target_for_type "$etype")
 
-  # Skip if already in L3 (any entry whose text payload matches)
-  found_in_l3=false
-  while IFS=$'\t' read -r f s e payload etype2 id; do
-    k2=$(printf '%s' "$payload" | tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ')
-    [ "$k2" = "$key" ] && { found_in_l3=true; break; }
-  done < <(list_entries "$target")
-  $found_in_l3 && continue
+  # Skip if already in L3 (e.g. promoted by single-shot above, or a prior run).
+  l3_has_key "$target" "$key" && continue
 
   if $DRY_RUN; then
     echo "  promote → $target  (×$count)  : ${key:0:80}…"
     continue
   fi
 
-  shared_id="mem_$(sha8 "$key")"
-  decided=$(date +%Y-%m-%d)
-  {
-    echo ""
-    echo "- id: $shared_id"
-    echo "  decided: $decided"
-    echo "  entity_type: $etype"
-    echo "  entities: []"
-    echo "  confidence: medium"
-    echo "  source: ${TEXT_SAMPLE_FILE[$key]} (×$count, 2-strike)"
-    echo "  text: |"
-    printf '%s\n' "$key" | fold -s -w 100 | sed 's/^/    /'
-  } >> "$target"
+  append_l3 "$target" "$etype" "$key" "$key" "medium" "${TEXT_SAMPLE_FILE[$key]} (×$count, 2-strike)"
   PROMOTED=$((PROMOTED+1))
 done
 
@@ -323,4 +373,4 @@ if $PROPOSE_HARDENING; then
 fi
 
 echo
-echo "Done. Promoted: $PROMOTED. Superseded: $SUPERSEDED. Index: $ROOT"
+echo "Done. Promoted: $PROMOTED (2-strike) + $SINGLE (high-confidence). Superseded: $SUPERSEDED. Index: $ROOT"

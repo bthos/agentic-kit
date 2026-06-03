@@ -66,7 +66,7 @@ prop_file="$VARIANTS_DIR/$round_id/proposal/${target#./}"
 [ -f "$base_file" ] && [ -f "$prop_file" ] \
   || { echo "missing baseline or proposal for round $round_id" >&2; exit 2; }
 
-mkdir -p "$ARTEFACTS_ROOT" "$RUNS_DIR" "$VARIANTS_DIR"
+mkdir -p "$ARTEFACTS" "$RUNS_DIR" "$VARIANTS_DIR"
 
 # Hash judge.md and program.md before/after to enforce invariant 3 (judge sacred)
 judge_pre=$(kit_sha256_file "$JUDGE_TPL")

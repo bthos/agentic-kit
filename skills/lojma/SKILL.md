@@ -99,7 +99,7 @@ Use the layered memory tree before drafting UX (see `agentic-kit/templates/memor
 
 ### Mandatory write checklist
 
-Append to today's L2 file (`.akt/memory/$(date +%Y-%m-%d).md`) when you make any of these calls:
+Log via `agentic-kit/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to today's L2 file and runs promotion) when you make any of these calls:
 
 - [ ] **UX pattern** chosen / rejected — `entity_type: pattern` (or `anti-pattern`)
 - [ ] **Accessibility decision** that future features should keep — `entity_type: decision`

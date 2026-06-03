@@ -110,6 +110,14 @@ When commit completes:
    ```
    Skip silently if `agentic-kit/memory/tools/promote.sh` is missing.
 
+   Then **clear the hot state** — the feature is closed, so L1 should not keep pointing at it:
+   ```bash
+   agentic-kit/memory/tools/session.sh feature "(none — awaiting next feature)"
+   agentic-kit/memory/tools/session.sh agent "(none)"
+   agentic-kit/memory/tools/session.sh clear-decisions
+   ```
+   Note: lessons mirrored above are `confidence: medium`, so they reach L3 only via the 2-strike rule. If a lesson is a hard rule, log it explicitly as high-confidence so it lands immediately: `agentic-kit/memory/tools/log.sh --type <type> --confidence high "…"`.
+
 5. **Record metrics.** When a feature path was provided, record before finishing:
    ```bash
    .akt/autoresearch/tools/record-metrics.sh \

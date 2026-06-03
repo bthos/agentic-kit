@@ -37,7 +37,7 @@ PROJECT_ROOT="$(pwd)"
 ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
 RUNS_DIR="$ARTEFACTS/autoresearch/runs"
 COST_LOG="$RUNS_DIR/cost.jsonl"
-mkdir -p "$ARTEFACTS_ROOT" "$RUNS_DIR"
+mkdir -p "$ARTEFACTS" "$RUNS_DIR"
 
 feature=""
 agent=""

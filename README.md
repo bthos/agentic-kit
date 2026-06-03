@@ -48,13 +48,13 @@ git submodule add https://github.com/bthos/agentic-kit agentic-kit
 # Interactive launcher — recommended for humans. Detects install stage and
 # only offers actions that make sense (init when not installed, validate +
 # edit PROJECT.md when unconfigured, full menu once ready).
-agentic-kit/agentic-kit.sh
+agentic-kit/kit.sh
 
 # Or call init.sh directly — recommended for scripts and CI.
 agentic-kit/tools/init.sh
 ```
 
-`agentic-kit/agentic-kit.sh` is a stage-aware menu: at stage **0 (not installed)** it only shows `init`; at stage **1 (needs config)** it adds `probe`, `edit PROJECT.md`, `validate`, `teardown`; at stage **2 (ready)** it surfaces the full set — feature status, memory search, version bumps, memory rollover/promotion, distill lessons, apply patches. Press `h` for inline descriptions of every action. For CI / agents, pass an action as a positional argument: `agentic-kit/agentic-kit.sh status` runs once and exits; `agentic-kit/agentic-kit.sh --list-json` dumps the action registry as JSON; `agentic-kit/agentic-kit.sh --help` prints the full reference.
+`agentic-kit/kit.sh` is a stage-aware menu: at stage **0 (not installed)** it only shows `init`; at stage **1 (needs config)** it adds `probe`, `edit PROJECT.md`, `validate`, `teardown`, and an **Optional components** submenu; at stage **2 (ready)** it surfaces the full set — feature status, memory search, version bumps, memory rollover/promotion, distill lessons, apply patches. The **Optional components** submenu installs/removes opt-in add-ons (statusline, AutoResearch, memory Stop hook) from one place, each showing live `[installed]`/`[off]` status — adding a new add-on is one registry row. Press `h` for inline descriptions of every action. For CI / agents, pass an action as a positional argument: `agentic-kit/kit.sh status` runs once and exits; `agentic-kit/kit.sh --list-json` dumps the action registry as JSON; `agentic-kit/kit.sh --help` prints the full reference.
 
 > **Requirements.** Bash ≥ 4.0 (uses `read -a`, associative-style arrays, `[[ … ]]`). On Windows use **MSYS2 / Git Bash**. macOS / Linux work out of the box.
 
@@ -70,7 +70,9 @@ agentic-kit/tools/init.sh --skip-all       # keep all existing kit paths, no pro
 agentic-kit/tools/init.sh --overwrite-all  # replace all kit-managed files, no prompts
 ```
 
-When a path already exists, the interactive prompt is: **s**kip this file, **o**verwrite this file, overwrite **a**ll remaining, or skip **r**est (this file and every later conflict).
+When a kit-managed path already exists, the interactive prompt is: **s**kip this file, **o**verwrite this file, overwrite **a**ll remaining, skip **r**est (this file and every later conflict), or **d**iff (show `diff -u` of your copy vs the kit's before you decide).
+
+> **`.akt/PROJECT.md` is never part of this prompt.** It holds *your* project config and is *meant* to diverge from the template, so init/update always **keep it** silently — there's no sensible "overwrite?" question to ask. Reset it from the template only with an explicit `--force` / `--overwrite-all`. If a kit update changes `PROJECT.md.template` (e.g. adds a new config field), init prints a one-line notice with a `diff` command so you can adopt new fields by hand — it still never overwrites your copy.
 
 `--non-interactive` / `-n` is the recommended flag for agents and CI (aliases: `--yes`, `-y`): it skips existing files, suppresses all Y/n prompts, and prints a structured **`[AGENT ACTION REQUIRED]`** block instructing the calling agent to fill `.akt/PROJECT.md` itself — no nested CLI process is spawned. The agent reads the script output and uses its own tools (Read / Glob / Edit) to replace the placeholders.
 
@@ -113,7 +115,7 @@ That's it.
 └── .gitignore                                ← one kit-managed block (ephemeral + local bookkeeping)
 ```
 
-Shared shell helpers live in **`agentic-kit/tools/lib.sh`** (sourced by `init.sh` / `update.sh` / `teardown.sh`, not run by hand). For a guided launcher use **`agentic-kit/agentic-kit.sh`** — a stage-aware menu that detects whether the kit is installed/configured and only offers actions that fit.
+Shared shell helpers live in **`agentic-kit/tools/lib.sh`** (sourced by `init.sh` / `update.sh` / `teardown.sh`, not run by hand). For a guided launcher use **`agentic-kit/kit.sh`** — a stage-aware menu that detects whether the kit is installed/configured and only offers actions that fit.
 
 The IDE entry-point files are **never overwritten**. The kit only manages the content between its `<!-- agentic-kit:start -->` and `<!-- agentic-kit:end -->` markers — anything you add above or below is yours and survives every `init.sh` / `update.sh` / `teardown.sh` cycle.
 
@@ -244,6 +246,8 @@ Memory is organised as a five-layer tree modelled on **OpenClaw's self-evolving 
 observed → logged (L2) → curated (L3, 2-strike rule) → hardened (L0 patch) → stable
 ```
 
+- **Writing memory:** agents call **`memory/tools/log.sh`** (append a structured L2 entry + auto-run promote) and **`memory/tools/session.sh`** (set L1 active feature / agent / in-flight decisions) rather than hand-editing YAML — the deterministic seam that actually keeps the tree filled.
+- **Single-shot curation:** a `--confidence high` entry promotes to L3 **immediately** (the schema treats `high` as a rule). Medium/low entries wait for the 2-strike rule below.
 - **2-strike rule:** if the same fact appears in two daily files it auto-promotes to L3 with `confidence: medium` (no manual curation required).
 - **Temporal awareness:** every L3 entry has `decided:`. New entries can declare `supersedes: mem_<id>`; the resolver tags the older entry `[superseded by …]` (no silent overwrites — the past is preserved).
 - **Custom ontology:** fixed `entity_type` set (`person | project | file | tool | library | pattern | anti-pattern | decision`) gives `memory-search.sh` and skills a stable contract.
@@ -260,13 +264,91 @@ agentic-kit/memory/tools/init.sh
 agentic-kit/memory/tools/search.sh "auth flow"
 agentic-kit/memory/tools/search.sh "auth flow" --layer l3 --top-k 10
 
-# Curate (run after archive, or as a daily cron)
+# Write memory (agents call these; you can too)
+agentic-kit/memory/tools/log.sh --type decision --confidence high "Adopt trunk-based dev."
+agentic-kit/memory/tools/session.sh feature 2025-06-03-login
+agentic-kit/memory/tools/session.sh decision "Chose device flow over PKCE."
+
+# Curate + roll over (promote runs automatically on every log.sh write)
 agentic-kit/memory/tools/promote.sh
 agentic-kit/memory/tools/promote.sh --propose-hardening
 agentic-kit/memory/tools/rollover.sh
+agentic-kit/memory/tools/tick.sh          # promote + rollover in one call
 ```
 
 Python TF-IDF (`memory-search.py`) is used automatically when `python3` + `scikit-learn` are available; otherwise the pure-bash search runs with no extra dependencies.
+
+### Scheduling regular maintenance
+
+Two things benefit from running on a schedule. **`promote.sh`** already runs on every `log.sh` write, so the only *time-based* work is **`rollover.sh`** (clears L1 `SESSION-STATE.md` after 24 h idle; compacts L2 daily files older than 7 days). **`tick.sh`** runs promote + rollover together, so scheduling `tick.sh` once a day covers everything. (AutoResearch's `autoresearch/run.sh` is optional and only worth scheduling if you want continuous self-tuning.)
+
+Pick **one** of the options below — they are alternatives, not all required. Each runs from the **project root** and honours `ARTEFACTS_DIR`.
+
+**Option 1 — Claude Code hook (no OS scheduler).** Runs the tick whenever a session/subagent stops. Add to `.claude/settings.json` (or via the `/update-config` skill):
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      { "hooks": [ { "type": "command",
+        "command": "agentic-kit/memory/tools/tick.sh >/dev/null 2>&1 || true" } ] }
+    ]
+  }
+}
+```
+
+**Option 2 — cron (Linux / macOS / Windows Git Bash / WSL).** `crontab -e`, then (adjust the path to your project):
+
+```cron
+# Daily at 03:00 — memory promote + rollover
+0 3 * * *  cd /path/to/your-project && agentic-kit/memory/tools/tick.sh >> .akt/memory/tick.log 2>&1
+```
+
+**Option 3 — macOS `launchd`** (if you prefer it to cron). Create `~/Library/LaunchAgents/dev.agentic-kit.tick.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>dev.agentic-kit.tick</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string><string>-lc</string>
+    <string>cd /path/to/your-project &amp;&amp; agentic-kit/memory/tools/tick.sh</string>
+  </array>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
+</dict></plist>
+```
+
+Then `launchctl load ~/Library/LaunchAgents/dev.agentic-kit.tick.plist`.
+
+**Option 4 — Windows Task Scheduler** (runs `tick.sh` through Git Bash). In an elevated PowerShell:
+
+```powershell
+$bash = "C:\Program Files\Git\bin\bash.exe"
+$proj = "C:\path\to\your-project"
+schtasks /Create /SC DAILY /ST 03:00 /TN "agentic-kit tick" `
+  /TR "`"$bash`" -lc 'cd \"$proj\" && agentic-kit/memory/tools/tick.sh'"
+```
+
+> Cron/launchd/Task Scheduler run with a minimal environment — always `cd` into the project root first (as shown) so relative paths like `.akt/` resolve, and use the **absolute** path to `bash` on Windows.
+
+#### Scheduling AutoResearch (optional, advanced)
+
+Unlike the memory tick, **`autoresearch/run.sh` is not a good fit for a frequent unattended schedule** and is intentionally left off the default list:
+
+- It makes **LLM calls** (mutation + LLM-as-judge over every eval entry) — real token cost per round.
+- It **mutates your installed agent/skill files** (L0). The ratchet only accepts non-regressing changes, but it still rewrites files unattended.
+- It needs a non-empty **eval-set** (built from archived features) to have anything to score against.
+
+By design it runs **after a Zlydni archive** (auto, 2 rounds) or **manually** (`agentic-kit/autoresearch/run.sh --rounds=N`). That event-driven model is usually what you want. If you nonetheless want a periodic run, schedule it **infrequently** (e.g. weekly, off-hours), capture logs, and review the accepted mutations:
+
+```cron
+# Sundays at 04:00 — 3 self-tuning rounds, logged (review the diffs afterwards)
+0 4 * * 0  cd /path/to/your-project && agentic-kit/autoresearch/run.sh --rounds=3 >> .akt/autoresearch/runs/cron.log 2>&1
+```
+
+The same launchd / Windows Task Scheduler / Claude-hook mechanisms above work too — just point them at `autoresearch/run.sh --rounds=N` instead of `tick.sh`, and prefer a **weekly** cadence. (A `Stop` hook would fire it far too often.) `run.sh` no-ops cleanly when the eval-set is empty, so a scheduled run before you've archived any features does no harm.
 
 > **Override the artefacts directory.** Every memory / autoresearch script honours `ARTEFACTS_DIR` (e.g. `ARTEFACTS_DIR=.kit-state agentic-kit/memory/tools/search.sh "auth"`). The default is `.akt`, which `init.sh` records in `.akt/.agentic-kit.cfg` as `ARTEFACTS_DIR=…` for drift detection and tooling.
 
@@ -342,7 +424,7 @@ Each skill bundles its own script. Shared scripts live in `agentic-kit/tools/`. 
 
 | Script | What it does |
 |--------|-------------|
-| `agentic-kit.sh` | **Recommended human entry point.** Stage-aware interactive launcher. Detects install state (not installed / needs config / ready) and surfaces only actions that make sense at the current stage: `init`, `probe`, edit + `validate` `PROJECT.md`, `update`, `teardown`, feature `status`, memory `search`, version `bump`, memory `rollover` / `promote`, `distill` lessons, apply `patches`. Press `h` inside the menu for one-line descriptions. |
+| `kit.sh` | **Recommended human entry point.** Stage-aware interactive launcher. Detects install state (not installed / needs config / ready) and surfaces only actions that make sense at the current stage: `init`, `probe`, edit + `validate` `PROJECT.md`, `update`, `teardown`, feature `status`, memory `search`, version `bump`, memory `rollover` / `promote`, `distill` lessons, apply `patches`. Press `h` inside the menu for one-line descriptions. |
 | `tools/init.sh` | Sets up `.akt/`; copies agents to `.claude/agents/` and skills to `.claude/skills/`; manages include blocks in `CLAUDE.md` and `AGENTS.md`; manages the `.gitignore` block; maintains **`.akt/.agentic-kit.files`**. |
 | `tools/update.sh` | `git submodule update --remote` for the kit, then re-runs `tools/init.sh` with the same arguments you pass (optional `--no-pull` to skip the fetch). After the refresh, sweeps obsolete Cursor/Copilot artefacts from prior kit versions (manifest-safety preserved). Warns if `templates/PIPELINE.md.template` drifted since last init. |
 | `tools/teardown.sh` | Strips managed include blocks from `CLAUDE.md` and `AGENTS.md`; strips the managed `.gitignore` block; removes kit-installed copies when SHA-256 matches **`.akt/.agentic-kit.files`**; sweeps any legacy `.cursor/` and `.github/` artefacts. `--full-clean` also removes `.akt/PROJECT.md`, `.akt/.agentic-kit.cfg`, and `.akt/scratch/`; `--remove-submodule` deinits git. |

@@ -117,7 +117,7 @@ When Bagnik passes code QA on a Yaga-originated fix, Bagnik or Cmok re-invokes `
 
 ### Mandatory write checklist
 
-Before handing off to Cmok, append to today's L2 file (`.akt/memory/YYYY-MM-DD.md`) when any of these fire:
+Before handing off to Cmok, log via `agentic-kit/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to today's L2 file and runs promotion) when any of these fire:
 
 - [ ] **Root cause confirmed** — `entity_type: pattern` or `anti-pattern`, `entities: [<file or module>]`, evidence link to `findings.md`.
 - [ ] **Hypothesis eliminated with evidence** — `entity_type: anti-pattern` only if it represents a class of mistake worth remembering; otherwise leave as L2.

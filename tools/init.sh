@@ -167,6 +167,7 @@ MODE=""
 NON_INTERACTIVE=false
 TUNE=false
 AUTORESEARCH=""  # "yes" | "no" | "" (auto-detect)
+MEMORY_HOOK=""   # "yes" | "no" | "" (ask)
 
 for arg in "$@"; do
   case "$arg" in
@@ -184,6 +185,8 @@ for arg in "$@"; do
     --no-tune)                       TUNE=false ;;
     --with-autoresearch)             AUTORESEARCH="yes" ;;
     --no-autoresearch)               AUTORESEARCH="no" ;;
+    --with-hook)                     MEMORY_HOOK="yes" ;;
+    --no-hook)                       MEMORY_HOOK="no" ;;
   esac
 done
 
@@ -305,17 +308,29 @@ setup_artefacts_dir() {
   # PIPELINE.md — kit-managed copy of the template, refreshed on update.
   install_kit_copy_file "$PIPELINE_REL" "$PIPELINE_REL" "$PIPELINE_TEMPLATE" || true
 
-  # PROJECT.md — copied once from the template; user edits and we keep their copy.
-  # We track it in the manifest only when the bytes still match the template (so
-  # teardown can clean up an unedited copy automatically).
+  # PROJECT.md — copied once from the template; thereafter it is YOURS. It is
+  # *expected* to diverge from the template (holding your project's config is its
+  # whole purpose), so we never prompt to overwrite it on update — that question
+  # has only one sensible answer. It is kept on every run and reset only by an
+  # explicit --force / --overwrite-all (OVERWRITE_ALL).
   if [ -f "$PROJECT_TARGET" ]; then
-    if should_overwrite "$PROJECT_REL"; then
+    if $OVERWRITE_ALL; then
       cp "$PROJECT_TEMPLATE" "$PROJECT_TARGET"
       manifest_set_hash "$PROJECT_REL" "$(kit_sha256_file "$PROJECT_TARGET")"
-      success "$PROJECT_REL (overwritten from template)"
+      success "$PROJECT_REL (reset from template — --force)"
       FRESH_PROJECT_MD=true
     else
       info "$PROJECT_REL (kept — your edits preserved)"
+      # Non-noisy drift signal: only mention it when the *template itself* changed
+      # since last init (a kit update may have added new config fields). This
+      # fires rarely, unlike a byte-compare against your edited copy.
+      local _saved_ptpl _cur_ptpl
+      _saved_ptpl=$(kit_cfg_get PROJECT_SHA 2>/dev/null || true)
+      _cur_ptpl=$(kit_sha256_file "$PROJECT_TEMPLATE" 2>/dev/null || true)
+      if [ -n "$_saved_ptpl" ] && [ -n "$_cur_ptpl" ] && [ "$_saved_ptpl" != "$_cur_ptpl" ]; then
+        warn "PROJECT.md.template gained changes since last init (new config fields may be available)."
+        info "Compare: diff \"$PROJECT_TARGET\" \"$PROJECT_TEMPLATE\"   (your copy is kept; --force resets it)"
+      fi
     fi
   else
     cp "$PROJECT_TEMPLATE" "$PROJECT_TARGET"
@@ -459,12 +474,14 @@ fi
 # paths so other tools/agents can read them without re-running discovery).
 # ---------------------------------------------------------------------------
 _pipeline_sha=$(kit_sha256_file "$PIPELINE_TEMPLATE" 2>/dev/null || true)
+_project_sha=$(kit_sha256_file "$PROJECT_TEMPLATE" 2>/dev/null || true)
 _kit_version=$(cd "$SCRIPT_DIR" && git rev-parse --short HEAD 2>/dev/null || true)
 
 kit_cfg_set_many \
   INIT_DATE       "$(date +%Y-%m-%d)" \
   KIT_VERSION     "$_kit_version" \
   PIPELINE_SHA    "$_pipeline_sha" \
+  PROJECT_SHA     "$_project_sha" \
   ARTEFACTS_DIR   "$ARTEFACTS_NAME" \
   KIT_ROOT        "$SCRIPT_DIR" \
   PROJECT_ROOT    "$PROJECT_ROOT" \
@@ -534,6 +551,42 @@ if $_ar_setup && [ -x "$_ar_run" ]; then
   fi
 elif $_ar_setup && [ ! -x "$_ar_run" ]; then
   warn "autoresearch/run.sh not found at $_ar_run — skipping."
+fi
+
+# ---------------------------------------------------------------------------
+# Memory maintenance hook (opt-in): a Claude Code Stop hook that runs
+# memory/tools/tick.sh (promote + rollover) so the memory tree stays fresh
+# without a cron job. We never edit settings.json silently — it's a choice.
+# ---------------------------------------------------------------------------
+_hook_install="$SCRIPT_DIR/tools/memory-hook.sh"
+_settings_file="$PROJECT_ROOT/.claude/settings.json"
+_do_hook=false
+if [ "$MEMORY_HOOK" = "yes" ]; then
+  _do_hook=true
+elif [ "$MEMORY_HOOK" = "no" ]; then
+  _do_hook=false
+elif [ -f "$_settings_file" ] && grep -q "memory/tools/tick.sh" "$_settings_file" 2>/dev/null; then
+  _do_hook=true   # already installed — memory-hook.sh will idempotently skip
+else
+  if $NON_INTERACTIVE; then
+    info "Memory maintenance hook not installed (pass --with-hook to enable, or see README scheduling)"
+  elif [ -t 0 ]; then
+    printf '\n'
+    printf "  Install a Claude Code ${BOLD}Stop hook${RESET} to auto-run memory promote + rollover? [y/${BOLD}N${RESET}] "
+    read -r yn; yn="${yn:-N}"
+    [[ "$yn" =~ ^[Yy]$ ]] && _do_hook=true
+  elif { : >/dev/tty; } 2>/dev/null; then
+    printf "  Install a Claude Code Stop hook to auto-run memory promote + rollover? [y/N] " > /dev/tty
+    read -r yn < /dev/tty; yn="${yn:-N}"
+    [[ "$yn" =~ ^[Yy]$ ]] && _do_hook=true
+  fi
+fi
+
+if $_do_hook && [ -x "$_hook_install" ]; then
+  header "Memory maintenance hook"
+  ( cd "$PROJECT_ROOT" && "$_hook_install" ) || warn "memory-hook.sh exited non-zero."
+elif $_do_hook && [ ! -x "$_hook_install" ]; then
+  warn "memory-hook.sh not found at $_hook_install — skipping."
 fi
 
 # ---------------------------------------------------------------------------
