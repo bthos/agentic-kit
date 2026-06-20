@@ -3,7 +3,7 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
 
 SESSION="$KIT_ROOT/memory/tools/session.sh"
-_art() { printf '%s' "$(make_tmp_project)/.akt"; }
+_art() { printf '%s' "$(make_tmp_project)/.tlk"; }
 _s() { ARTEFACTS_DIR="$1" bash "$SESSION" "${@:2}"; }
 _file() { printf '%s/SESSION-STATE.md' "$1"; }
 
@@ -25,9 +25,9 @@ test_sets_active_feature() {
 
 test_sets_active_agent() {
   local art; art=$(_art)
-  _s "$art" agent "vadavik" >/dev/null 2>&1
+  _s "$art" agent "eliciting-requirements" >/dev/null 2>&1
   local line; line=$(awk '/^## Active agent/{getline; print; exit}' "$(_file "$art")")
-  assert_eq "vadavik" "$line"
+  assert_eq "eliciting-requirements" "$line"
 }
 
 test_decisions_accumulate() {

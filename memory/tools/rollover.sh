@@ -3,18 +3,18 @@
 #
 #   - Empties the "In-flight decisions" section of SESSION-STATE.md if mtime > 24h.
 #   - Compacts L2 daily files older than 7 days into a weekly summary stub
-#     (memory-promote.sh will re-promote anything that survives the 2-strike rule
+#     (memory/tools/promote.sh will re-promote anything that survives the 2-strike rule
 #     before the file ages out, so compaction is safe).
 #
 # Usage:
-#   agentic-kit/memory/tools/rollover.sh
-#   agentic-kit/memory/tools/rollover.sh --dry-run
+#   talaka/memory/tools/rollover.sh
+#   talaka/memory/tools/rollover.sh --dry-run
 #
 # Run from project root, ideally as a daily cron / hook.
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 MEM_DIR="$ARTEFACTS/memory"
 SESSION="$ARTEFACTS/SESSION-STATE.md"
 
@@ -32,7 +32,7 @@ p = pathlib.Path(sys.argv[1])
 src = p.read_text(encoding="utf-8")
 new = re.sub(
     r"## In-flight decisions[\s\S]*?(?=\n## |\Z)",
-    "## In-flight decisions\n_(empty — auto-cleared by memory-rollover.sh)_\n\n",
+    "## In-flight decisions\n_(empty — auto-cleared by memory/tools/rollover.sh)_\n\n",
     src, count=1)
 if new != src: p.write_text(new, encoding="utf-8")
 PY
@@ -56,7 +56,7 @@ if [ -d "$MEM_DIR" ]; then
           {
             echo "# Daily memory — $name (compacted)"
             echo
-            echo "_Compacted by memory-rollover.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ). Original retained as $name.md.compact._"
+            echo "_Compacted by memory/tools/rollover.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ). Original retained as $name.md.compact._"
             echo
             grep -E '^- id: ' "$f" | head -n 20 || true
           } > "$f.compact.tmp"

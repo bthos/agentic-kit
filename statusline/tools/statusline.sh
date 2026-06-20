@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# agentic-kit statusline — pipeline-aware status bar for Claude Code.
+# talaka statusline — pipeline-aware status bar for Claude Code.
 # Line 1 (always): agent | feature [STAGE] | context bar | cost | lines
 # Line 2 (alerts): only rendered when something needs attention
 # Requires: jq
@@ -20,7 +20,7 @@ C='\033[36m'; M='\033[35m'; G='\033[32m'; Y='\033[33m'; R='\033[31m'
 D='\033[2m'; B='\033[1m'; Z='\033[0m'
 
 # --- Pipeline state ---
-AKT="$PROJECT_DIR/.akt"
+AKT="$PROJECT_DIR/.tlk"
 ACTIVE_AGENT=""
 SLUG=""
 STAGE=""

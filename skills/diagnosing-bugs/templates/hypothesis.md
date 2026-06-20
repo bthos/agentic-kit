@@ -41,5 +41,5 @@ The investigation succeeds when **one** hypothesis is supported by evidence acro
 
 ## Notes
 
-- Investigation id: `{{INVESTIGATION_ID}}` — use this as the sentinel: `YAGA:{{INVESTIGATION_ID}}`.
+- Investigation id: `{{INVESTIGATION_ID}}` — use this as the sentinel: `DEBUG:{{INVESTIGATION_ID}}`.
 - Probes are added by `@yaga` (agent). This skill does not edit code.

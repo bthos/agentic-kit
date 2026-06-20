@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test runner for agentic-kit. Discovers and executes every *.test.sh under
+# Test runner for talaka. Discovers and executes every *.test.sh under
 # tests/ (each in its own bash process for isolation) plus the legacy
 # memory/tools/test-search-parity.sh smoke test.
 #
@@ -49,7 +49,7 @@ files_passed=0
 files_failed=0
 failed_files=()
 
-printf '%s%sagentic-kit test suite%s  (%d file(s))\n' "$C_BOLD" "" "$C_RESET" "${#files[@]}"
+printf '%s%stalaka test suite%s  (%d file(s))\n' "$C_BOLD" "" "$C_RESET" "${#files[@]}"
 printf '%sbash %s · %s%s\n\n' "$C_DIM" "${BASH_VERSION%%(*}" "$(uname -s 2>/dev/null || echo unknown)" "$C_RESET"
 
 for f in "${files[@]}"; do

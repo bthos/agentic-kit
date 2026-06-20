@@ -23,10 +23,10 @@ if ! command -v python3 >/dev/null 2>&1 || ! python3 -c "import sklearn" 2>/dev/
   exit 0
 fi
 
-WORK=$(mktemp -d "${TMPDIR:-/tmp}/akt-search-parity.XXXXXX")
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/tlk-search-parity.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT
 
-export ARTEFACTS_DIR="$WORK/.akt"
+export ARTEFACTS_DIR="$WORK/.tlk"
 mkdir -p "$ARTEFACTS_DIR/memory"
 
 # Fixture: three L3 files with varying relevance to the query "vector retrieval".

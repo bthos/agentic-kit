@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Reviews .akt/proposed-patches/<agent>.md (produced by
+# Reviews .tlk/proposed-patches/<agent>.md (produced by
 # `distill-lessons.sh --target=agents`) and lets the user accept or skip each
 # patch. On accept the patch is appended to the installed agent copy
-# (.claude/agents/<agent>.md) and the SHA-256 in `.akt/.agentic-kit.files`
+# (.claude/agents/<agent>.md) and the SHA-256 in `.tlk/.talaka.files`
 # is refreshed so `teardown.sh` still treats the file as kit-managed.
 #
 # Override the artefacts directory with $ARTEFACTS_DIR.
 #
 # Usage:
-#   agentic-kit/tools/apply-patches.sh           # interactive review
-#   agentic-kit/tools/apply-patches.sh --yes     # accept everything
-#   agentic-kit/tools/apply-patches.sh --dry-run # show patches, write nothing
+#   talaka/shared/learning/tools/apply-patches.sh           # interactive review
+#   talaka/shared/learning/tools/apply-patches.sh --yes     # accept everything
+#   talaka/shared/learning/tools/apply-patches.sh --dry-run # show patches, write nothing
 #
 # Run from project root.
 
 set -euo pipefail
 
-# shellcheck source=lib.sh
-source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+# shellcheck source=../../lifecycle/tools/lib.sh
+source "$(cd "$(dirname "$0")/../../lifecycle/tools" && pwd)/lib.sh"
 
 ARTEFACTS="${ARTEFACTS_DIR:-$ARTEFACTS_NAME}"
 PATCHES_DIR="$ARTEFACTS/proposed-patches"
@@ -34,7 +34,7 @@ done
 
 if [ ! -d "$PATCHES_DIR" ]; then
   info "No proposed patches at $PATCHES_DIR (nothing to apply)."
-  info "Generate them first:  agentic-kit/tools/distill-lessons.sh --target=agents"
+  info "Generate them first:  talaka/shared/learning/tools/distill-lessons.sh --target=agents"
   exit 0
 fi
 
@@ -63,7 +63,9 @@ apply_patch_to_file() {
 
   {
     printf '\n'
+    printf '%s\n' "$PROJECT_PATCH_BEGIN"
     printf '%s\n' "$patch_body"
+    printf '%s\n' "$PROJECT_PATCH_END"
   } >> "$abs"
 
   local new_hash
@@ -126,7 +128,7 @@ $DRY_RUN || rmdir "$PATCHES_DIR" 2>/dev/null || true
 if ! $DRY_RUN && [ "$ACCEPTED" -gt 0 ]; then
   PROMOTE="$SCRIPT_DIR/memory/tools/promote.sh"
   if [ -x "$PROMOTE" ] && [ -d "$PROJECT_ROOT/$ARTEFACTS/memory" ]; then
-    info "Refreshing memory index (memory-promote.sh)…"
+    info "Refreshing memory index (memory/tools/promote.sh)…"
     ( cd "$PROJECT_ROOT" && ARTEFACTS_DIR="$ARTEFACTS" "$PROMOTE" >/dev/null ) || true
   fi
 fi

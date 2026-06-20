@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Yaga local debug log server.
+"""Debug log server.
 
 Captures runtime probes from instrumented code over loopback HTTP, appends to
 runtime.jsonl in the investigation directory, and exposes a tail/stream/shutdown
 API for the @yaga agent.
 
 Usage:
-    python3 yaga-log-server.py --investigation .akt/debug/2026-05-21-bug-slug [--port 0]
+    python3 debug-log-server.py --investigation .tlk/debug/2026-05-21-bug-slug [--port 0]
 
 Endpoints (all on 127.0.0.1):
     POST /log      arbitrary JSON probe payload
@@ -200,8 +200,8 @@ def _signal(_sig: int, _frm: Any) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Yaga local debug log server")
-    parser.add_argument("--investigation", required=True, help="Path to .akt/debug/<slug>/ directory")
+    parser = argparse.ArgumentParser(description="Debug log server")
+    parser.add_argument("--investigation", required=True, help="Path to .tlk/debug/<slug>/ directory")
     parser.add_argument("--port", type=int, default=0, help="TCP port (0 = ephemeral)")
     parser.add_argument("--host", default="127.0.0.1", help="bind host (DO NOT change from 127.0.0.1)")
     args = parser.parse_args()
@@ -247,7 +247,7 @@ def main() -> int:
     signal.signal(signal.SIGINT, _signal)
     signal.signal(signal.SIGTERM, _signal)
 
-    print(f"yaga-log-server listening on http://{args.host}:{port}  (investigation={INV_DIR.name})", flush=True)
+    print(f"debug-log-server listening on http://{args.host}:{port}  (investigation={INV_DIR.name})", flush=True)
     try:
         HTTPD.serve_forever()
     finally:

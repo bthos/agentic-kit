@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Append a row to <feature>/metrics.jsonl AND to
-# .akt/autoresearch/runs/cost.jsonl (so Veles has fleet-wide history).
+# .tlk/autoresearch/runs/cost.jsonl (so Veles has fleet-wide history).
 #
-# Installed from agentic-kit/templates/autoresearch/tools/ by run.sh --init.
+# Installed from talaka/templates/autoresearch/tools/ by run.sh --init.
 # Edit this copy freely — the kit template is never overwritten after first install.
 #
 # Usage:
-#   .akt/autoresearch/tools/record-metrics.sh \
-#     --feature .akt/features/2026-04-30-foo \
+#   .tlk/autoresearch/tools/record-metrics.sh \
+#     --feature .tlk/features/2026-04-30-foo \
 #     --agent cmok \
 #     --tokens 18432 \
 #     --wall-ms 91500 \
@@ -34,7 +34,7 @@ if [ -n "${LOG_FILE:-}" ]; then
 fi
 
 PROJECT_ROOT="$(pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.tlk}"
 RUNS_DIR="$ARTEFACTS/autoresearch/runs"
 COST_LOG="$RUNS_DIR/cost.jsonl"
 mkdir -p "$ARTEFACTS" "$RUNS_DIR"

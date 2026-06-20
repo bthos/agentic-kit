@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Install or remove the agentic-kit memory maintenance hook in
+# Install or remove the talaka memory maintenance hook in
 # .claude/settings.json. The hook runs `memory/tools/tick.sh` (promote +
 # rollover) when a Claude Code session or subagent stops, so the memory tree
 # stays fresh without a cron job.
 #
 # Usage:
-#   agentic-kit/tools/memory-hook.sh                 # install (idempotent)
-#   agentic-kit/tools/memory-hook.sh --remove        # remove the kit's hook
-#   agentic-kit/tools/memory-hook.sh --event SubagentStop   # default: Stop
-#   agentic-kit/tools/memory-hook.sh --dry-run
+#   talaka/memory/tools/memory-hook.sh                 # install (idempotent)
+#   talaka/memory/tools/memory-hook.sh --remove        # remove the kit's hook
+#   talaka/memory/tools/memory-hook.sh --event SubagentStop   # default: Stop
+#   talaka/memory/tools/memory-hook.sh --dry-run
 #
 # Only the kit's own hook entry (identified by the tick.sh command) is touched —
 # any other hooks you have configured are preserved. Requires jq.
@@ -18,8 +18,8 @@
 set -euo pipefail
 
 _TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib.sh
-source "$_TOOLS_DIR/lib.sh"
+# shellcheck source=../../shared/lifecycle/tools/lib.sh
+source "$(cd "$_TOOLS_DIR/../../shared/lifecycle/tools" && pwd)/lib.sh"
 
 REMOVE=false
 DRY_RUN="${DRY_RUN:-false}"
@@ -122,4 +122,4 @@ else
   ' > "$SETTINGS_FILE"
 fi
 success "memory $EVENT hook configured → $HOOK_CMD"
-info "Runs promote + rollover when a session/subagent stops. Remove with: $SUBMODULE_DIR/tools/memory-hook.sh --remove"
+info "Runs promote + rollover when a session/subagent stops. Remove with: $SUBMODULE_DIR/memory/tools/memory-hook.sh --remove"

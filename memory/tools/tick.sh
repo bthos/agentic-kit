@@ -10,7 +10,7 @@
 #   memory/tools/tick.sh            # promote + rollover
 #   memory/tools/tick.sh --dry-run  # show what each would do
 #
-# Override the artefacts directory with $ARTEFACTS_DIR (default: .akt).
+# Override the artefacts directory with $ARTEFACTS_DIR (default: .tlk).
 # Run from project root.
 #
 # Example Claude Code hook (.claude/settings.json) — opt-in, add via /update-config:
@@ -18,7 +18,7 @@
 #     "hooks": {
 #       "Stop": [
 #         { "hooks": [ { "type": "command",
-#           "command": "agentic-kit/memory/tools/tick.sh >/dev/null 2>&1 || true" } ] }
+#           "command": "talaka/memory/tools/tick.sh >/dev/null 2>&1 || true" } ] }
 #       ]
 #     }
 #   }
@@ -26,13 +26,13 @@
 set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 
 DRY=""
 [ "${1:-}" = "--dry-run" ] && DRY="--dry-run"
 
 if [ ! -d "$ARTEFACTS/memory" ]; then
-  echo "Memory tree not initialised — run: agentic-kit/memory/tools/init.sh" >&2
+  echo "Memory tree not initialised — run: talaka/memory/tools/init.sh" >&2
   exit 0
 fi
 

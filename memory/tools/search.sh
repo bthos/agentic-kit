@@ -8,17 +8,17 @@
 #      with simple stemming (lowercase, strip punctuation), boosts L4 > L3 > L2.
 #
 # Usage:
-#   memory-search.sh "<query>"                 # top 5 chunks
-#   memory-search.sh "<query>" --top-k 10
-#   memory-search.sh "<query>" --layer l3      # restrict to L3 files
-#   memory-search.sh "<query>" --json          # machine-readable JSONL
+#   memory/tools/search.sh "<query>"                 # top 5 chunks
+#   memory/tools/search.sh "<query>" --top-k 10
+#   memory/tools/search.sh "<query>" --layer l3      # restrict to L3 files
+#   memory/tools/search.sh "<query>" --json          # machine-readable JSONL
 #
 # Output (default): one chunk per block, with path + score + first 5 lines.
 # Run from project root.
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 MEM_DIR="$ARTEFACTS/memory"
 
 QUERY=""
@@ -79,7 +79,7 @@ if [ -z "$LAYER" ] || [ "$LAYER" = "l1" ]; then
 fi
 
 if [ ${#files[@]} -eq 0 ]; then
-  echo "(no memory files yet — run \`agentic-kit/memory/tools/init.sh\`)"
+  echo "(no memory files yet — run \`talaka/memory/tools/init.sh\`)"
   exit 0
 fi
 

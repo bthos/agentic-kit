@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Unit tests for the SHA-gated teardown helpers in tools/lib.sh — the logic
+# Unit tests for the SHA-gated teardown helpers in shared/lifecycle/tools/lib.sh — the logic
 # that decides whether teardown.sh is allowed to delete a path. A regression
 # here either deletes user-modified files or strands kit files, so these are
 # the highest-stakes assertions in the suite.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
-source "$KIT_ROOT/tools/lib.sh"
+source "$KIT_ROOT/shared/lifecycle/tools/lib.sh"
 
 setup() {
   PROJECT_ROOT=$(make_tmp_project)
-  KIT_FILES_MANIFEST="$PROJECT_ROOT/.akt/.agentic-kit.files"
-  mkdir -p "$PROJECT_ROOT/.akt"
+  KIT_FILES_MANIFEST="$PROJECT_ROOT/.tlk/.talaka.files"
+  mkdir -p "$PROJECT_ROOT/.tlk"
   DRY_RUN=false
   manifest_abort
 }
@@ -40,7 +40,7 @@ test_file_kept_when_no_manifest_and_no_marker() {
 
 test_file_removed_via_legacy_marker_without_manifest() {
   local rel="legacy.md" abs="$PROJECT_ROOT/legacy.md"
-  printf 'header\n%s\nbody\n' "$AGENTIC_MARKER" > "$abs"
+  printf 'header\n%s\nbody\n' "$TALAKA_MARKER" > "$abs"
   kit_managed_file_remove "$rel" >/dev/null
   assert_file_absent "$abs" "legacy-marker file removed when no manifest entry"
 }
@@ -55,7 +55,7 @@ test_dry_run_does_not_delete() {
 }
 
 test_tree_removed_when_tree_hash_matches() {
-  local rel=".claude/skills/vadavik"; local abs="$PROJECT_ROOT/$rel"
+  local rel=".claude/skills/eliciting-requirements"; local abs="$PROJECT_ROOT/$rel"
   mkdir -p "$abs"
   printf 'a\n' > "$abs/SKILL.md"; printf 'b\n' > "$abs/helper.sh"
   manifest_set_hash "$rel" "$(kit_sha256_tree "$abs")"
@@ -64,7 +64,7 @@ test_tree_removed_when_tree_hash_matches() {
 }
 
 test_tree_kept_when_modified() {
-  local rel=".claude/skills/vadavik"; local abs="$PROJECT_ROOT/$rel"
+  local rel=".claude/skills/eliciting-requirements"; local abs="$PROJECT_ROOT/$rel"
   mkdir -p "$abs"; printf 'a\n' > "$abs/SKILL.md"
   manifest_set_hash "$rel" "$(kit_sha256_tree "$abs")"
   printf 'local edit\n' >> "$abs/SKILL.md"   # user changed it after install
@@ -74,7 +74,7 @@ test_tree_kept_when_modified() {
 
 test_include_block_stub_whole_file_removed() {
   local rel="CLAUDE.md" abs="$PROJECT_ROOT/CLAUDE.md"
-  agentic_block_write_stub "$abs" ".akt/PIPELINE.md"
+  talaka_block_write_stub "$abs" ".tlk/PIPELINE.md"
   manifest_set_hash "$rel" "stub:$(kit_sha256_file "$abs")"
   kit_include_block_remove "$rel" >/dev/null
   assert_file_absent "$abs" "kit-created stub removed whole"
@@ -83,13 +83,13 @@ test_include_block_stub_whole_file_removed() {
 test_include_block_only_stripped_when_user_content_present() {
   local rel="CLAUDE.md" abs="$PROJECT_ROOT/CLAUDE.md"
   printf '# Mine\n\nKeep this.\n' > "$abs"
-  agentic_block_append "$abs" ".akt/PIPELINE.md"
+  talaka_block_append "$abs" ".tlk/PIPELINE.md"
   # Not a stub — record block hash so the function strips rather than deletes.
   manifest_set_hash "$rel" "block:$(kit_sha256_file "$abs")"
   kit_include_block_remove "$rel" >/dev/null
   assert_file_exists "$abs" "file with user content kept"
   assert_file_contains "$abs" "Keep this."
-  assert_file_not_contains "$abs" "$AGENTIC_BLOCK_BEGIN" "managed block stripped"
+  assert_file_not_contains "$abs" "$TALAKA_BLOCK_BEGIN" "managed block stripped"
 }
 
 run_tests "$@"

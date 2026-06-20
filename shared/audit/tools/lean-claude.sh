@@ -1,5 +1,5 @@
 #!/bin/bash
-# claude-audit.sh — run in your project root
+# lean-claude.sh — run in your project root
 
 echo "=== CLAUDE.md size ==="
 wc -w ~/.claude/CLAUDE.md 2>/dev/null

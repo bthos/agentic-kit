@@ -1,29 +1,29 @@
 ---
-name: yaga
+name: diagnosing-bugs
 description: Hypothesis design for hard bugs. Reads the bug + relevant code and produces a structured hypothesis.md with ranked hypotheses and an instrumentation plan. No code edits, no log server. Hand off to @yaga (agent) for the execution loop.
 disable-model-invocation: false
 ---
 
-# Yaga / Яга — Hypothesis Design (skill)
+# Diagnosing Bugs — Hypothesis Design (skill)
 
-You are Yaga in her skill form: the one who frames the riddle before the search begins. You read the bug, read the code, and produce a written hypothesis. You do **not** touch production code. You do **not** start the log server. Those belong to `@yaga` (agent).
+This skill frames the riddle before the search begins. You read the bug, read the code, and produce a written hypothesis. You do **not** touch production code. You do **not** start the log server. Those belong to `@yaga` (agent).
 
 ## When to Use
 
-- User invokes `/yaga "<bug description>"` directly.
-- Cmok or Bagnik has suggested Yaga after repeated failures and the user has agreed.
-- A new investigation is starting and there is no `.akt/debug/<slug>/hypothesis.md` yet (or it exists but is empty / placeholder).
+- User invokes `/diagnosing-bugs "<bug description>"` directly.
+- Cmok or Bagnik has suggested `@yaga` after repeated failures and the user has agreed.
+- A new investigation is starting and there is no `.tlk/debug/<slug>/hypothesis.md` yet (or it exists but is empty / placeholder).
 
 ## Approach
 
-1. **Read `.akt/MEMORY.md`** (L4). Search `agentic-kit/memory/tools/search.sh "<bug keywords>"`. If a confirmed anti-pattern or prior investigation matches, raise it to the user before generating new hypotheses — the answer may already exist.
+1. **Read `.tlk/MEMORY.md`** (L4). Search `talaka/memory/tools/search.sh "<bug keywords>"`. If a confirmed anti-pattern or prior investigation matches, raise it to the user before generating new hypotheses — the answer may already exist.
 2. **Read the bug.** Get the user's report, error messages, and reproduction steps. Ask clarifying questions only when something material is missing (exact error text, version, environment, repro frequency).
 3. **Read the code.** Locate the modules involved. Read the call sites, the data flow, and the recent git history (`git log -p --follow` on the suspect files — recent changes are the highest-probability cause of new bugs).
 4. **Bootstrap the investigation folder.**
    ```bash
-   .claude/skills/yaga/new-investigation.sh <slug>
+   .claude/skills/diagnosing-bugs/new-investigation.sh <slug>
    ```
-   The slug should be short and bug-shaped (`login-stuck-spinner`, `pdf-export-blank-page`). The script creates `.akt/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, and `handoff-log.md` templates.
+   The slug should be short and bug-shaped (`login-stuck-spinner`, `pdf-export-blank-page`). The script creates `.tlk/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, and `handoff-log.md` templates.
 5. **Fill `hypothesis.md`.** Use the template that was created. The hypothesis section is the contract — `@yaga` will refuse to instrument without it.
 6. **Hand off to the agent.** Append to `handoff-log.md` and tell the user how to proceed: `@yaga` to run the execution loop.
 
@@ -51,7 +51,7 @@ Pick the minimum number of probes that can discriminate between hypotheses. A pr
 
 ## Output
 
-- `.akt/debug/YYYY-MM-DD-<slug>/hypothesis.md` populated with bug statement, ranked hypotheses, instrumentation plan, and success criteria.
+- `.tlk/debug/YYYY-MM-DD-<slug>/hypothesis.md` populated with bug statement, ranked hypotheses, instrumentation plan, and success criteria.
 - Handoff log entry directing the user (or `@yaga` agent) to start the execution loop.
 
 ## Guardrails
@@ -63,4 +63,4 @@ Pick the minimum number of probes that can discriminate between hypotheses. A pr
 
 ## Memory
 
-Read L4 first (`.akt/MEMORY.md`). Drill into `memory/anti-patterns.md` if it exists — prior root-cause categories are gold for hypothesis ranking. Write nothing yourself; the agent form handles L2 writes when evidence is in.
+Read L4 first (`.tlk/MEMORY.md`). Drill into `memory/anti-patterns.md` if it exists — prior root-cause categories are gold for hypothesis ranking. Write nothing yourself; the agent form handles L2 writes when evidence is in.

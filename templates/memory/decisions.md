@@ -2,6 +2,6 @@
 
 ADR-style decisions. Every entry has `decided:` and (when superseding a previous decision) `supersedes:` — the **temporal-awareness** mechanism. One bullet block per entry; see `SCHEMA.md`.
 
-_Auto-managed by `agentic-kit/memory/tools/promote.sh`._
+_Auto-managed by `talaka/memory/tools/promote.sh`._
 
 <!-- entries below -->

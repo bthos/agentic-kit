@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Checks PROJECT.md for unfilled Project-Specific Configuration placeholders.
-# Usage: agentic-kit/tools/validate-config.sh  (from project root)
+# Usage: talaka/shared/project/tools/validate-config.sh  (from project root)
 # Run from project root. Exits non-zero if any placeholders remain.
 
 set -euo pipefail
 
-PROJECT_MD="${PROJECT_MD:-.akt/PROJECT.md}"
+PROJECT_MD="${PROJECT_MD:-.tlk/PROJECT.md}"
 
 if [ ! -f "$PROJECT_MD" ]; then
   echo "Error: $PROJECT_MD not found. Run from project root." >&2

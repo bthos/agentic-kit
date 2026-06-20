@@ -1,7 +1,7 @@
 // YAGA probe — JavaScript / TypeScript
 // Investigation: {{INVESTIGATION_ID}}
 // Port: replace <PORT> with the value from server.json. Inline it as a literal.
-// Strip: removed by agentic-kit/tools/yaga-strip.sh on cleanup.
+// Strip: removed by talaka/shared/debug/tools/debug-strip.sh on cleanup.
 
 // Synchronous fire-and-forget. Works in Node and modern browsers.
-try { fetch("http://127.0.0.1:<PORT>/log", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "YAGA:{{INVESTIGATION_ID}}", probe: "p1", file: __filename || location.pathname, ts: Date.now(), vars: { /* capture vars here */ } }) }).catch(() => {}); } catch (e) {} // YAGA:{{INVESTIGATION_ID}}
+try { fetch("http://127.0.0.1:<PORT>/log", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "DEBUG:{{INVESTIGATION_ID}}", probe: "p1", file: __filename || location.pathname, ts: Date.now(), vars: { /* capture vars here */ } }) }).catch(() => {}); } catch (e) {} // DEBUG:{{INVESTIGATION_ID}}

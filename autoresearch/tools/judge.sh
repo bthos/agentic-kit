@@ -4,7 +4,7 @@
 #   judge.sh --requirement-file <path> --output-file <path>
 #   judge.sh --requirement "..." --output "..."
 #
-# Defaults to `claude -p` (Haiku-class model). Override via .akt/PROJECT.md:
+# Defaults to `claude -p` (Haiku-class model). Override via .tlk/PROJECT.md:
 #   - **Judge command:** `<your CLI>` (must accept stdin and emit one char on stdout)
 # Run from project root.
 
@@ -72,10 +72,10 @@ prompt=$(awk -v req="$req" -v out="$out" '
 ' "$JUDGE_TEMPLATE")
 
 # Resolve judge command:
-#   1) .akt/PROJECT.md  →  - **Judge command:** `<cmd>`
+#   1) .tlk/PROJECT.md  →  - **Judge command:** `<cmd>`
 #   2) `claude -p --allowedTools none`
 PROJECT_ROOT="$(pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.tlk}"
 JUDGE_CMD=""
 PROJECT_MD="$ARTEFACTS/PROJECT.md"
 if [ -f "$PROJECT_MD" ]; then
@@ -87,7 +87,7 @@ if [ -z "$JUDGE_CMD" ]; then
   if command -v claude &>/dev/null; then
     JUDGE_CMD="claude -p --allowedTools none"
   else
-    echo "No judge command available (no .akt/PROJECT.md override and no claude CLI)." >&2
+    echo "No judge command available (no .tlk/PROJECT.md override and no claude CLI)." >&2
     exit 2
   fi
 fi

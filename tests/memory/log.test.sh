@@ -3,7 +3,7 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
 
 LOG="$KIT_ROOT/memory/tools/log.sh"
-_art() { printf '%s' "$(make_tmp_project)/.akt"; }
+_art() { printf '%s' "$(make_tmp_project)/.tlk"; }
 _log() { ARTEFACTS_DIR="$1" bash "$LOG" "${@:2}"; }
 _today() { date +%Y-%m-%d; }
 

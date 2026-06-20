@@ -1,17 +1,17 @@
 # Memory Schema
 
-This file is the **ontology** for `.akt/memory/`. Every entry across the L2/L3 layers follows this shape so `memory-search.sh`, `memory-promote.sh`, and the agents that read memory can rely on a stable contract.
+This file is the **ontology** for `.tlk/memory/`. Every entry across the L2/L3 layers follows this shape so `memory/tools/search.sh`, `memory/tools/promote.sh`, and the agents that read memory can rely on a stable contract.
 
 ## Layered storage
 
 | Layer | Path | What lives here |
 |-------|------|-----------------|
-| **L0 — Enforcement** | `agents/*.md`, `skills/*/SKILL.md`, `agentic-kit/autoresearch/program.md` | Hardened rules. Mutated only via `apply-patches.sh` or Veles ratchet. |
-| **L1 — Hot State** | `.akt/SESSION-STATE.md` | Current active feature, current agent, in-flight decisions. Reset / pruned aggressively. |
-| **L2 — Daily Memory** | `.akt/memory/YYYY-MM-DD.md` | Per-day rolling log of observations, lessons, decisions. Append-only; rolled over by `memory-rollover.sh`. |
-| **L3 — Long-term structured** | `.akt/memory/{preferences,system,projects,decisions}.md` | Curated, deduplicated facts grouped by entity type. |
-| **L4 — Root summary** | `.akt/MEMORY.md` | ≤2 KB index pointing to L3 sections. Read first by every skill. |
-| **L5 — Semantic recall** | `.akt/memory/index.jsonl` | Chunked text + lightweight retrieval surface for `memory-search.sh`. Auto-rebuilt. |
+| **L0 — Enforcement** | `agents/*.md`, `skills/*/SKILL.md`, `talaka/autoresearch/program.md` | Hardened rules. Mutated only via `apply-patches.sh` or Veles ratchet. |
+| **L1 — Hot State** | `.tlk/SESSION-STATE.md` | Current active feature, current agent, in-flight decisions. Reset / pruned aggressively. |
+| **L2 — Daily Memory** | `.tlk/memory/YYYY-MM-DD.md` | Per-day rolling log of observations, lessons, decisions. Append-only; rolled over by `memory/tools/rollover.sh`. |
+| **L3 — Long-term structured** | `.tlk/memory/{preferences,system,projects,decisions}.md` | Curated, deduplicated facts grouped by entity type. |
+| **L4 — Root summary** | `.tlk/MEMORY.md` | ≤2 KB index pointing to L3 sections. Read first by every skill. |
+| **L5 — Semantic recall** | `.tlk/memory/index.jsonl` | Chunked text + lightweight retrieval surface for `memory/tools/search.sh`. Auto-rebuilt. |
 
 ## Entity types (fixed)
 
@@ -44,9 +44,9 @@ Every memory entry is a markdown bullet block of this exact form:
 
 Rules:
 
-1. **`id` is content-addressed**: SHA-1 of the `text` field, truncated to 8 chars, prefixed `mem_`. Computed by `memory-promote.sh`. Never edit by hand.
+1. **`id` is content-addressed**: SHA-1 of the `text` field, truncated to 8 chars, prefixed `mem_`. Computed by `memory/tools/promote.sh`. Never edit by hand.
 2. **`decided` is mandatory** for L3. Allows the **temporal-awareness** resolver (OpenClaw gap #1) to deprioritise older entries when newer ones supersede them.
-3. **`supersedes`** is the explicit replacement pointer. When present, `memory-search.sh` returns the new entry but tags the old one as `[superseded]` (instead of silently dropping it — Навь principle).
+3. **`supersedes`** is the explicit replacement pointer. When present, `memory/tools/search.sh` returns the new entry but tags the old one as `[superseded]` (instead of silently dropping it — Навь principle).
 4. **`entities`** is a flat list. Lets simple `grep`-traversal find related entries (OpenClaw gap #2: no relationships) without needing a graph DB.
 5. **`confidence`** drives the agent's behaviour: `high` is treated as a rule; `medium` as advisory; `low` is reference only.
 
@@ -56,21 +56,21 @@ Rules:
 observed → logged (L2 daily) → curated (L3) → hardened (L0 agent prompt) → stable
 ```
 
-Implemented by `memory-promote.sh`:
+Implemented by `memory/tools/promote.sh`:
 
 - **observed → logged** — agents append to today's L2 file as they work (see "Mandatory write checklist" in each agent prompt).
 - **logged → curated** — when the same fact appears in **2 different daily files** (the **2-strike rule**), it auto-moves to the right L3 file with `confidence: medium`.
-- **curated → hardened** — when an L3 entry has `confidence: high` AND has been referenced in 3+ subsequent features without contradiction, `memory-promote.sh --propose-hardening` writes a patch to `.akt/proposed-patches/<agent>.md` for review with `tools/apply-patches.sh`.
+- **curated → hardened** — when an L3 entry has `confidence: high` AND has been referenced in 3+ subsequent features without contradiction, `memory/tools/promote.sh --propose-hardening` writes a patch to `.tlk/proposed-patches/<agent>.md` for review with `shared/learning/tools/apply-patches.sh`.
 - **stable** — the rule lives in the agent prompt; the L3 entry is kept as evidence (Навь) with a `hardened_in: agent.md@<sha>` tag.
 
 ## Layer 4 (root summary) format
 
-`.akt/MEMORY.md` is **regenerated** by `memory-promote.sh` on every promote run. Hand-edits will be overwritten — capture intent in L3 instead.
+`.tlk/MEMORY.md` is **regenerated** by `memory/tools/promote.sh` on every promote run. Hand-edits will be overwritten — capture intent in L3 instead.
 
 ```
 # Memory Index
 
-_Generated by memory-promote.sh. Do not edit by hand — edit the linked layer files._
+_Generated by memory/tools/promote.sh. Do not edit by hand — edit the linked layer files._
 
 ## High-confidence preferences
 - → `memory/preferences.md` (N entries)
@@ -91,8 +91,10 @@ _Generated by memory-promote.sh. Do not edit by hand — edit the linked layer f
 
 ## How agents must use memory
 
-1. **Read first.** Before any task, read `.akt/MEMORY.md`. Drill into L3 only when needed.
-2. **Search when uncertain.** `agentic-kit/memory/tools/search.sh "<query>"` returns top-k chunks across all layers.
-3. **Write when you learn.** Every agent has a "Mandatory write checklist" — append to today's L2 file when any trigger fires (new convention, new tool, anti-pattern, decision).
-4. **Never edit L4.** It's regenerated.
-5. **Never delete L2/L3 entries.** Use `supersedes:` instead. Навь is preserved.
+1. **Read first.** Before any task, read `.tlk/MEMORY.md`. Drill into L3 only when needed.
+2. **Register on entry (L1).** Each agent/skill, on entry, sets the hot state so the rest of the system can see who is active: `talaka/memory/tools/session.sh agent <name>`. Feature originators (eliciting-requirements, designing-cli) also set `feature <slug>`. Background / parallel agents (Mokash, Veles) skip this so they do not clobber the foreground owner of the singular "Active agent" field.
+3. **Record in-flight decisions (L1).** As decisions are made mid-task, append them: `talaka/memory/tools/session.sh decision "<what + why>"`. They accumulate in `.tlk/SESSION-STATE.md`; Zlydni promotes them to L2 and clears the hot state at feature close.
+4. **Search when uncertain.** `talaka/memory/tools/search.sh "<query>"` returns top-k chunks across all layers.
+5. **Write when you learn.** Every agent has a "Mandatory write checklist" — append to today's L2 file when any trigger fires (new convention, new tool, anti-pattern, decision).
+6. **Never edit L4.** It's regenerated.
+7. **Never delete L2/L3 entries.** Use `supersedes:` instead. Навь is preserved.

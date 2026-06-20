@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Unit tests for the install-manifest helpers in tools/lib.sh
-# (.akt/.agentic-kit.files: relpath<TAB>hash), both direct and transactional.
+# Unit tests for the install-manifest helpers in shared/lifecycle/tools/lib.sh
+# (.tlk/.talaka.files: relpath<TAB>hash), both direct and transactional.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
-source "$KIT_ROOT/tools/lib.sh"
+source "$KIT_ROOT/shared/lifecycle/tools/lib.sh"
 
 # Point the manifest at a fresh temp file before each test.
 setup() {
-  _MF_TMP=$(mktemp -d "${TMPDIR:-/tmp}/akt-mf.XXXXXX")
-  KIT_FILES_MANIFEST="$_MF_TMP/.agentic-kit.files"
+  _MF_TMP=$(mktemp -d "${TMPDIR:-/tmp}/tlk-mf.XXXXXX")
+  KIT_FILES_MANIFEST="$_MF_TMP/.talaka.files"
   # Reset transactional state in case a prior test left it loaded.
   manifest_abort
 }

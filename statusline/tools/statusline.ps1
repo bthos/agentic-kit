@@ -1,4 +1,4 @@
-# agentic-kit statusline — pipeline-aware status bar for Claude Code (Windows).
+# talaka statusline — pipeline-aware status bar for Claude Code (Windows).
 # Line 1 (always): agent | feature [STAGE] | context bar | cost | lines
 # Line 2 (alerts): only rendered when something needs attention
 $ErrorActionPreference = 'SilentlyContinue'
@@ -26,12 +26,12 @@ $yellow  = "$e[33m"; $red     = "$e[31m"; $dim   = "$e[2m"
 $bold    = "$e[1m";  $reset   = "$e[0m"
 
 # --- Pipeline state ---
-$aktDir = Join-Path $projectDir ".akt"
+$tlkDir = Join-Path $projectDir ".tlk"
 $activeAgent = $null
 $slug = ""; $stage = ""; $featCount = 0; $featPath = ""
 
-if (Test-Path $aktDir) {
-    $sessionState = Join-Path $aktDir "SESSION-STATE.md"
+if (Test-Path $tlkDir) {
+    $sessionState = Join-Path $tlkDir "SESSION-STATE.md"
     $activeFeature = ""
 
     if (Test-Path $sessionState) {
@@ -52,7 +52,7 @@ if (Test-Path $aktDir) {
     if ($activeFeature -and (Test-Path $activeFeature)) {
         $featPath = $activeFeature
     } else {
-        $featuresDir = Join-Path $aktDir "features"
+        $featuresDir = Join-Path $tlkDir "features"
         if (Test-Path $featuresDir) {
             $latest = Get-ChildItem $featuresDir -Directory |
                 Sort-Object Name -Descending | Select-Object -First 1
@@ -61,7 +61,7 @@ if (Test-Path $aktDir) {
     }
 
     # Count active features
-    $featuresDir = Join-Path $aktDir "features"
+    $featuresDir = Join-Path $tlkDir "features"
     if (Test-Path $featuresDir) {
         $featCount = @(Get-ChildItem $featuresDir -Directory).Count
     }
@@ -111,12 +111,12 @@ $l1 += " ${dim}|${reset} ${bar} ${pct}% ${dim}|${reset} ${costFmt} ${dim}|${rese
 Write-Host $l1
 
 # === LINE 2: Conditional alerts ===
-if (-not (Test-Path $aktDir)) { exit }
+if (-not (Test-Path $tlkDir)) { exit }
 
 $alerts = @()
 
 # --- Alert: Memory stale (SESSION-STATE.md > 24h) ---
-$ssPath = Join-Path $aktDir "SESSION-STATE.md"
+$ssPath = Join-Path $tlkDir "SESSION-STATE.md"
 if (Test-Path $ssPath) {
     $mtime = (Get-Item $ssPath).LastWriteTime
     $ageHours = [math]::Floor(((Get-Date) - $mtime).TotalHours)
@@ -140,7 +140,7 @@ if ($featPath -and (Test-Path $featPath)) {
 }
 
 # --- Alert: Yaga investigation active ---
-$debugDir = Join-Path $aktDir "debug"
+$debugDir = Join-Path $tlkDir "debug"
 if (Test-Path $debugDir) {
     $activeInv = Get-ChildItem $debugDir -Directory |
         Sort-Object Name -Descending | Select-Object -First 1
@@ -164,8 +164,8 @@ if (Test-Path $debugDir) {
 }
 
 # --- Alert: Autoresearch ratchet status ---
-$ratchetLog = Join-Path $aktDir "autoresearch/runs/ratchet.jsonl"
-$rejectedLog = Join-Path $aktDir "autoresearch/runs/rejected.jsonl"
+$ratchetLog = Join-Path $tlkDir "autoresearch/runs/ratchet.jsonl"
+$rejectedLog = Join-Path $tlkDir "autoresearch/runs/rejected.jsonl"
 if (Test-Path $ratchetLog) {
     $accepted = (Get-Content $ratchetLog | Measure-Object -Line).Lines
     $rejected = 0

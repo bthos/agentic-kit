@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# Shared helpers for agentic-kit shell scripts.
-# Source from tools/<script>.sh siblings:
+# Shared helpers for talaka shell scripts.
+# Lives at shared/lifecycle/tools/lib.sh. Source from co-located siblings
+# (init.sh / update.sh / teardown.sh):
 #     source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+# Source from another component's tools dir (e.g. memory/tools, statusline/tools):
+#     source "$(cd "$(dirname "$0")/../../shared/lifecycle/tools" && pwd)/lib.sh"
+# Source from another shared category (e.g. shared/learning/tools):
+#     source "$(cd "$(dirname "$0")/../../lifecycle/tools" && pwd)/lib.sh"
 # Source from autoresearch/tools/<script>.sh:
-#     source "$(cd "$(dirname "$0")/../.." && pwd)/tools/lib.sh"
+#     source "$(cd "$(dirname "$0")/../.." && pwd)/shared/lifecycle/tools/lib.sh"
 # shellcheck shell=bash
 
 # ---------------------------------------------------------------------------
@@ -57,37 +62,48 @@ kit_arg_is_yes() {
 }
 
 # ---------------------------------------------------------------------------
+# Brand identity — single source of truth. To rebrand the kit, change these two
+# (KIT_BRAND = display name, KIT_SLUG = lowercase token for markers/filenames);
+# every marker, config filename, and managed-block header below derives from them.
+# ---------------------------------------------------------------------------
+KIT_BRAND="${KIT_BRAND:-Talaka}"
+KIT_SLUG="${KIT_SLUG:-talaka}"
+
+# ---------------------------------------------------------------------------
 # Kit paths & marker (kit directory = directory containing this file)
 # ---------------------------------------------------------------------------
-AGENTIC_MARKER='<!-- agentic-kit managed -->'
+TALAKA_MARKER="<!-- ${KIT_SLUG} managed -->"
 
-AGENTIC_BLOCK_BEGIN='<!-- agentic-kit:start -->'
-AGENTIC_BLOCK_END='<!-- agentic-kit:end -->'
-AGENTIC_GITIGNORE_BEGIN='# >>> agentic-kit (managed) >>>'
-AGENTIC_GITIGNORE_END='# <<< agentic-kit (managed) <<<'
+TALAKA_BLOCK_BEGIN="<!-- ${KIT_SLUG}:start -->"
+TALAKA_BLOCK_END="<!-- ${KIT_SLUG}:end -->"
+TALAKA_GITIGNORE_BEGIN="# >>> ${KIT_SLUG} (managed) >>>"
+TALAKA_GITIGNORE_END="# <<< ${KIT_SLUG} (managed) <<<"
+PROJECT_PATCH_BEGIN='<!-- project-patch:start -->'
+PROJECT_PATCH_END='<!-- project-patch:end -->'
 
-ARTEFACTS_NAME="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS_NAME="${ARTEFACTS_DIR:-.tlk}"
 
 _LIB_SELFDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCRIPT_DIR="$(cd "$_LIB_SELFDIR/.." && pwd)"
+# lib.sh lives at <kit>/shared/lifecycle/tools/lib.sh — kit root is three levels up.
+SCRIPT_DIR="$(cd "$_LIB_SELFDIR/../../.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
 ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"
-KIT_CFG="$ARTEFACTS/.agentic-kit.cfg"
-KIT_FILES_MANIFEST="$ARTEFACTS/.agentic-kit.files"
+KIT_CFG="$ARTEFACTS/.${KIT_SLUG}.cfg"
+KIT_FILES_MANIFEST="$ARTEFACTS/.${KIT_SLUG}.files"
 
 # One-time migration from older layouts (manifest + cfg at project root).
 kit_migrate_legacy_root_state() {
   mkdir -p "$ARTEFACTS"
-  local lc="$PROJECT_ROOT/.agentic-kit.cfg"
-  local lm="$PROJECT_ROOT/.agentic-kit.files"
+  local lc="$PROJECT_ROOT/.talaka.cfg"
+  local lm="$PROJECT_ROOT/.talaka.files"
   if [ -f "$lc" ] && [ ! -f "$KIT_CFG" ]; then
     mv "$lc" "$KIT_CFG"
-    info "migrated .agentic-kit.cfg → $ARTEFACTS_NAME/.agentic-kit.cfg"
+    info "migrated .talaka.cfg → $ARTEFACTS_NAME/.talaka.cfg"
   fi
   if [ -f "$lm" ] && [ ! -f "$KIT_FILES_MANIFEST" ]; then
     mv "$lm" "$KIT_FILES_MANIFEST"
-    info "migrated .agentic-kit.files → $ARTEFACTS_NAME/.agentic-kit.files"
+    info "migrated .talaka.files → $ARTEFACTS_NAME/.talaka.files"
   fi
 }
 
@@ -109,7 +125,7 @@ _kit_cleanup_temps() {
 kit_mktemp() {
   local as_dir=false
   if [ "${1:-}" = "-d" ]; then as_dir=true; shift; fi
-  local label="${1:-akt}"
+  local label="${1:-tlk}"
   local base="${TMPDIR:-/tmp}"
   [ -d "$base" ] || base="."
   local t
@@ -192,7 +208,7 @@ kit_is_git_clean() {
 }
 
 # ---------------------------------------------------------------------------
-# .akt/.agentic-kit.cfg — flat KEY=VALUE store
+# .tlk/.talaka.cfg — flat KEY=VALUE store
 # ---------------------------------------------------------------------------
 kit_cfg_get() {
   local key="$1"
@@ -205,7 +221,7 @@ kit_cfg_set() {
   mkdir -p "$(dirname "$KIT_CFG")"
   touch "$KIT_CFG"
   local tmp
-  tmp=$(kit_mktemp "akt-cfg") || return 1
+  tmp=$(kit_mktemp "tlk-cfg") || return 1
   awk -F= -v k="$key" '$1 != k' "$KIT_CFG" > "$tmp"
   printf '%s=%s\n' "$key" "$value" >> "$tmp"
   mv "$tmp" "$KIT_CFG"
@@ -223,7 +239,7 @@ kit_cfg_set_many() {
   for k in "${keys[@]}"; do pat+="|^${k}="; done
   pat="${pat#|}"
   local tmp
-  tmp=$(kit_mktemp "akt-cfg") || return 1
+  tmp=$(kit_mktemp "tlk-cfg") || return 1
   if [ -n "$pat" ]; then
     awk -v pat="$pat" '$0 !~ pat' "$KIT_CFG" > "$tmp" || true
   else
@@ -237,7 +253,7 @@ kit_cfg_set_many() {
 }
 
 # ---------------------------------------------------------------------------
-# Install manifest (.akt/.agentic-kit.files: relpath<TAB>hash)
+# Install manifest (.tlk/.talaka.files: relpath<TAB>hash)
 #
 # Two modes:
 #   * Direct (default): each set/remove rewrites the file. Fine for one-shot ops.
@@ -270,7 +286,7 @@ manifest_commit() {
   if $_KIT_MANIFEST_DIRTY; then
     manifest_ensure_file
     local tmp k
-    tmp=$(kit_mktemp "akt-manifest") || return 1
+    tmp=$(kit_mktemp "tlk-manifest") || return 1
     for k in "${!_KIT_MANIFEST_BUF[@]}"; do
       printf '%s\t%s\n' "$k" "${_KIT_MANIFEST_BUF[$k]}" >> "$tmp"
     done
@@ -300,7 +316,7 @@ manifest_remove_entry() {
   fi
   manifest_ensure_file
   local tmp
-  tmp=$(kit_mktemp "akt-manifest") || return 1
+  tmp=$(kit_mktemp "tlk-manifest") || return 1
   awk -F'\t' -v p="$rel" 'BEGIN{FS=OFS="\t"} $1 != p || NF < 2 {print}' "$KIT_FILES_MANIFEST" >"$tmp"
   mv "$tmp" "$KIT_FILES_MANIFEST"
 }
@@ -343,7 +359,7 @@ kit_symlink_points_into_kit() {
 # Managed blocks (CLAUDE.md / AGENTS.md / .gitignore)
 #
 # Single strip implementation parameterised by begin/end markers; thin wrappers
-# preserve the prior API (agentic_block_*, agentic_gitignore_*).
+# preserve the prior API (talaka_block_*, talaka_gitignore_*).
 # ---------------------------------------------------------------------------
 
 _kit_block_present() {
@@ -360,7 +376,7 @@ _kit_strip_block() {
   _kit_block_present "$file" "$begin" || return 1
 
   local tmp trimmed
-  tmp=$(kit_mktemp "akt-strip") || return 2
+  tmp=$(kit_mktemp "tlk-strip") || return 2
 
   awk -v b="$begin" -v e="$end" '
     BEGIN { skip=0 }
@@ -375,7 +391,7 @@ _kit_strip_block() {
     }
   ' "$file" > "$tmp" || return 2
 
-  trimmed=$(kit_mktemp "akt-strip") || return 2
+  trimmed=$(kit_mktemp "tlk-strip") || return 2
   awk '
     { lines[NR]=$0 }
     END {
@@ -389,40 +405,40 @@ _kit_strip_block() {
 }
 
 # Render the include block. Arg: pipeline_rel (relative path).
-agentic_block_render() {
+talaka_block_render() {
   local pipeline_rel="$1"
   cat <<EOF
-$AGENTIC_BLOCK_BEGIN
+$TALAKA_BLOCK_BEGIN
 <!--
-  This block is managed by agentic-kit.
-  Do not edit between the start/end markers — re-run \`agentic-kit/init.sh\` to refresh it,
-  or \`agentic-kit/teardown.sh\` to remove it. Everything outside the markers is yours.
+  This block is managed by talaka.
+  Do not edit between the start/end markers — re-run \`talaka/shared/lifecycle/tools/init.sh\` to refresh it,
+  or \`talaka/shared/lifecycle/tools/teardown.sh\` to remove it. Everything outside the markers is yours.
 -->
 
-> **Agentic Kit pipeline** — read [\`$pipeline_rel\`]($pipeline_rel) before any task.
+> **$KIT_BRAND pipeline** — read [\`$pipeline_rel\`]($pipeline_rel) before any task.
 > It defines the agent roles, handoff protocol, and quality gates used in this project.
 > Project-specific config: [\`$ARTEFACTS_NAME/PROJECT.md\`]($ARTEFACTS_NAME/PROJECT.md).
 
 @$pipeline_rel
-$AGENTIC_BLOCK_END
+$TALAKA_BLOCK_END
 EOF
 }
 
-agentic_block_present() { _kit_block_present "$1" "$AGENTIC_BLOCK_BEGIN"; }
-agentic_block_strip()   { _kit_strip_block  "$1" "$AGENTIC_BLOCK_BEGIN" "$AGENTIC_BLOCK_END"; }
+talaka_block_present() { _kit_block_present "$1" "$TALAKA_BLOCK_BEGIN"; }
+talaka_block_strip()   { _kit_strip_block  "$1" "$TALAKA_BLOCK_BEGIN" "$TALAKA_BLOCK_END"; }
 
-agentic_block_write_stub() {
+talaka_block_write_stub() {
   local file="$1" pipeline_rel="$2"
   mkdir -p "$(dirname "$file")"
   {
     printf '# %s\n\n' "$(basename "$file" .md)"
     printf 'This file is read by your IDE on every prompt. Add project-specific guidance below the managed block.\n\n'
-    agentic_block_render "$pipeline_rel"
+    talaka_block_render "$pipeline_rel"
     printf '\n'
   } > "$file"
 }
 
-agentic_block_append() {
+talaka_block_append() {
   local file="$1" pipeline_rel="$2"
   if [ -s "$file" ]; then
     local last_byte
@@ -432,45 +448,97 @@ agentic_block_append() {
     fi
     printf '\n' >> "$file"
   fi
-  agentic_block_render "$pipeline_rel" >> "$file"
+  talaka_block_render "$pipeline_rel" >> "$file"
 }
 
 # ---------------------------------------------------------------------------
 # Managed .gitignore block
 # ---------------------------------------------------------------------------
-agentic_gitignore_render() {
+talaka_gitignore_render() {
+  # talaka is a per-developer tool, not a team-sync mechanism: it installs
+  # into the working tree but commits nothing of its own. The whole artefacts
+  # dir is personal state, and the kit-installed agent/skill copies are personal
+  # too (Veles ratchets them in place). Enumerate those copies by name so a
+  # team's own .claude/ content stays tracked while the kit's copies do not.
+  local claude_lines="" f name
+  for f in "$SCRIPT_DIR"/agents/*.md; do
+    [ -e "$f" ] || continue
+    name=$(basename "$f")
+    claude_lines+=".claude/agents/$name"$'\n'
+  done
+  for f in "$SCRIPT_DIR"/skills/*/; do
+    [ -d "$f" ] || continue
+    name=$(basename "$f")
+    claude_lines+=".claude/skills/$name/"$'\n'
+  done
   cat <<EOF
-$AGENTIC_GITIGNORE_BEGIN
-# Managed by agentic-kit. Re-run \`agentic-kit/init.sh\` to refresh, or
-# \`agentic-kit/teardown.sh\` to remove the whole block. Edits inside this block
-# are overwritten on init.
+$TALAKA_GITIGNORE_BEGIN
+# Managed by talaka — a per-developer tool, NOT intended for team sync.
+# Re-run \`talaka/shared/lifecycle/tools/init.sh\` to refresh, or \`talaka/shared/lifecycle/tools/teardown.sh\`
+# to remove the whole block. Edits inside this block are overwritten on init.
 #
-# --- Runtime / ephemeral (pipeline scratch; usually not committed) ---
-$ARTEFACTS_NAME/memory/
-$ARTEFACTS_NAME/features/
-$ARTEFACTS_NAME/archive/
-$ARTEFACTS_NAME/proposed-patches/
-$ARTEFACTS_NAME/scratch/
-$ARTEFACTS_NAME/SESSION-STATE.md
-$ARTEFACTS_NAME/MEMORY.md
-$ARTEFACTS_NAME/PROJECT_PROFILE.md
+# The kit commits nothing of its own: a teammate who does not use talaka
+# sees none of this, and a second kit user just re-runs init.sh to regenerate
+# it. Everything below is personal working state. (curating-knowledge's wiki/ lives at the
+# project root, outside this dir, precisely so it CAN be committed.)
 #
-# --- Per-machine kit bookkeeping (usually not committed) ---
-$ARTEFACTS_NAME/.agentic-kit.cfg
-$ARTEFACTS_NAME/.agentic-kit.files
+# --- Artefacts: all per-developer pipeline state (memory, features, PIPELINE.md, PROJECT.md, …) ---
+$ARTEFACTS_NAME/
 #
-# Optional — ignore all of $ARTEFACTS_NAME/ except PIPELINE.md + PROJECT.md (uncomment all 4 lines):
-# $ARTEFACTS_NAME/**
-# !$ARTEFACTS_NAME/
-# !$ARTEFACTS_NAME/PIPELINE.md
-# !$ARTEFACTS_NAME/PROJECT.md
-#
-$AGENTIC_GITIGNORE_END
+# --- Kit-installed agent + skill copies (personal; Veles ratchets these in place) ---
+${claude_lines}$TALAKA_GITIGNORE_END
 EOF
 }
 
-agentic_gitignore_present() { _kit_block_present "$1" "$AGENTIC_GITIGNORE_BEGIN"; }
-agentic_gitignore_strip()   { _kit_strip_block  "$1" "$AGENTIC_GITIGNORE_BEGIN" "$AGENTIC_GITIGNORE_END"; }
+talaka_gitignore_present() { _kit_block_present "$1" "$TALAKA_GITIGNORE_BEGIN"; }
+talaka_gitignore_strip()   { _kit_strip_block  "$1" "$TALAKA_GITIGNORE_BEGIN" "$TALAKA_GITIGNORE_END"; }
+
+# ---------------------------------------------------------------------------
+# Project-patch blocks (user-owned sections appended by apply-patches.sh).
+# These survive kit updates: install-helpers extracts them before overwrite and
+# re-appends them after copying the fresh kit source.
+# ---------------------------------------------------------------------------
+project_patch_present() { _kit_block_present "$1" "$PROJECT_PATCH_BEGIN"; }
+
+# Extract all project-patch blocks from a file. Prints the raw content
+# (including markers) to stdout. Returns 1 if no patches found.
+project_patch_extract() {
+  local file="$1"
+  [ -f "$file" ] || return 1
+  project_patch_present "$file" || return 1
+  awk -v b="$PROJECT_PATCH_BEGIN" -v e="$PROJECT_PATCH_END" '
+    index($0, b) > 0 { capture=1 }
+    capture { print }
+    capture && index($0, e) > 0 { capture=0; print "" }
+  ' "$file"
+}
+
+# Strip all project-patch blocks from a file (in-place). Used only when needed
+# to get the "clean kit" portion for hash comparison.
+project_patch_strip() {
+  local file="$1"
+  [ -f "$file" ] || return 1
+  project_patch_present "$file" || return 1
+  local tmp
+  tmp=$(kit_mktemp "tlk-ppstrip") || return 2
+  awk -v b="$PROJECT_PATCH_BEGIN" -v e="$PROJECT_PATCH_END" '
+    index($0, b) > 0 { skip=1 }
+    !skip { print }
+    skip && index($0, e) > 0 { skip=0 }
+  ' "$file" > "$tmp" || return 2
+  # Trim trailing blank lines
+  local trimmed
+  trimmed=$(kit_mktemp "tlk-ppstrip") || return 2
+  awk '
+    { lines[NR]=$0 }
+    END {
+      n=NR
+      while (n > 0 && lines[n] ~ /^[[:space:]]*$/) n--
+      for (i=1; i<=n; i++) print lines[i]
+    }
+  ' "$tmp" > "$trimmed" || return 2
+  mv "$trimmed" "$file"
+}
 
 # ---------------------------------------------------------------------------
 # Managed-file teardown helpers (shared by teardown.sh and update.sh).
@@ -530,7 +598,7 @@ kit_managed_file_remove() {
     return 0
   fi
 
-  if [ -z "$recorded" ] && grep -qF "$AGENTIC_MARKER" "$abs" 2>/dev/null; then
+  if [ -z "$recorded" ] && grep -qF "$TALAKA_MARKER" "$abs" 2>/dev/null; then
     kit_rm "$abs"
     _manifest_drop "$rel"
     removed "$rel (legacy kit marker, no manifest)"
@@ -619,12 +687,12 @@ kit_include_block_remove() {
     fi
   fi
 
-  if agentic_block_present "$abs"; then
+  if talaka_block_present "$abs"; then
     if [ "${DRY_RUN:-false}" = "true" ]; then
       info "would strip managed include block from: $rel"
       return 0
     fi
-    if agentic_block_strip "$abs"; then
+    if talaka_block_strip "$abs"; then
       _manifest_drop "$rel"
       removed "$rel (managed block stripped, file kept)"
       return 0

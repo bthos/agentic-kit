@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bumps the version in all files listed in PROJECT.md → Project-Specific Configuration → Version files.
-# Usage: agentic-kit/tools/bump-version.sh [patch|minor]  (from project root)
+# Usage: talaka/shared/project/tools/bump-version.sh [patch|minor]  (from project root)
 #   patch — increments Z in X.Y.Z  (Cmok agent calls before each build)
 #   minor — increments Y, resets Z  (Zlydni agent calls before commit)
 # Run from project root.
@@ -13,7 +13,7 @@ if [[ "$TYPE" != "patch" && "$TYPE" != "minor" ]]; then
   exit 1
 fi
 
-PROJECT_MD="${PROJECT_MD:-.akt/PROJECT.md}"
+PROJECT_MD="${PROJECT_MD:-.tlk/PROJECT.md}"
 if [ ! -f "$PROJECT_MD" ]; then
   echo "Error: $PROJECT_MD not found. Run from project root." >&2
   exit 1

@@ -43,7 +43,7 @@ EOF
 _run() { ARTEFACTS_DIR="$1" bash "$BUILD" >/dev/null 2>&1; }
 
 test_builds_entry_from_full_feature() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   _feature "$art" 2026-05-01-auth
   _run "$art"
   local out="$art/autoresearch/eval-set/2026-05-01-auth.md"
@@ -55,21 +55,21 @@ test_builds_entry_from_full_feature() {
 }
 
 test_skips_feature_without_handoff() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   _feature "$art" 2026-05-02-nohandoff --no-handoff
   _run "$art"
   assert_file_absent "$art/autoresearch/eval-set/2026-05-02-nohandoff.md" "no handoff → skipped (would score 0)"
 }
 
 test_skips_feature_without_spec() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   _feature "$art" 2026-05-03-nospec --no-spec
   _run "$art"
   assert_file_absent "$art/autoresearch/eval-set/2026-05-03-nospec.md" "no spec → skipped"
 }
 
 test_is_idempotent_and_preserves_existing() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   _feature "$art" 2026-05-01-auth
   _run "$art"
   local out="$art/autoresearch/eval-set/2026-05-01-auth.md"
@@ -79,7 +79,7 @@ test_is_idempotent_and_preserves_existing() {
 }
 
 test_no_archive_dir_is_graceful() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   mkdir -p "$art"
   # No archive/ at all — should exit cleanly, not error.
   assert_ok env ARTEFACTS_DIR="$art" bash "$BUILD"

@@ -12,7 +12,7 @@ MUTATE="$KIT_ROOT/autoresearch/tools/mutate-agent.sh"
 _setup() {
   local target_content="$1"
   local proj; proj=$(make_tmp_project)
-  local art="$proj/.akt"
+  local art="$proj/.tlk"
   mkdir -p "$art/autoresearch" "$proj/.claude/agents" "$proj/bin"
   printf 'λ = 0.3\nINVARIANTS: do not break things.\n' > "$art/autoresearch/program.md"
   printf '%s' "$target_content" > "$proj/.claude/agents/cmok.md"
@@ -30,7 +30,7 @@ EOF
 # _mutate PROJ → runs mutate-agent with fake claude on PATH; rc preserved.
 _mutate() {
   local proj="$1"
-  ( cd "$proj" && PATH="$proj/bin:$PATH" ARTEFACTS_DIR="$proj/.akt" \
+  ( cd "$proj" && PATH="$proj/bin:$PATH" ARTEFACTS_DIR="$proj/.tlk" \
       bash "$MUTATE" --target .claude/agents/cmok.md --round-id rt )
 }
 
@@ -72,13 +72,13 @@ test_valid_mutation_succeeds() {
   unset FAKE_OUT
   assert_eq "0" "$rc" "valid mutation exits 0"
   assert_eq "rt" "$out" "prints the round id on success"
-  assert_file_exists "$proj/.akt/autoresearch/variants/rt/proposal/.claude/agents/cmok.md" "proposal saved"
-  assert_file_contains "$proj/.akt/autoresearch/variants/rt/baseline/.claude/agents/cmok.md" "ORIGINAL CONTENT" "baseline snapshotted"
+  assert_file_exists "$proj/.tlk/autoresearch/variants/rt/proposal/.claude/agents/cmok.md" "proposal saved"
+  assert_file_contains "$proj/.tlk/autoresearch/variants/rt/baseline/.claude/agents/cmok.md" "ORIGINAL CONTENT" "baseline snapshotted"
 }
 
 test_missing_program_md_errors() {
   local proj; proj=$(_setup $'X\n')
-  rm -f "$proj/.akt/autoresearch/program.md"
+  rm -f "$proj/.tlk/autoresearch/program.md"
   _mutate "$proj" >/dev/null 2>&1 && fail "missing program.md should error" || true
 }
 

@@ -8,7 +8,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
 SEARCH="$KIT_ROOT/memory/tools/search.sh"
 
 _seed() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   mkdir -p "$art/memory"
   cat > "$art/memory/system.md" <<'EOF'
 # System

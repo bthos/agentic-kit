@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Tests for tools/memory-hook.sh — the opt-in Stop hook in .claude/settings.json.
+# Tests for memory/tools/memory-hook.sh — the opt-in Stop hook in .claude/settings.json.
 # Installs/removes only the kit's own hook; must preserve all other settings.
 # Requires jq (skips cleanly without it, mirroring the script's own degrade path).
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
 
 have_jq() { command -v jq >/dev/null 2>&1; }
 
-# Lightweight sandbox: only tools/ is needed for memory-hook.sh (it sources
-# lib.sh and resolves PROJECT_ROOT as the kit's parent).
+# Lightweight sandbox: memory-hook.sh sources shared/lifecycle/tools/lib.sh and
+# resolves PROJECT_ROOT as the kit's parent, so stage shared/ + memory/.
 _proj() {
   local proj; proj=$(make_tmp_project)
-  mkdir -p "$proj/agentic-kit"
-  cp -r "$KIT_ROOT/tools" "$proj/agentic-kit/"
+  mkdir -p "$proj/talaka"
+  cp -r "$KIT_ROOT/shared" "$KIT_ROOT/memory" "$proj/talaka/"
   printf '%s' "$proj"
 }
-_hook() { ( cd "$1" && bash agentic-kit/tools/memory-hook.sh "${@:2}" ); }
+_hook() { ( cd "$1" && bash talaka/memory/tools/memory-hook.sh "${@:2}" ); }
 _settings() { printf '%s/.claude/settings.json' "$1"; }
 
 test_install_creates_hook() {

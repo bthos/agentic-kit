@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pull the latest agentic-kit submodule revision, then re-run init with the
+# Pull the latest talaka submodule revision, then re-run init with the
 # same flags you use day-to-day. The pipeline doc, project config, and the
 # kit-managed include blocks in CLAUDE.md and AGENTS.md are refreshed in
 # place — your edits outside the marked blocks are preserved.
@@ -9,9 +9,9 @@
 # are removed; locally-edited files are preserved with a warning.
 #
 # Usage (from project root):
-#   agentic-kit/tools/update.sh
-#   agentic-kit/tools/update.sh --skip
-#   agentic-kit/tools/update.sh --non-interactive
+#   talaka/shared/lifecycle/tools/update.sh
+#   talaka/shared/lifecycle/tools/update.sh --skip
+#   talaka/shared/lifecycle/tools/update.sh --non-interactive
 #
 # Flags:
 #   --no-pull   Skip `git submodule update --remote` (only run init.sh —
@@ -22,7 +22,7 @@
 #
 # After this script, commit the new submodule pointer if you want the team on
 # the same kit version:
-#   git add agentic-kit && git commit -m "chore: update agentic-kit"
+#   git add talaka && git commit -m "chore: update talaka"
 
 set -euo pipefail
 
@@ -33,9 +33,9 @@ kit_migrate_legacy_root_state
 
 show_update_help() {
   cat <<'EOF'
-agentic-kit / update.sh
+talaka / update.sh
 
-  Pull the latest agentic-kit submodule revision, then re-run init.sh with the
+  Pull the latest talaka submodule revision, then re-run init.sh with the
   same flags you use day-to-day. The pipeline doc, project config, and the
   managed include blocks in CLAUDE.md / AGENTS.md are refreshed in place —
   your edits outside the marked blocks are preserved.
@@ -45,7 +45,7 @@ agentic-kit / update.sh
   locally-edited files are preserved with a warning.
 
   USAGE
-    agentic-kit/tools/update.sh [--no-pull] [INIT_FLAGS…]
+    talaka/shared/lifecycle/tools/update.sh [--no-pull] [INIT_FLAGS…]
 
   FLAGS
     --no-pull            Skip `git submodule update --remote` (re-run init only).
@@ -57,11 +57,11 @@ agentic-kit / update.sh
       --tune | --no-tune
       --with-autoresearch | --no-autoresearch
 
-    The --ide=* flag was removed; agentic-kit now installs a single
+    The --ide=* flag was removed; talaka now installs a single
     Claude-shaped layout. See CHANGELOG.md.
 
   AFTER UPDATE
-    git add agentic-kit && git commit -m "chore: update agentic-kit"
+    git add talaka && git commit -m "chore: update talaka"
 EOF
 }
 
@@ -75,7 +75,7 @@ for arg in "$@"; do
   esac
 done
 
-kit_banner "agentic-kit update"
+kit_banner "$KIT_BRAND update"
 info "project root: $PROJECT_ROOT"
 info "submodule:    $SUBMODULE_DIR/"
 info "artefacts:    $ARTEFACTS_NAME/  (PIPELINE.md will be refreshed; PROJECT.md kept)"
@@ -88,7 +88,7 @@ if $PULL; then
     err "git submodule update --remote failed (exit $?)."
     info "If the submodule is not initialised: git submodule update --init $SUBMODULE_DIR"
     info "If you do not use a tracking branch, update the pointer manually then run:"
-    info "  $SUBMODULE_DIR/tools/init.sh  (same flags as usual: --skip, --force, etc.)"
+    info "  $SUBMODULE_DIR/shared/lifecycle/tools/init.sh  (same flags as usual: --skip, --force, etc.)"
     exit 1
   fi
   success "$SUBMODULE_DIR"
@@ -113,7 +113,7 @@ fi
 
 # Run the refresh, then sweep legacy IDE artefacts. We don't `exec` because
 # we need to run the sweep after init.sh returns.
-"$SCRIPT_DIR/tools/init.sh" "${forward_args[@]}"
+"$SCRIPT_DIR/shared/lifecycle/tools/init.sh" "${forward_args[@]}"
 init_exit=$?
 if [ $init_exit -ne 0 ]; then
   exit $init_exit

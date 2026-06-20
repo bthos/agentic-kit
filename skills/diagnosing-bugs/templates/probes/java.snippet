@@ -1,7 +1,7 @@
 // YAGA probe — Java / Kotlin / C#-ish
 // Investigation: {{INVESTIGATION_ID}}
 // Port: replace <PORT> with the value from server.json. Inline as a literal.
-// Strip: removed by agentic-kit/tools/yaga-strip.sh on cleanup.
+// Strip: removed by talaka/shared/debug/tools/debug-strip.sh on cleanup.
 // Uses java.net.http.HttpClient (JDK 11+). Adapt for other stacks.
 
-try { java.net.http.HttpClient.newHttpClient().sendAsync(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:<PORT>/log")).header("content-type","application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"id\":\"YAGA:{{INVESTIGATION_ID}}\",\"probe\":\"p1\",\"vars\":{}}")).build(), java.net.http.HttpResponse.BodyHandlers.discarding()); } catch (Throwable t) {} // YAGA:{{INVESTIGATION_ID}}
+try { java.net.http.HttpClient.newHttpClient().sendAsync(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:<PORT>/log")).header("content-type","application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"id\":\"DEBUG:{{INVESTIGATION_ID}}\",\"probe\":\"p1\",\"vars\":{}}")).build(), java.net.http.HttpResponse.BodyHandlers.discarding()); } catch (Throwable t) {} // DEBUG:{{INVESTIGATION_ID}}

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Creates a new investigation folder under .akt/debug/ with today's date prefix.
-# Usage: .claude/skills/yaga/new-investigation.sh <slug>
-# Example: .claude/skills/yaga/new-investigation.sh login-stuck-spinner
+# Creates a new investigation folder under .tlk/debug/ with today's date prefix.
+# Usage: .claude/skills/diagnosing-bugs/new-investigation.sh <slug>
+# Example: .claude/skills/diagnosing-bugs/new-investigation.sh login-stuck-spinner
 # Run from project root.
 
 set -euo pipefail
@@ -14,7 +14,7 @@ fi
 
 SLUG="$1"
 DATE=$(date +%Y-%m-%d)
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 INV_DIR="$ARTEFACTS/debug/${DATE}-${SLUG}"
 INV_ID="${DATE}-${SLUG}"
 
@@ -22,10 +22,10 @@ INV_ID="${DATE}-${SLUG}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -d "$SCRIPT_DIR/templates" ]; then
   TPL="$SCRIPT_DIR/templates"
-elif [ -d "agentic-kit/skills/yaga/templates" ]; then
-  TPL="agentic-kit/skills/yaga/templates"
+elif [ -d "talaka/skills/diagnosing-bugs/templates" ]; then
+  TPL="talaka/skills/diagnosing-bugs/templates"
 else
-  echo "ERROR: cannot locate yaga templates dir" >&2
+  echo "ERROR: cannot locate diagnosing-bugs templates dir" >&2
   exit 2
 fi
 

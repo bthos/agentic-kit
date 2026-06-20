@@ -7,7 +7,7 @@
 # Run from project root.
 #
 # Environment:
-#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .akt)
+#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .tlk)
 
 set -euo pipefail
 
@@ -26,7 +26,7 @@ fi
 
 PKG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.tlk}"
 
 PROGRAM="$ARTEFACTS/autoresearch/program.md"
 VARIANTS_DIR="$ARTEFACTS/autoresearch/variants"
@@ -51,7 +51,7 @@ done
 
 [ -n "$target" ] || { echo "--target required (path to installed agent/skill file)" >&2; exit 2; }
 [ -f "$target" ] || { echo "Target not found: $target" >&2; exit 2; }
-[ -f "$PROGRAM" ] || { echo "program.md missing at $PROGRAM — run: agentic-kit/autoresearch/run.sh --init" >&2; exit 2; }
+[ -f "$PROGRAM" ] || { echo "program.md missing at $PROGRAM — run: talaka/autoresearch/run.sh --init" >&2; exit 2; }
 
 if ! command -v claude &>/dev/null; then
   echo "claude CLI required for mutation step" >&2

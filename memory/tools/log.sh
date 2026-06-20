@@ -26,12 +26,12 @@
 #   --dry-run           print the entry to stdout; write nothing
 #   -h, --help
 #
-# Override the artefacts directory with $ARTEFACTS_DIR (default: .akt).
+# Override the artefacts directory with $ARTEFACTS_DIR (default: .tlk).
 # Run from project root.
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 MEM_DIR="$ARTEFACTS/memory"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -108,7 +108,7 @@ fi
 
 mkdir -p "$MEM_DIR"
 if [ ! -f "$DAILY" ]; then
-  printf '# Daily memory — %s (L2)\n\n_Append-only log. Rolled into L3 by `memory-promote.sh`._\n\n## Observations\n' "$TODAY" > "$DAILY"
+  printf '# Daily memory — %s (L2)\n\n_Append-only log. Rolled into L3 by `memory/tools/promote.sh`._\n\n## Observations\n' "$TODAY" > "$DAILY"
 fi
 render_entry >> "$DAILY"
 echo "Logged ($TYPE, $CONFIDENCE) → $DAILY"

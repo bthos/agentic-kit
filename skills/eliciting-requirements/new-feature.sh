@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Creates a new feature folder under .akt/features/ with today's date prefix.
-# Usage: /skills/vadavik/new-feature.sh <feature-slug>
-# Example: /skills/vadavik/new-feature.sh user-login-flow
+# Creates a new feature folder under .tlk/features/ with today's date prefix.
+# Usage: /skills/eliciting-requirements/new-feature.sh <feature-slug>
+# Example: /skills/eliciting-requirements/new-feature.sh user-login-flow
 # Run from project root.
 
 set -euo pipefail
@@ -14,7 +14,7 @@ fi
 
 SLUG="$1"
 DATE=$(date +%Y-%m-%d)
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 FEATURE_DIR="$ARTEFACTS/features/${DATE}-${SLUG}"
 
 if [ -d "$FEATURE_DIR" ]; then
@@ -55,6 +55,13 @@ cat > "$FEATURE_DIR/spec.md" <<EOF
 - [What should appear in docs]
 EOF
 
+# Write deferred decisions file
+cat > "$FEATURE_DIR/deferred.md" <<EOF
+# Deferred Decisions — ${SLUG}
+
+<!-- Append entries using: talaka/shared/deferred/tools/defer.sh --feature <path> ... -->
+EOF
+
 # Write handoff log header
 cat > "$FEATURE_DIR/handoff-log.md" <<EOF
 # Handoff Log — ${DATE}-${SLUG}
@@ -68,6 +75,7 @@ EOF
 
 echo "Created: $FEATURE_DIR"
 echo "  spec.md         (fill in requirements)"
+echo "  deferred.md     (deferred decisions tracker)"
 echo "  handoff-log.md  (agents append entries here)"
 echo ""
 echo "FEATURE_PATH=$FEATURE_DIR"

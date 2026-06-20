@@ -1,0 +1,57 @@
+---
+name: mapping-codebase
+description: Codebase onboarding. Reads an unfamiliar repo (or one module) and produces a structured map.md — orientation, file tree, entry points, component boundaries, invocation edges, and the conventions a newcomer would otherwise learn by breaking them. No code edits. Hand off to /planning-architecture or /eliciting-requirements with the map as shared context.
+disable-model-invocation: false
+---
+
+# Mapping Codebase — Onboarding Map (skill)
+
+You draw the map before anyone walks the territory. You read an unfamiliar codebase and produce a written, durable map: what it is, where execution begins, which components it is really made of, and how they call each other. You do **not** edit code. The map is **design-only context** that downstream roles read instead of re-deriving the structure from scratch every session.
+
+A map is **edges, not just nodes** — a file tree any tool can dump. The value is naming entry points, component boundaries, invocation flow, and the implicit conventions.
+
+## When to Use
+
+- `/mapping-codebase` — map the current repo from scratch.
+- `/mapping-codebase <subdir|module>` — map one area in depth.
+- Before `/planning-architecture` on an unfamiliar codebase, or before `/eliciting-requirements` when the existing system shapes what's possible.
+- Onboarding to a new project, a large dependency, or inherited code.
+
+## Bootstrap
+
+```bash
+.claude/skills/mapping-codebase/new-map.sh <slug>
+```
+
+The slug should be short and area-shaped (`whole-repo`, `payments-service`, `auth-module`). Creates `.tlk/maps/YYYY-MM-DD-<slug>/` with `map.md`, `open-questions.md`, and `handoff-log.md`.
+
+## Approach
+
+1. **Read `.tlk/MEMORY.md`** (L4) and search `talaka/memory/tools/search.sh "<area keywords>"`. The map may already partly exist — prior maps, decisions, or wiki pages. If `wiki/` exists (curating-knowledge), skim its index; don't re-derive settled knowledge.
+2. **Breadth-first tree.** Enumerate directories and files, excluding noise (`.git`, `node_modules`, vendored deps, build output, `.tlk`). Record the date and current commit sha in `map.md` — a map is a snapshot.
+3. **Find the entry points.** Locate every place execution actually begins: `main`s, CLI commands, servers, jobs, build/test scripts. These anchor everything else.
+4. **Draw component boundaries.** Collapse the file list into the 3–8 units the system is really made of. Name each one's responsibility and what it depends on — conceptual, not file-by-file.
+5. **Trace invocation edges.** For each important boundary, find the call site (`path:line`) and record what triggers the call and what's passed. This is the part a file tree cannot show, and the reason the map is worth writing.
+6. **Capture conventions & schemas.** Config file shapes, frontmatter fields, naming patterns, error/exit-code conventions, where persistent state lives. Read recent git history (`git log` on hot paths) — it reveals intent the code doesn't state.
+7. **Fill `map.md`** using the template. Park anything you can't resolve from the code in `open-questions.md` — do **not** guess it into the map as fact.
+8. **Hand off.** Append to `handoff-log.md` and point the user to the next role (`/planning-architecture`, `/eliciting-requirements`), citing the map path.
+
+## Map quality bar
+
+A good map is:
+
+- **Anchored** — entry points and edges cite `path:line`, not prose like "somewhere in the service layer".
+- **Edge-aware** — names how components call each other, not only that they exist.
+- **Scoped** — deep where the work happens, collapsed everywhere else. A uniform map is an un-prioritised one.
+- **Honest** — unknowns live in `open-questions.md`, not disguised as findings.
+
+## Guardrails
+
+- **No code edits.** Not even comments. This skill is read-only and design-only.
+- **Don't boil the ocean.** A 4000-line map of a 4000-file repo is not a map. Spend depth where a newcomer would actually need it; collapse the rest.
+- **Snapshot, not gospel.** Record the commit sha; a map decays. Say what was excluded.
+- **No fixes or refactor proposals.** Observations belong in the map; recommendations belong to `/planning-architecture`.
+
+## Memory
+
+Read L4 first (`.tlk/MEMORY.md`). When the map settles a durable structural fact that future work will rely on (the canonical entry point, where state lives, a load-bearing convention), log it: `talaka/memory/tools/log.sh --type decision "<the fact>"`. If the codebase has an active `wiki/`, a stable map is a strong candidate to ingest via `/curating-knowledge` so it compounds instead of being redrawn each session.

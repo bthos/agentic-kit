@@ -2,7 +2,7 @@
 # Tests for autoresearch/tools/ratchet.sh — the accept/revert decision, the
 # "judge.md / program.md are sacred" invariant guard, and the jsonl logs.
 #
-# The kit is copied into <proj>/agentic-kit so lib.sh resolves PROJECT_ROOT to
+# The kit is copied into <proj>/talaka so lib.sh resolves PROJECT_ROOT to
 # the sandbox (manifest writes stay isolated). The LLM judge is a scripted fake
 # wired through PROJECT.md.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
@@ -13,7 +13,7 @@ _setup_round() {
   local judge_cmd="$1"
   local proj; proj=$(make_tmp_project)
   install_kit_into "$proj"
-  local art="$proj/.akt"
+  local art="$proj/.tlk"
   local rel=".claude/agents/cmok.md"
 
   mkdir -p "$art/autoresearch/eval-set" \
@@ -38,11 +38,11 @@ _setup_round() {
 }
 
 _ratchet() {  # _ratchet PROJ  → runs ratchet, echoes nothing, returns its rc
-  # Do NOT set ARTEFACTS_DIR: ratchet defaults to $PROJECT_ROOT/.akt, and lib.sh
+  # Do NOT set ARTEFACTS_DIR: ratchet defaults to $PROJECT_ROOT/.tlk, and lib.sh
   # builds its manifest path as $PROJECT_ROOT/<ARTEFACTS_NAME> — an absolute
   # ARTEFACTS_DIR would corrupt that into a nested path.
   local proj="$1"
-  ( cd "$proj" && bash agentic-kit/autoresearch/tools/ratchet.sh \
+  ( cd "$proj" && bash talaka/autoresearch/tools/ratchet.sh \
       --round-id r1 --target .claude/agents/cmok.md )
 }
 
@@ -55,10 +55,10 @@ test_accepts_non_regressing_proposal() {
   # Live file now holds the proposal.
   assert_file_contains "$proj/.claude/agents/cmok.md" "AGENT PROPOSAL" "proposal promoted to live file"
   # Decision logged.
-  assert_file_exists "$proj/.akt/autoresearch/runs/ratchet.jsonl" "ratchet.jsonl written"
-  assert_file_contains "$proj/.akt/autoresearch/runs/ratchet.jsonl" '"round":"r1"'
+  assert_file_exists "$proj/.tlk/autoresearch/runs/ratchet.jsonl" "ratchet.jsonl written"
+  assert_file_contains "$proj/.tlk/autoresearch/runs/ratchet.jsonl" '"round":"r1"'
   # Manifest hash refreshed so teardown still recognises the file as kit-managed.
-  assert_file_contains "$proj/.akt/.agentic-kit.files" ".claude/agents/cmok.md" "manifest hash refreshed"
+  assert_file_contains "$proj/.tlk/.talaka.files" ".claude/agents/cmok.md" "manifest hash refreshed"
 }
 
 test_reverts_on_invariant_violation() {
@@ -66,7 +66,7 @@ test_reverts_on_invariant_violation() {
   # program.md before/after scoring; any change → REJECT + revert.
   local proj; proj=$(make_tmp_project)
   install_kit_into "$proj"
-  local art="$proj/.akt" rel=".claude/agents/cmok.md"
+  local art="$proj/.tlk" rel=".claude/agents/cmok.md"
   mkdir -p "$art/autoresearch/eval-set" \
            "$art/autoresearch/variants/r1/baseline/.claude/agents" \
            "$art/autoresearch/variants/r1/proposal/.claude/agents" \
@@ -95,12 +95,12 @@ EOF
   # Live file reverted to baseline, proposal NOT promoted.
   assert_file_contains "$proj/.claude/agents/cmok.md" "AGENT BASELINE" "reverted to baseline"
   assert_file_not_contains "$proj/.claude/agents/cmok.md" "AGENT PROPOSAL" "proposal not kept"
-  assert_file_contains "$proj/.akt/autoresearch/runs/rejected.jsonl" "invariant violation" "rejection logged"
+  assert_file_contains "$proj/.tlk/autoresearch/runs/rejected.jsonl" "invariant violation" "rejection logged"
 }
 
 test_requires_round_id_and_target() {
   local proj; proj=$(_setup_round "printf 1")
-  ( cd "$proj" && bash agentic-kit/autoresearch/tools/ratchet.sh --target .claude/agents/cmok.md >/dev/null 2>&1 ) \
+  ( cd "$proj" && bash talaka/autoresearch/tools/ratchet.sh --target .claude/agents/cmok.md >/dev/null 2>&1 ) \
     && fail "missing --round-id should error" || true
 }
 

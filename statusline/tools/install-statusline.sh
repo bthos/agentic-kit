@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Install the agentic-kit statusline into the target project's .claude/settings.json.
+# Install the talaka statusline into the target project's .claude/settings.json.
 # Idempotent: skips if statusLine is already configured.
 #
-# Usage: agentic-kit/tools/install-statusline.sh [--force]
+# Usage: talaka/statusline/tools/install-statusline.sh [--force]
 #   --force   Overwrite an existing statusLine entry
 #
 # Requires: jq
@@ -10,8 +10,8 @@
 set -euo pipefail
 
 _TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib.sh
-source "$_TOOLS_DIR/lib.sh"
+# shellcheck source=../../shared/lifecycle/tools/lib.sh
+source "$(cd "$_TOOLS_DIR/../../shared/lifecycle/tools" && pwd)/lib.sh"
 
 FORCE=false
 REMOVE=false
@@ -29,10 +29,10 @@ SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 
 # Bash works everywhere (Git Bash on Windows, native on macOS/Linux).
 # Use --powershell flag to force the PowerShell variant on Windows.
-SL_COMMAND="bash ${SUBMODULE_DIR}/tools/statusline.sh"
+SL_COMMAND="bash ${SUBMODULE_DIR}/statusline/tools/statusline.sh"
 for arg in "$@"; do
   case "$arg" in
-    --powershell|--ps) SL_COMMAND="pwsh -NoProfile -File ${SUBMODULE_DIR}/tools/statusline.ps1" ;;
+    --powershell|--ps) SL_COMMAND="pwsh -NoProfile -File ${SUBMODULE_DIR}/statusline/tools/statusline.ps1" ;;
   esac
 done
 

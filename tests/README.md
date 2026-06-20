@@ -1,6 +1,6 @@
 # Tests
 
-Zero-dependency bash test suite for agentic-kit. No framework to install — each
+Zero-dependency bash test suite for talaka. No framework to install — each
 test file sources `tests/lib.sh` (assert helpers + fixtures) and the runner
 discovers every `*.test.sh`.
 
@@ -21,9 +21,10 @@ Exit status is non-zero if any file fails. Requires **bash ≥ 4** (macOS ships
 | Path | Covers |
 |------|--------|
 | `tests/lib.sh` | Assertions, `make_tmp_project`, `install_kit_into`, `make_fake_judge`, the runner. |
-| `tests/lifecycle/` | `tools/lib.sh` (managed blocks, manifest, SHA-gated teardown) + `init.sh`↔`teardown.sh` round-trip. |
+| `tests/lifecycle/` | `shared/lifecycle/tools/lib.sh` (managed blocks, manifest, SHA-gated teardown) + `init.sh`↔`teardown.sh` round-trip. |
 | `tests/memory/` | `memory/tools/` — `init`, `promote` (2-strike, id hashing, supersedes, L4), `rollover`, `search`. |
-| `tests/autoresearch/` | `build-eval-set`, `judge`, `ratchet` (accept/revert + invariant guard), `mutate-agent` guards. |
+| `tests/autoresearch/` | `build-eval-set`, `judge`, `ratchet` (accept/revert + invariant guard), `mutate-agent` guards, `decay-variants` (age-gated prune + audit log). |
+| `tests/skills/` | Skill-bundled scripts — `curating-knowledge` (`new-wiki.sh`), `designing-cli` (`new-cli.sh`): tree bootstrap, idempotency, output contract. |
 | `tests/lint/` | Structural guards: frontmatter, no-plugin-dependency, block markers, `bash -n` syntax. |
 
 `memory/tools/test-search-parity.sh` (py-vs-bash search parity) is also picked
@@ -44,6 +45,6 @@ up by the runner.
 ## What the LLM-dependent steps do in tests
 
 `judge.sh` and `ratchet.sh` resolve the judge via the `Judge command:` override
-in `.akt/PROJECT.md`, so tests point it at a scripted fake (e.g. `printf 1`).
+in `.tlk/PROJECT.md`, so tests point it at a scripted fake (e.g. `printf 1`).
 `mutate-agent.sh` is tested by shadowing the `claude` CLI with a fake on `PATH`.
 No network or real model is ever called.

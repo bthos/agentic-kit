@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Auto-generates eval-set entries from .akt/archive/<feature>/.
+# Auto-generates eval-set entries from .tlk/archive/<feature>/.
 # Each archived feature with both spec.md and handoff-log.md becomes an
 # eval-set/<feature-id>.md file containing a list of (requirement, expected)
 # pairs. Existing files are NOT modified (per program.md invariants).
 #
 # Override the artefacts directory with $ARTEFACTS_DIR.
 #
-# Usage:  agentic-kit/autoresearch/tools/build-eval-set.sh
+# Usage:  talaka/autoresearch/tools/build-eval-set.sh
 # Run from project root.
 
 set -euo pipefail
@@ -19,7 +19,7 @@ fi
 
 PKG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.tlk}"
 
 EVAL_DIR="$ARTEFACTS/autoresearch/eval-set"
 ARCHIVE_DIR="$ARTEFACTS/archive"

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """TF-IDF cosine retrieval over the project memory tree.
 
-Used as a drop-in replacement for `memory-search.sh` when scikit-learn is
+Used as a drop-in replacement for `memory/tools/search.sh` when scikit-learn is
 available. Same CLI shape as the bash version:
 
-    memory-search.py --query "<q>" [--top-k 5] [--layer l3] [--json]
+    memory/tools/search.py --query "<q>" [--top-k 5] [--layer l3] [--json]
 
 Override the artefacts directory with $ARTEFACTS_DIR.
 
@@ -24,10 +24,10 @@ try:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
 except ImportError:  # pragma: no cover
-    sys.stderr.write("sklearn not installed — fall back to memory-search.sh\n")
+    sys.stderr.write("sklearn not installed — fall back to memory/tools/search.sh\n")
     sys.exit(2)
 
-ARTEFACTS = Path(os.environ.get("ARTEFACTS_DIR", ".akt")).resolve()
+ARTEFACTS = Path(os.environ.get("ARTEFACTS_DIR", ".tlk")).resolve()
 MEM_DIR = ARTEFACTS / "memory"
 
 LAYER_WEIGHT = {
@@ -92,7 +92,7 @@ def main() -> int:
 
     files = discover(args.layer)
     if not files:
-        print("(no memory files yet — run `agentic-kit/memory/tools/init.sh`)")
+        print("(no memory files yet — run `talaka/memory/tools/init.sh`)")
         return 0
 
     docs: list[str] = []

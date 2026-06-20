@@ -9,7 +9,7 @@ ROLLOVER="$KIT_ROOT/memory/tools/rollover.sh"
 have_python() { command -v python3 >/dev/null 2>&1; }
 
 _fresh_art() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   mkdir -p "$art/memory"
   printf '%s' "$art"
 }

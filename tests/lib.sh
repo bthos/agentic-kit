@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tiny zero-dependency test library for agentic-kit.
+# Tiny zero-dependency test library for talaka.
 #
 # Each test file is a standalone bash script that sources this lib, defines
 # `test_*` functions, and ends with `run_tests "$@"`. The runner (tests/run.sh)
@@ -135,7 +135,7 @@ skip_test() {        # skip_test "reason" — abandons the current test as skipp
 _TMP_DIRS=()
 make_tmp_project() {
   local d
-  d=$(mktemp -d "${TMPDIR:-/tmp}/akt-test.XXXXXX")
+  d=$(mktemp -d "${TMPDIR:-/tmp}/tlk-test.XXXXXX")
   _TMP_DIRS+=( "$d" )
   ( cd "$d" && git init -q && git config user.email t@t && git config user.name t ) 2>/dev/null || true
   printf '%s' "$d"
@@ -149,16 +149,16 @@ _cleanup_tmp_dirs() {
 }
 trap _cleanup_tmp_dirs EXIT
 
-# install_kit_into PROJ — copy the kit into <PROJ>/agentic-kit so scripts that
+# install_kit_into PROJ — copy the kit into <PROJ>/talaka so scripts that
 # derive PROJECT_ROOT as the kit's parent (via lib.sh) resolve to PROJ. This
 # keeps manifest writes and artefacts inside the sandbox.
 install_kit_into() {
   local proj="$1" d
-  mkdir -p "$proj/agentic-kit"
-  for d in tools templates agents skills memory autoresearch; do
-    cp -r "$KIT_ROOT/$d" "$proj/agentic-kit/" 2>/dev/null || true
+  mkdir -p "$proj/talaka"
+  for d in shared statusline templates agents skills memory autoresearch; do
+    cp -r "$KIT_ROOT/$d" "$proj/talaka/" 2>/dev/null || true
   done
-  cp "$KIT_ROOT"/*.sh "$proj/agentic-kit/" 2>/dev/null || true
+  cp "$KIT_ROOT"/*.sh "$proj/talaka/" 2>/dev/null || true
 }
 
 # write_file PATH <<'EOF' ... EOF  — mkdir -p the parent, then write stdin.

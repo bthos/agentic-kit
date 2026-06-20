@@ -9,7 +9,7 @@ JUDGE="$KIT_ROOT/autoresearch/tools/judge.sh"
 # Set up an artefacts dir whose PROJECT.md points the judge at $cmd.
 _art_with_judge() {
   local cmd="$1"
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   mkdir -p "$art"
   printf -- '- **Judge command:** `%s`\n' "$cmd" > "$art/PROJECT.md"
   printf '%s' "$art"
@@ -39,7 +39,7 @@ test_prompt_substitution_reaches_judge() {
   # both the requirement and output text — proving {{requirement}}/{{output}}
   # were filled in.
   local proj; proj=$(make_tmp_project)
-  local art="$proj/.akt"; mkdir -p "$art"
+  local art="$proj/.tlk"; mkdir -p "$art"
   local fake="$proj/fakejudge.sh"
   cat > "$fake" <<'EOF'
 #!/usr/bin/env bash
@@ -63,7 +63,7 @@ test_missing_output_errors() {
 
 test_file_inputs_supported() {
   local proj; proj=$(make_tmp_project)
-  local art="$proj/.akt"; mkdir -p "$art"
+  local art="$proj/.tlk"; mkdir -p "$art"
   printf -- '- **Judge command:** `printf 1`\n' > "$art/PROJECT.md"
   printf 'requirement from file' > "$proj/req.txt"
   printf 'output from file' > "$proj/out.txt"

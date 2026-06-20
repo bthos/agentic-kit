@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests for tools/install-statusline.sh install + --remove. Removal must take out
+# Tests for statusline/tools/install-statusline.sh install + --remove. Removal must take out
 # only the kit's own statusLine and preserve a user's custom one and all other
 # settings. Requires jq (skips cleanly without it).
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
@@ -8,11 +8,11 @@ have_jq() { command -v jq >/dev/null 2>&1; }
 
 _proj() {
   local proj; proj=$(make_tmp_project)
-  mkdir -p "$proj/agentic-kit"
-  cp -r "$KIT_ROOT/tools" "$proj/agentic-kit/"
+  mkdir -p "$proj/talaka"
+  cp -r "$KIT_ROOT/shared" "$KIT_ROOT/statusline" "$proj/talaka/"
   printf '%s' "$proj"
 }
-_sl() { ( cd "$1" && bash agentic-kit/tools/install-statusline.sh "${@:2}" ); }
+_sl() { ( cd "$1" && bash talaka/statusline/tools/install-statusline.sh "${@:2}" ); }
 _settings() { printf '%s/.claude/settings.json' "$1"; }
 
 test_install_sets_statusline() {

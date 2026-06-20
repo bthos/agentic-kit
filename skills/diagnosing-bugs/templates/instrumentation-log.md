@@ -17,7 +17,7 @@
 
 ## Forwarding remote logs (when the bug is not local)
 
-If the affected process runs on a remote host, forward its log stream into the local Yaga log server:
+If the affected process runs on a remote host, forward its log stream into the local debug log server:
 
 ```bash
 PORT=$(jq -r .port server.json)

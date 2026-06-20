@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read/update L1 hot state (.akt/SESSION-STATE.md). This is the seam that lets
+# Read/update L1 hot state (.tlk/SESSION-STATE.md). This is the seam that lets
 # agents actually populate SESSION-STATE — previously nothing wrote it, so it
 # sat at the init stub forever.
 #
@@ -10,15 +10,15 @@
 #   memory/tools/session.sh clear-decisions      # reset the in-flight section
 #   memory/tools/session.sh show                 # print the file
 #
-# Writing updates the file's mtime, so memory-rollover.sh only clears it once
+# Writing updates the file's mtime, so memory/tools/rollover.sh only clears it once
 # the session has actually been idle > 24h.
 #
-# Override the artefacts directory with $ARTEFACTS_DIR (default: .akt).
+# Override the artefacts directory with $ARTEFACTS_DIR (default: .tlk).
 # Run from project root.
 
 set -euo pipefail
 
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 SESSION="$ARTEFACTS/SESSION-STATE.md"
 
 FEATURE_HDR="## Active feature"
@@ -31,10 +31,10 @@ ensure_file() {
   cat > "$SESSION" <<EOF
 # Session State (L1 — Hot)
 
-_Updated by every agent on entry/exit. Pruned by \`memory-rollover.sh\` when stale (>24h)._
+_Updated by every agent on entry/exit. Pruned by \`memory/tools/rollover.sh\` when stale (>24h)._
 
 $FEATURE_HDR
-_(none — set by Vadavik or whoever starts the next feature)_
+_(none — set by eliciting-requirements or whoever starts the next feature)_
 
 $AGENT_HDR
 _(none)_
@@ -47,7 +47,7 @@ EOF
 # Replace the body between $hdr and the next "## " (or EOF) with $body.
 set_section() {
   local hdr="$1" body="$2" tmp
-  tmp="$(mktemp "${TMPDIR:-/tmp}/akt-session.XXXXXX")"
+  tmp="$(mktemp "${TMPDIR:-/tmp}/tlk-session.XXXXXX")"
   awk -v hdr="$hdr" -v body="$body" '
     BEGIN { done=0; skip=0 }
     {

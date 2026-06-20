@@ -7,7 +7,7 @@
 # Run from project root.
 #
 # Environment:
-#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .akt)
+#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .tlk)
 
 set -euo pipefail
 
@@ -24,12 +24,12 @@ if [ -n "${LOG_FILE:-}" ]; then
   exec 1> >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
 fi
 
-# shellcheck source=../../tools/lib.sh
-source "$(cd "$(dirname "$0")/../.." && pwd)/tools/lib.sh"
+# shellcheck source=../../shared/lifecycle/tools/lib.sh
+source "$(cd "$(dirname "$0")/../.." && pwd)/shared/lifecycle/tools/lib.sh"
 
 PKG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_ROOT="$(pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.tlk}"
 
 PROGRAM="$ARTEFACTS/autoresearch/program.md"
 JUDGE_TPL="$PKG_DIR/judge.md"          # kit law — stays in submodule
@@ -57,7 +57,7 @@ done
 [ -n "$round_id" ] && [ -n "$target" ] \
   || { echo "--round-id and --target are required" >&2; exit 2; }
 [ -f "$PROGRAM" ] \
-  || { echo "program.md missing at $PROGRAM — run: agentic-kit/autoresearch/run.sh --init" >&2; exit 2; }
+  || { echo "program.md missing at $PROGRAM — run: talaka/autoresearch/run.sh --init" >&2; exit 2; }
 [ -f "$JUDGE_TPL" ] \
   || { echo "judge.md missing at $JUDGE_TPL — submodule broken" >&2; exit 2; }
 

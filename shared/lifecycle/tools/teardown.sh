@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Removes agentic-kit installed copies from the target project.
+# Removes talaka installed copies from the target project.
 #
 # Order of operations:
 #   1. Strip the kit-managed include block from CLAUDE.md and AGENTS.md
@@ -8,20 +8,20 @@
 #      matches what we created, the file is removed entirely.
 #   2. Remove kit-installed agent / skill copies under .claude/ — but only
 #      when their SHA-256 still matches the value recorded in
-#      .akt/.agentic-kit.files. Files you edited locally are kept.
+#      .tlk/.talaka.files. Files you edited locally are kept.
 #   3. Sweep legacy .cursor/ and .github/ artefacts left behind by older kit
 #      versions, using the same manifest-safety predicate.
-#   4. Remove the canonical pipeline copy at .akt/PIPELINE.md when its hash
+#   4. Remove the canonical pipeline copy at .tlk/PIPELINE.md when its hash
 #      still matches; PROJECT.md is kept unless --full-clean.
 #   5. Strip the managed block from .gitignore.
-#   6. (--remove-submodule) Deinit the agentic-kit submodule.
-#   7. (--full-clean) Sweep .akt/scratch/ (ephemeral runtime files),
-#      offer to remove .akt/PROJECT.md, and try to remove the .akt/
+#   6. (--remove-submodule) Deinit the talaka submodule.
+#   7. (--full-clean) Sweep .tlk/scratch/ (ephemeral runtime files),
+#      offer to remove .tlk/PROJECT.md, and try to remove the .tlk/
 #      folder itself if nothing user-owned remains.
 #
-# Usage: agentic-kit/tools/teardown.sh [--remove-submodule] [--full-clean] [--yes] [--dry-run]
-#   --full-clean        Also remove .akt/PROJECT.md and the
-#                       .akt/ directory if empty.
+# Usage: talaka/shared/lifecycle/tools/teardown.sh [--remove-submodule] [--full-clean] [--yes] [--dry-run]
+#   --full-clean        Also remove .tlk/PROJECT.md and the
+#                       .tlk/ directory if empty.
 #   --remove-submodule  Also `git submodule deinit` and remove the kit submodule.
 #   --yes, -y           Skip confirmation prompts (auto-confirm).
 #   --dry-run           Show what would be removed without doing it.
@@ -39,20 +39,20 @@ kit_migrate_legacy_root_state
 # ---------------------------------------------------------------------------
 show_teardown_help() {
   cat <<'EOF'
-agentic-kit / teardown.sh
+talaka / teardown.sh
 
-  Remove agentic-kit installed copies from the current project. Files are
+  Remove talaka installed copies from the current project. Files are
   only deleted when their SHA-256 still matches the manifest — local edits
   are preserved.
 
   USAGE
-    agentic-kit/tools/teardown.sh [--remove-submodule] [--full-clean]
+    talaka/shared/lifecycle/tools/teardown.sh [--remove-submodule] [--full-clean]
                                   [--yes|-y|--non-interactive|-n] [--dry-run] [--help|-h]
 
   FLAGS
     --remove-submodule   Also `git submodule deinit` and remove the kit submodule.
-    --full-clean         Sweep .akt/scratch/, also remove .akt/PROJECT.md
-                         and the .akt/ folder if empty.
+    --full-clean         Sweep .tlk/scratch/, also remove .tlk/PROJECT.md
+                         and the .tlk/ folder if empty.
     --yes, -y            Skip confirmation prompts. Aliases: --non-interactive, -n.
     --dry-run            Show what would be removed without doing it.
     --help, -h           Show this help and exit.
@@ -78,7 +78,7 @@ done
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-kit_banner "agentic-kit teardown"
+kit_banner "$KIT_BRAND teardown"
 info "project root: $PROJECT_ROOT"
 info "artefacts:    $ARTEFACTS_NAME/"
 $DRY_RUN && warn "Dry run — no files will be removed."
@@ -94,12 +94,12 @@ teardown_gitignore_block() {
     return 0
   fi
 
-  if agentic_gitignore_present "$abs"; then
+  if talaka_gitignore_present "$abs"; then
     if $DRY_RUN; then
       info "would strip managed block from: $rel"
       return 0
     fi
-    if agentic_gitignore_strip "$abs"; then
+    if talaka_gitignore_strip "$abs"; then
       _manifest_drop "$rel"
       removed ".gitignore (managed block stripped, file kept)"
       # If we just emptied .gitignore (file existed only because we created it
@@ -231,7 +231,7 @@ if ! $DRY_RUN && [ -d "$PROJECT_ROOT/.github" ] && [ -z "$(ls -A "$PROJECT_ROOT/
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Remove .akt/PIPELINE.md (kit-managed copy)
+# 4. Remove .tlk/PIPELINE.md (kit-managed copy)
 # ---------------------------------------------------------------------------
 header "$ARTEFACTS_NAME/ (canonical pipeline copy)"
 kit_managed_file_remove "$ARTEFACTS_NAME/PIPELINE.md"
@@ -247,8 +247,8 @@ teardown_gitignore_block
 #     Stop hook and the kit statusLine. Both are no-ops if never installed, and
 #     both preserve everything else (user hooks, a custom statusLine, etc.).
 # ---------------------------------------------------------------------------
-_hook_remove="$SCRIPT_DIR/tools/memory-hook.sh"
-_sl_remove="$SCRIPT_DIR/tools/install-statusline.sh"
+_hook_remove="$SCRIPT_DIR/memory/tools/memory-hook.sh"
+_sl_remove="$SCRIPT_DIR/statusline/tools/install-statusline.sh"
 if [ -x "$_hook_remove" ] || [ -x "$_sl_remove" ]; then
   header ".claude/settings.json (kit entries)"
   [ -x "$_hook_remove" ] && ( cd "$PROJECT_ROOT" && DRY_RUN="$DRY_RUN" "$_hook_remove" --remove ) || true
@@ -333,9 +333,9 @@ if $FULL_CLEAN; then
   fi
 
   if [ -f "$KIT_CFG" ] && ! $DRY_RUN; then
-    rm "$KIT_CFG" && removed ".akt/.agentic-kit.cfg"
+    rm "$KIT_CFG" && removed ".tlk/.talaka.cfg"
   elif [ -f "$KIT_CFG" ] && $DRY_RUN; then
-    info "would remove: $ARTEFACTS_NAME/.agentic-kit.cfg"
+    info "would remove: $ARTEFACTS_NAME/.talaka.cfg"
   fi
 fi
 
@@ -344,7 +344,7 @@ fi
 # ---------------------------------------------------------------------------
 if ! $DRY_RUN; then
   if [ -f "$KIT_FILES_MANIFEST" ] && [ ! -s "$KIT_FILES_MANIFEST" ]; then
-    rm "$KIT_FILES_MANIFEST" && removed "$ARTEFACTS_NAME/.agentic-kit.files (empty)"
+    rm "$KIT_FILES_MANIFEST" && removed "$ARTEFACTS_NAME/.talaka.files (empty)"
   fi
 fi
 

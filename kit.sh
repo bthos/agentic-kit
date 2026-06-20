@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kit.sh — single entry point for all manual kit workflows.
 #
-# Run from the project root (the directory that contains agentic-kit/).
+# Run from the project root (the directory that contains talaka/).
 # Detects the current install stage and only offers actions that make sense:
 #
 #   stage 0  not installed       → init only
@@ -11,16 +11,20 @@
 #                                  distill lessons, version bump, teardown, …
 #
 # This script is a launcher only — it never edits project files itself, it
-# shells out to the kit's own scripts (tools/init.sh / tools/update.sh / tools/teardown.sh and
-# helpers under tools/ + autoresearch/tools/).
+# shells out to the kit's own scripts (shared/lifecycle/tools/init.sh / update.sh / teardown.sh and
+# helpers under shared/<category>/tools/ + the component tools/ dirs).
 
 set -euo pipefail
 
+# Brand identity (kept in sync with shared/lifecycle/tools/lib.sh — change in both).
+KIT_BRAND="${KIT_BRAND:-Talaka}"
+KIT_SLUG="${KIT_SLUG:-talaka}"
+
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$KIT/.." && pwd)"
-ARTEFACTS_NAME="${ARTEFACTS_DIR:-.akt}"
+ARTEFACTS_NAME="${ARTEFACTS_DIR:-.tlk}"
 ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"
-CFG="$ARTEFACTS/.agentic-kit.cfg"
+CFG="$ARTEFACTS/.${KIT_SLUG}.cfg"
 PROJECT_MD="$ARTEFACTS/PROJECT.md"
 
 cd "$PROJECT_ROOT"
@@ -57,9 +61,14 @@ else
 fi
 
 banner() {
+  local title="⚙  $KIT_BRAND" inner=41 pad left right ls="" rs="" i
+  pad=$(( inner - ${#title} )); [ "$pad" -lt 0 ] && pad=0
+  left=$(( pad / 2 )); right=$(( pad - left ))
+  for ((i=0; i<left;  i++)); do ls+=" "; done
+  for ((i=0; i<right; i++)); do rs+=" "; done
   printf '\n'
   printf "  %s╭─────────────────────────────────────────╮%s\n" "$BOLD$CYAN" "$RESET"
-  printf "  %s│            ⚙  agentic-kit               │%s\n" "$BOLD$CYAN" "$RESET"
+  printf "  %s│%s%s%s│%s\n" "$BOLD$CYAN" "$ls" "$title" "$rs" "$RESET"
   printf "  %s│      one menu, every workflow           │%s\n" "$BOLD$CYAN" "$RESET"
   printf "  %s╰─────────────────────────────────────────╯%s\n" "$BOLD$CYAN" "$RESET"
 }
@@ -135,15 +144,15 @@ register_actions() {
 
   # ---- setup ----
   add init     0 setup "Install / refresh kit"           "Run init.sh — copy agents, skills, IDE entry-point block, .gitignore block. Safe to re-run; your edits are preserved." \
-       "$KIT/tools/init.sh"
+       "$KIT/shared/lifecycle/tools/init.sh"
   add probe    1 setup "Probe project (--tune)"          "Inspect repo (package.json, pyproject.toml, Cargo.toml, …) and write $ARTEFACTS_NAME/PROJECT_PROFILE.md so agents self-tune." \
-       "$KIT/tools/probe-project.sh::--force"
+       "$KIT/shared/project/tools/probe-project.sh::--force"
   add edit-pm  1 setup "Edit PROJECT.md"                 "Open $ARTEFACTS_NAME/PROJECT.md in \$EDITOR (fallback: vi). Fill in stack, test/build commands, version files." \
        "::edit-project-md"
   add validate 1 setup "Validate PROJECT.md"             "Fail if PROJECT.md still has <placeholder> values. Run after editing." \
-       "$KIT/tools/validate-config.sh"
-  add update   2 setup "Update kit"                      "git submodule update --remote agentic-kit, then re-run init.sh with your saved IDE." \
-       "$KIT/tools/update.sh"
+       "$KIT/shared/project/tools/validate-config.sh"
+  add update   2 setup "Update kit"                      "git submodule update --remote talaka, then re-run init.sh with your saved IDE." \
+       "$KIT/shared/lifecycle/tools/update.sh"
   add teardown 1 setup "Uninstall (teardown)"            "Strip managed include blocks; remove kit-installed copies whose SHA-256 still matches the manifest. Asks for extra args." \
        "::teardown-prompt"
 
@@ -153,25 +162,25 @@ register_actions() {
 
   # ---- daily ----
   add status   2 daily "Feature pipeline status"         "Show spec / UX / tech-plan / handoff state for every active feature under $ARTEFACTS_NAME/features/." \
-       "$KIT/tools/feature-status.sh"
+       "$KIT/shared/project/tools/feature-status.sh"
   add memory   2 daily "Search memory"                   "Top-k retrieval across all memory layers (L1..L4). Prompts for a query." \
        "::memory-prompt"
 
   # ---- maintenance ----
   add bump     2 maint "Bump version (patch)"            "Increment Z in X.Y.Z across every file listed under 'Version files:' in PROJECT.md." \
-       "$KIT/tools/bump-version.sh::patch"
+       "$KIT/shared/project/tools/bump-version.sh::patch"
   add bump-min 2 maint "Bump version (minor)"            "Increment Y, reset Z. Run before commit when shipping a new feature." \
-       "$KIT/tools/bump-version.sh::minor"
+       "$KIT/shared/project/tools/bump-version.sh::minor"
   add distill  2 maint "Distill lessons from archive"    "Read every archived feature's LESSONS.md and append to today's L2 daily memory." \
-       "$KIT/tools/distill-lessons.sh"
+       "$KIT/shared/learning/tools/distill-lessons.sh"
   add mem-prom 2 maint "Memory promote (2-strike)"       "Run the L2→L3 promotion state machine; rebuild MEMORY.md root index." \
        "$KIT/memory/tools/promote.sh"
   add mem-roll 2 maint "Memory rollover"                 "Empty stale L1 in-flight decisions; compact L2 daily files older than 7 days into a weekly stub." \
        "$KIT/memory/tools/rollover.sh"
     add claude-check 2 maint "Audit Claude install"       "Run a lightweight check of local Claude/skills/plugins/settings." \
-      "$KIT/tools/lean-claude.sh"
+      "$KIT/shared/audit/tools/lean-claude.sh"
   add patches  2 maint "Review proposed patches"         "Walk through $ARTEFACTS_NAME/proposed-patches/ interactively; accept or skip each." \
-       "$KIT/tools/apply-patches.sh"
+       "$KIT/shared/learning/tools/apply-patches.sh"
 }
 
 cat_label() {
@@ -248,11 +257,11 @@ register_components() {
   COMPONENTS=()
   cadd() { COMPONENTS+=("$1|$2|$3|$4|$5"); }
 
-  cadd statusline   "Statusline"           "$KIT/tools/install-statusline.sh"  "$KIT/tools/install-statusline.sh::--remove" \
+  cadd statusline   "Statusline"           "$KIT/statusline/tools/install-statusline.sh"  "$KIT/statusline/tools/install-statusline.sh::--remove" \
        "Pipeline-aware status bar in .claude/settings.json (statusLine)."
   cadd autoresearch "AutoResearch (Veles)" "$KIT/autoresearch/run.sh::--init"  "::none" \
        "Eval-set + program.md + ratchet self-tuning (builds eval-set from archived features)."
-  cadd memhook      "Memory Stop hook"     "$KIT/tools/memory-hook.sh"         "$KIT/tools/memory-hook.sh::--remove" \
+  cadd memhook      "Memory Stop hook"     "$KIT/memory/tools/memory-hook.sh"         "$KIT/memory/tools/memory-hook.sh::--remove" \
        "Claude Code Stop hook: runs memory promote + rollover when a session/subagent ends."
 }
 
@@ -406,7 +415,7 @@ run_action() {
       if [ ! -t 0 ]; then
         # No TTY → safe default: dry-run so nothing destructive happens by accident.
         printf "  %s→%s no TTY — running teardown.sh --dry-run\n" "$YELLOW" "$RESET"
-        "$KIT/tools/teardown.sh" --dry-run
+        "$KIT/shared/lifecycle/tools/teardown.sh" --dry-run
         return 0
       fi
       printf "  %sExamples:%s --dry-run | --full-clean | --remove-submodule | --yes\n" "$DIM" "$RESET"
@@ -418,7 +427,7 @@ run_action() {
         # shellcheck disable=SC2206  # we want word-splitting, not glob expansion
         IFS=' ' read -r -a teardown_args <<<"$extra"
       fi
-      "$KIT/tools/teardown.sh" "${teardown_args[@]}"
+      "$KIT/shared/lifecycle/tools/teardown.sh" "${teardown_args[@]}"
       ;;
     *)
       # split on "::" sentinel without eval
@@ -435,10 +444,10 @@ print_top_help() {
 kit.sh — single entry point for all manual kit workflows.
 
 USAGE
-  agentic-kit/kit.sh                     # interactive menu
-  agentic-kit/kit.sh <action>            # run a single action and exit
-  agentic-kit/kit.sh --list-json         # dump action registry as JSON
-  agentic-kit/kit.sh --help              # this help
+  talaka/kit.sh                     # interactive menu
+  talaka/kit.sh <action>            # run a single action and exit
+  talaka/kit.sh --list-json         # dump action registry as JSON
+  talaka/kit.sh --help              # this help
 
 ACTIONS (filtered by detected stage; see 'h' inside the menu)
 EOF

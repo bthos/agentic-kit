@@ -13,7 +13,7 @@ have_python() { command -v python3 >/dev/null 2>&1; }
 # Fresh artefacts dir with empty L3 files so promote never awk-errors on a
 # missing target.
 _fresh_art() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   mkdir -p "$art/memory"
   : > "$art/MEMORY.md"
   for f in preferences system projects decisions; do printf '# %s\n' "$f" > "$art/memory/$f.md"; done

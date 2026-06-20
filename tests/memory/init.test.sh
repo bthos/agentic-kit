@@ -9,7 +9,7 @@ INIT="$KIT_ROOT/memory/tools/init.sh"
 _init() { ARTEFACTS_DIR="$1" bash "$INIT" "${@:2}" >/dev/null 2>&1; }
 
 test_creates_all_layers() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   _init "$art" || fail "init failed"
   assert_file_exists "$art/MEMORY.md"             "L4 root"
   assert_file_exists "$art/SESSION-STATE.md"      "L1 hot state"
@@ -21,7 +21,7 @@ test_creates_all_layers() {
 }
 
 test_skips_existing_without_force() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   _init "$art"
   printf '\nUSER EDIT\n' >> "$art/memory/preferences.md"
   _init "$art"   # second run, no --force
@@ -29,7 +29,7 @@ test_skips_existing_without_force() {
 }
 
 test_force_overwrites_from_template() {
-  local art; art="$(make_tmp_project)/.akt"
+  local art; art="$(make_tmp_project)/.tlk"
   _init "$art"
   printf '\nUSER EDIT\n' >> "$art/memory/preferences.md"
   _init "$art" --force
@@ -41,7 +41,7 @@ test_artefacts_dir_override_is_honoured() {
   local art="$proj/.kit-state"
   _init "$art"
   assert_dir_exists "$art/memory" "custom ARTEFACTS_DIR used"
-  assert_file_absent "$proj/.akt" "default .akt not created when overridden"
+  assert_file_absent "$proj/.tlk" "default .tlk not created when overridden"
 }
 
 run_tests "$@"

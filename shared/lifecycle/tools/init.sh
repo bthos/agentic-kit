@@ -1,29 +1,31 @@
 #!/usr/bin/env bash
 # Run from the target project root after adding the submodule.
-# Usage: agentic-kit/tools/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive]
+# Usage: talaka/shared/lifecycle/tools/init.sh [--force | --overwrite-all | --skip | --skip-all | --non-interactive]
 #
 # What this script does (minimally invasive by design):
 #
-#   1.  Creates `.akt/` and copies the canonical pipeline doc + project config:
-#         .akt/PIPELINE.md   (kit-managed; refreshed on update)
-#         .akt/PROJECT.md    (you edit; kept on update)
+#   1.  Creates `.tlk/` and copies the canonical pipeline doc + project config:
+#         .tlk/PIPELINE.md   (kit-managed; refreshed on update)
+#         .tlk/PROJECT.md    (you edit; kept on update)
 #
 #   2.  Installs agents (.claude/agents/) and skills (.claude/skills/) from the
 #       kit submodule. SHA-256 of every installed file is recorded in
-#       .akt/.agentic-kit.files so teardown.sh refuses to delete paths you have
+#       .tlk/.talaka.files so teardown.sh refuses to delete paths you have
 #       edited locally.
 #
 #   3.  Adds a managed include block to (or creates) the entry-point files:
 #         CLAUDE.md   (read natively by Claude Code)
 #         AGENTS.md   (the cross-IDE convention — read by any workspace-aware tool)
-#       Block delimiters: <!-- agentic-kit:start --> ... <!-- agentic-kit:end -->
+#       Block delimiters: <!-- talaka:start --> ... <!-- talaka:end -->
 #       Existing user content above/below the markers is preserved verbatim.
 #
-#   4.  Adds a managed block to .gitignore for ephemeral state under
-#         .akt/{memory,features,archive,proposed-patches,scratch} plus
-#         .akt/.agentic-kit.cfg and .akt/.agentic-kit.files
-#       PIPELINE.md and PROJECT.md inside .akt/ are NOT ignored — your team
-#       should commit them.
+#   4.  Adds a managed block to .gitignore. talaka is a per-developer tool:
+#       it commits nothing of its own. The block ignores ALL of .tlk/ (memory,
+#       features, PIPELINE.md, PROJECT.md, bookkeeping — every bit is personal
+#       working state) plus the kit-installed .claude/agents|skills copies. A
+#       second kit user just re-runs this script to regenerate it all; a
+#       teammate who does not use the kit sees none of it. (curating-knowledge's wiki/ lives
+#       at the project root, outside .tlk/, so it CAN be committed.)
 #
 # Flags:
 #   --force, --overwrite-all   Overwrite all existing kit-managed paths without prompting
@@ -58,27 +60,31 @@ PROJECT_TEMPLATE="$SCRIPT_DIR/templates/PROJECT.md.template"
 show_help() {
   cat <<'EOF'
 
-  agentic-kit / init.sh
+  talaka / init.sh
 
-  Bootstrap agentic-kit in the current project (run from project root).
+  Bootstrap talaka in the current project (run from project root).
 
   USAGE
-    agentic-kit/tools/init.sh [--force | --overwrite-all | --skip | --skip-all]
+    talaka/shared/lifecycle/tools/init.sh [--force | --overwrite-all | --skip | --skip-all]
                               [--non-interactive | -n | --yes | -y]
                               [--tune | --no-tune]
                               [--help | -h]
 
   WHAT IT DOES
-    1. Writes .akt/PIPELINE.md (canonical pipeline) and .akt/PROJECT.md
+    1. Writes .tlk/PIPELINE.md (canonical pipeline) and .tlk/PROJECT.md
        (project-specific config; you fill in placeholders).
     2. Copies agents to .claude/agents/ and skills to .claude/skills/.
     3. Adds a managed include block to CLAUDE.md and AGENTS.md, both pointing
-       at .akt/PIPELINE.md. Existing user content is preserved verbatim.
-    4. Adds a managed block to .gitignore for ephemeral state.
+       at .tlk/PIPELINE.md. Existing user content is preserved verbatim.
+    4. Adds a managed .gitignore block. The kit is per-developer and commits
+       nothing: the block ignores all of .tlk/ plus the kit's .claude/ copies.
+       (curating-knowledge's wiki/ lives at the project root so it stays committable.)
 
   CROSS-IDE
     Claude Code reads CLAUDE.md natively. Any other workspace-aware IDE picks
     up AGENTS.md (the cross-IDE convention). One install covers all of them.
+    The include just points at .tlk/PIPELINE.md — a no-op for teammates who do
+    not run the kit, so leaving these entry-point files committed is harmless.
 
   OPTIONS
     --non-interactive, -n   Agent / CI mode: no prompts, accept all defaults,
@@ -99,8 +105,8 @@ show_help() {
 
     --tune                  After install, probe the project (stack, frameworks,
                             test/build commands, conventions) and write
-                            .akt/PROJECT_PROFILE.md so agents can self-tune.
-                            Calls `agentic-kit/tools/probe-project.sh --force`.
+                            .tlk/PROJECT_PROFILE.md so agents can self-tune.
+                            Calls `talaka/shared/project/tools/probe-project.sh --force`.
     --no-tune               Skip the probe step (default).
 
     --help, -h              Show this help and exit.
@@ -114,17 +120,17 @@ show_help() {
       d  show diff (current vs. incoming) — only when both are plain files
 
   AGENT INVOCATION
-    agentic-kit/tools/init.sh --non-interactive
+    talaka/shared/lifecycle/tools/init.sh --non-interactive
 
     After the script exits, read the [AGENT ACTION REQUIRED] block in the output
-    and fill in .akt/PROJECT.md yourself (inspect package.json, pyproject.toml,
+    and fill in .tlk/PROJECT.md yourself (inspect package.json, pyproject.toml,
     Cargo.toml, go.mod, Makefile, etc.), then run:
-      agentic-kit/tools/validate-config.sh
+      talaka/shared/project/tools/validate-config.sh
 
   EXAMPLES
-    agentic-kit/tools/init.sh                          # interactive
-    agentic-kit/tools/init.sh --non-interactive        # CI / agent
-    agentic-kit/tools/init.sh --skip-all               # keep all existing kit paths
+    talaka/shared/lifecycle/tools/init.sh                          # interactive
+    talaka/shared/lifecycle/tools/init.sh --non-interactive        # CI / agent
+    talaka/shared/lifecycle/tools/init.sh --skip-all               # keep all existing kit paths
 
 EOF
 }
@@ -176,7 +182,7 @@ for arg in "$@"; do
     --skip|--skip-all)               MODE="skip" ;;
     --non-interactive|-n|--yes|-y)   NON_INTERACTIVE=true ;;
     --ide=*)
-      err "--ide=* was removed; agentic-kit now installs a single Claude-shaped layout."
+      err "--ide=* was removed; talaka now installs a single Claude-shaped layout."
       err "Cursor, GitHub Copilot and other workspace-aware IDEs read AGENTS.md."
       err "See CHANGELOG.md. Re-run without --ide=."
       exit 2
@@ -232,29 +238,29 @@ install_pipeline_include() {
   local block_sha
 
   if [ -f "$dest" ]; then
-    if agentic_block_present "$dest"; then
+    if talaka_block_present "$dest"; then
       if should_overwrite "$label"; then
-        agentic_block_strip "$dest" >/dev/null 2>&1 || true
-        agentic_block_append "$dest" "$PIPELINE_REL"
-        block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL")")
+        talaka_block_strip "$dest" >/dev/null 2>&1 || true
+        talaka_block_append "$dest" "$PIPELINE_REL"
+        block_sha=$(kit_sha256_string "$(talaka_block_render "$PIPELINE_REL")")
         manifest_set_hash "$dest_rel" "block:$block_sha"
         success "$label (block refreshed)"
       else
-        block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL")")
+        block_sha=$(kit_sha256_string "$(talaka_block_render "$PIPELINE_REL")")
         manifest_set_hash "$dest_rel" "block:$block_sha"
         info "$label (block already present — manifest synced)"
       fi
     else
-      agentic_block_append "$dest" "$PIPELINE_REL"
-      block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL")")
+      talaka_block_append "$dest" "$PIPELINE_REL"
+      block_sha=$(kit_sha256_string "$(talaka_block_render "$PIPELINE_REL")")
       manifest_set_hash "$dest_rel" "block:$block_sha"
       success "$label (block appended; existing content preserved)"
     fi
     return 0
   fi
 
-  agentic_block_write_stub "$dest" "$PIPELINE_REL"
-  block_sha=$(kit_sha256_string "$(agentic_block_render "$PIPELINE_REL")")
+  talaka_block_write_stub "$dest" "$PIPELINE_REL"
+  block_sha=$(kit_sha256_string "$(talaka_block_render "$PIPELINE_REL")")
   manifest_set_hash "$dest_rel" "stub:$(kit_sha256_file "$dest")"
   success "$label (created with include block)"
 }
@@ -299,7 +305,7 @@ setup_kit() {
 }
 
 # ---------------------------------------------------------------------------
-# .akt/ (canonical home for PIPELINE.md and PROJECT.md)
+# .tlk/ (canonical home for PIPELINE.md and PROJECT.md)
 # ---------------------------------------------------------------------------
 setup_artefacts_dir() {
   header "$ARTEFACTS_NAME/ (pipeline + project config)"
@@ -348,13 +354,13 @@ setup_gitignore() {
   local file="$PROJECT_ROOT/.gitignore"
   local action="appended"
 
-  if [ -f "$file" ] && agentic_gitignore_present "$file"; then
+  if [ -f "$file" ] && talaka_gitignore_present "$file"; then
     if should_overwrite ".gitignore (managed block)"; then
-      agentic_gitignore_strip "$file" >/dev/null 2>&1 || true
+      talaka_gitignore_strip "$file" >/dev/null 2>&1 || true
       action="refreshed"
     else
       info ".gitignore (managed block already present)"
-      manifest_set_hash ".gitignore" "block:$(kit_sha256_string "$(agentic_gitignore_render)")"
+      manifest_set_hash ".gitignore" "block:$(kit_sha256_string "$(talaka_gitignore_render)")"
       return 0
     fi
   elif [ ! -f "$file" ]; then
@@ -367,8 +373,8 @@ setup_gitignore() {
     [ "$last_byte" != $'\n' ] && printf '\n' >> "$file"
     printf '\n' >> "$file"
   fi
-  agentic_gitignore_render >> "$file"
-  manifest_set_hash ".gitignore" "block:$(kit_sha256_string "$(agentic_gitignore_render)")"
+  talaka_gitignore_render >> "$file"
+  manifest_set_hash ".gitignore" "block:$(kit_sha256_string "$(talaka_gitignore_render)")"
   case "$action" in
     refreshed) success ".gitignore (managed block refreshed)" ;;
     created)   success ".gitignore (created with managed block)" ;;
@@ -379,7 +385,7 @@ setup_gitignore() {
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-kit_banner "agentic-kit"
+kit_banner "$KIT_BRAND"
 info "project root: $PROJECT_ROOT"
 info "kit location: $SUBMODULE_DIR/"
 info "artefacts:    $ARTEFACTS_NAME/  (pipeline doc, project config, memory, features)"
@@ -391,13 +397,13 @@ if [ -n "$_saved_sha" ]; then
   if [ -n "$_current_sha" ] && [ "$_current_sha" != "$_saved_sha" ]; then
     warn "PIPELINE.md.template has changed since last init."
     info "Review:  diff $PIPELINE_TARGET $PIPELINE_TEMPLATE"
-    info "Refresh: $SUBMODULE_DIR/tools/init.sh --force"
+    info "Refresh: $SUBMODULE_DIR/shared/lifecycle/tools/init.sh --force"
   fi
 fi
 
 # ---------------------------------------------------------------------------
 # Run setups — wrapped in a manifest transaction so all SHA updates land in one
-# atomic write at the end (instead of rewriting .agentic-kit.files per entry).
+# atomic write at the end (instead of rewriting .talaka.files per entry).
 # ---------------------------------------------------------------------------
 FRESH_PROJECT_MD=false
 
@@ -434,7 +440,7 @@ if [ "$FRESH_PROJECT_MD" = true ]; then
     printf "  Inspect the project files (package.json, pyproject.toml, Cargo.toml, go.mod,\n"
     printf "  Makefile, etc.) to infer the test command, build command, and version files.\n"
     printf "  Replace every <placeholder> in $PROJECT_REL with the correct value.\n"
-    printf "  Then run: ${SUBMODULE_DIR}/tools/validate-config.sh\n\n"
+    printf "  Then run: ${SUBMODULE_DIR}/shared/project/tools/validate-config.sh\n\n"
   else
     run_fill=false
     if [ -n "$fill_cli" ]; then
@@ -455,7 +461,7 @@ if [ "$FRESH_PROJECT_MD" = true ]; then
       info "Running Claude..."
       ( cd "$PROJECT_ROOT" && printf '%s\n' "$project_md_fill_prompt" | claude -p --allowedTools 'Edit,Write,Read,Glob,Grep,Bash' )
       success "$PROJECT_REL filled in"
-      info "Run ${SUBMODULE_DIR}/tools/validate-config.sh to verify."
+      info "Run ${SUBMODULE_DIR}/shared/project/tools/validate-config.sh to verify."
     else
       if [ -n "$fill_cli" ] && [ ! -t 0 ]; then
         info "$PROJECT_REL auto-fill skipped (no TTY). Pass --non-interactive for agent/CI mode, or edit it manually."
@@ -464,13 +470,13 @@ if [ "$FRESH_PROJECT_MD" = true ]; then
         info "Claude CLI (\`claude\`) not on PATH — install Claude Code or fill $PROJECT_REL manually."
       fi
       info "Edit $PROJECT_REL → Project-Specific Configuration, then run:"
-      info "${SUBMODULE_DIR}/tools/validate-config.sh"
+      info "${SUBMODULE_DIR}/shared/project/tools/validate-config.sh"
     fi
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# Write .akt/.agentic-kit.cfg (persist template sha + kit version + resolved
+# Write .tlk/.talaka.cfg (persist template sha + kit version + resolved
 # paths so other tools/agents can read them without re-running discovery).
 # ---------------------------------------------------------------------------
 _pipeline_sha=$(kit_sha256_file "$PIPELINE_TEMPLATE" 2>/dev/null || true)
@@ -488,10 +494,10 @@ kit_cfg_set_many \
   SUBMODULE_DIR   "$SUBMODULE_DIR"
 
 # ---------------------------------------------------------------------------
-# Project probe (--tune): write .akt/PROJECT_PROFILE.md so agents self-tune
+# Project probe (--tune): write .tlk/PROJECT_PROFILE.md so agents self-tune
 # ---------------------------------------------------------------------------
 if $TUNE; then
-  _probe="$SCRIPT_DIR/tools/probe-project.sh"
+  _probe="$SCRIPT_DIR/shared/project/tools/probe-project.sh"
   if [ -x "$_probe" ]; then
     info "Probing project to write $ARTEFACTS_NAME/PROJECT_PROFILE.md (--tune)…"
     _probe_args=( "--force" )
@@ -558,7 +564,7 @@ fi
 # memory/tools/tick.sh (promote + rollover) so the memory tree stays fresh
 # without a cron job. We never edit settings.json silently — it's a choice.
 # ---------------------------------------------------------------------------
-_hook_install="$SCRIPT_DIR/tools/memory-hook.sh"
+_hook_install="$SCRIPT_DIR/memory/tools/memory-hook.sh"
 _settings_file="$PROJECT_ROOT/.claude/settings.json"
 _do_hook=false
 if [ "$MEMORY_HOOK" = "yes" ]; then
@@ -592,7 +598,7 @@ fi
 # ---------------------------------------------------------------------------
 # Statusline: pipeline-aware status bar for Claude Code
 # ---------------------------------------------------------------------------
-_sl_install="$SCRIPT_DIR/tools/install-statusline.sh"
+_sl_install="$SCRIPT_DIR/statusline/tools/install-statusline.sh"
 if [ -x "$_sl_install" ]; then
   info "Configuring pipeline-aware statusline…"
   if ! ( cd "$PROJECT_ROOT" && "$_sl_install" ); then
@@ -613,12 +619,12 @@ printf "  ${DIM}%-38s${RESET} %s\n" "Skills installed:"  "${CYAN}.claude/skills/
 printf "  ${DIM}%-38s${RESET} %s\n" "Statusline:"        "${CYAN}.claude/settings.json (statusLine)${RESET}"
 
 printf "\n  ${BOLD}Next steps${RESET}\n"
-printf "  ${DIM}%-38s${RESET} %s\n" "Start a feature:"       "${CYAN}/vadavik${RESET}"
-printf "  ${DIM}%-38s${RESET} %s\n" "Check feature status:"  "${CYAN}${SUBMODULE_DIR}/tools/feature-status.sh${RESET}"
-printf "  ${DIM}%-38s${RESET} %s\n" "Validate config:"       "${CYAN}${SUBMODULE_DIR}/tools/validate-config.sh${RESET}"
-printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/tools/update.sh${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Start a feature:"       "${CYAN}/eliciting-requirements${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Check feature status:"  "${CYAN}${SUBMODULE_DIR}/shared/project/tools/feature-status.sh${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Validate config:"       "${CYAN}${SUBMODULE_DIR}/shared/project/tools/validate-config.sh${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/shared/lifecycle/tools/update.sh${RESET}"
 
 printf "\n  ${BOLD}Removal${RESET}\n"
-printf "  ${DIM}%-38s${RESET} %s\n" "Strip kit:" "${CYAN}${SUBMODULE_DIR}/tools/teardown.sh${RESET}"
-printf "  ${DIM}%-38s${RESET} %s\n" "Strip kit + remove submodule:" "${CYAN}${SUBMODULE_DIR}/tools/teardown.sh --remove-submodule${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Strip kit:" "${CYAN}${SUBMODULE_DIR}/shared/lifecycle/tools/teardown.sh${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Strip kit + remove submodule:" "${CYAN}${SUBMODULE_DIR}/shared/lifecycle/tools/teardown.sh --remove-submodule${RESET}"
 printf '\n'

@@ -2,14 +2,14 @@
 # Drives N rounds of (mutate → ratchet) over installed agent/skill files.
 #
 # Usage:
-#   agentic-kit/autoresearch/run.sh --rounds=3
-#   agentic-kit/autoresearch/run.sh --init                 # install templates + build eval-set
-#   agentic-kit/autoresearch/run.sh --rounds=2 --target .claude/agents/cmok.md
+#   talaka/autoresearch/run.sh --rounds=3
+#   talaka/autoresearch/run.sh --init                 # install templates + build eval-set
+#   talaka/autoresearch/run.sh --rounds=2 --target .claude/agents/cmok.md
 #
 # Run from project root.
 #
 # Environment:
-#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .akt)
+#   ARTEFACTS_DIR  Path to the project artefacts folder (default: .tlk)
 
 set -euo pipefail
 
@@ -29,7 +29,7 @@ fi
 PKG_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATES_DIR="$(cd "$PKG_DIR/../templates/autoresearch" && pwd)"
 PROJECT_ROOT="$(pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.akt}"
+ARTEFACTS="${ARTEFACTS_DIR:-$PROJECT_ROOT/.tlk}"
 
 EVAL_DIR="$ARTEFACTS/autoresearch/eval-set"
 RUNS_DIR="$ARTEFACTS/autoresearch/runs"
@@ -56,7 +56,7 @@ done
 
 mkdir -p "$EVAL_DIR" "$RUNS_DIR" "$VARIANTS_DIR" "$TOOLS_DIR"
 
-# Default log file: .akt/autoresearch/runs/YYYYMMDD-HH.log
+# Default log file: .tlk/autoresearch/runs/YYYYMMDD-HH.log
 if [ -z "${LOG_FILE:-}" ]; then
   LOG_FILE="$RUNS_DIR/$(date -u +%Y%m%d-%H).log"
 fi
@@ -93,7 +93,7 @@ fi
 
 # Guard: program.md must exist (run --init first)
 if [ ! -f "$PROGRAM" ]; then
-  echo "autoresearch not initialised — run: agentic-kit/autoresearch/run.sh --init" >&2
+  echo "autoresearch not initialised — run: talaka/autoresearch/run.sh --init" >&2
   exit 1
 fi
 
@@ -116,7 +116,7 @@ else
 fi
 
 if [ ${#candidates[@]} -eq 0 ]; then
-  echo "No installed agent/skill files found — run agentic-kit/tools/init.sh first." >&2
+  echo "No installed agent/skill files found — run talaka/shared/lifecycle/tools/init.sh first." >&2
   exit 1
 fi
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Degraded Yaga log server — used when python3 is unavailable.
+# Degraded debug log server — used when python3 is unavailable.
 # Accepts POSTs to /log /console /network via nc and appends raw JSON bodies
 # (one per line) to <investigation>/runtime.jsonl. No /tail, no /stream — the
 # agent reads runtime.jsonl directly via `tail -n` or `tail -F`.
 #
-# Usage: yaga-log-server.sh --investigation <dir> [--port 0]
+# Usage: debug-log-server.sh --investigation <dir> [--port 0]
 
 set -euo pipefail
 
@@ -24,7 +24,7 @@ if [ -z "$INV" ] || [ ! -d "$INV" ]; then
 fi
 
 if ! command -v nc >/dev/null 2>&1; then
-  echo "ERROR: nc (netcat) not found — install netcat or use yaga-log-server.py instead" >&2
+  echo "ERROR: nc (netcat) not found — install netcat or use debug-log-server.py instead" >&2
   exit 3
 fi
 
@@ -64,11 +64,11 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-echo "yaga-log-server (bash fallback) listening on 127.0.0.1:$PORT  (investigation=$(basename "$INV"))"
+echo "debug-log-server (bash fallback) listening on 127.0.0.1:$PORT  (investigation=$(basename "$INV"))"
 
 # Minimal HTTP loop: read request, extract body, append to runtime.jsonl, reply 200.
 while true; do
-  nc -l 127.0.0.1 "$PORT" >/dev/null 2>/tmp/yaga.req.$$ <<EOF || true
+  nc -l 127.0.0.1 "$PORT" >/dev/null 2>/tmp/debug.req.$$ <<EOF || true
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Length: 11
@@ -77,9 +77,9 @@ Connection: close
 {"ok":true}
 EOF
   # Extract body (after blank line) from the captured request.
-  if [ -s /tmp/yaga.req.$$ ]; then
-    awk 'BEGIN{body=0} /^\r?$/{body=1;next} body{print}' /tmp/yaga.req.$$ >> "$RUNTIME" || true
+  if [ -s /tmp/debug.req.$$ ]; then
+    awk 'BEGIN{body=0} /^\r?$/{body=1;next} body{print}' /tmp/debug.req.$$ >> "$RUNTIME" || true
     echo "" >> "$RUNTIME"
   fi
-  rm -f /tmp/yaga.req.$$
+  rm -f /tmp/debug.req.$$
 done

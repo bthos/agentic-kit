@@ -11,7 +11,7 @@
 
 - **Files to change:** [`path/to/file.ext`]
 - **Smallest change that resolves the mechanism:** [one or two sentences. Not a code diff — a description of the change.]
-- **Tests to add or update:** [pointers — Laznik or Cmok will own the exact test code.]
+- **Tests to add or update:** [pointers — planning-architecture or Cmok will own the exact test code.]
 
 ## Evidence
 

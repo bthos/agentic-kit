@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Distills LESSONS.md files from archived features into the layered memory tree.
-# Usage: agentic-kit/tools/distill-lessons.sh [--target=memory|agents|both]
+# Usage: talaka/shared/learning/tools/distill-lessons.sh [--target=memory|agents|both]
 #
 #   --target=memory  (default) Append schema-compliant entries into today's L2
-#                              daily file (.akt/memory/YYYY-MM-DD.md),
-#                              then run memory-promote.sh so the 2-strike rule,
+#                              daily file (.tlk/memory/YYYY-MM-DD.md),
+#                              then run memory/tools/promote.sh so the 2-strike rule,
 #                              supersedes resolver, and L4 root index update
 #                              automatically.
 #   --target=agents            Write proposed per-agent patches to
-#                              .akt/proposed-patches/<agent>.md so
+#                              .tlk/proposed-patches/<agent>.md so
 #                              a human (or `apply-patches.sh`) can review and merge
 #                              them into the installed agent copies
 #                              (self-improvement Layer 2).
@@ -16,14 +16,15 @@
 #
 # Override the artefacts directory with $ARTEFACTS_DIR.
 #
-# Reads all .akt/archive/*/LESSONS.md files and uses the Claude
+# Reads all .tlk/archive/*/LESSONS.md files and uses the Claude
 # CLI. Requires: claude CLI on PATH.
 # Run from project root.
 
 set -euo pipefail
 
-KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ARTEFACTS="${ARTEFACTS_DIR:-.akt}"
+# distill-lessons.sh lives at <kit>/shared/learning/tools/ — kit root is three levels up.
+KIT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+ARTEFACTS="${ARTEFACTS_DIR:-.tlk}"
 ARCHIVE_DIR="$ARTEFACTS/archive"
 MEM_DIR="$ARTEFACTS/memory"
 PATCHES_DIR="$ARTEFACTS/proposed-patches"
@@ -113,7 +114,7 @@ $(cat "$tmp")
 
 ${existing_context}Produce a list of schema-compliant memory entries to APPEND to today's daily file.
 
-The schema (see agentic-kit/templates/memory/SCHEMA.md) is exactly:
+The schema (see talaka/templates/memory/SCHEMA.md) is exactly:
 
 - id: pending
   decided: $today
@@ -126,7 +127,7 @@ The schema (see agentic-kit/templates/memory/SCHEMA.md) is exactly:
 
 Rules:
 - Output ONLY a sequence of bullet blocks of the shape above. No preamble, no markdown headings, no fenced code blocks.
-- Use 'id: pending' literally — memory-promote.sh will hash it.
+- Use 'id: pending' literally — memory/tools/promote.sh will hash it.
 - Use the smallest, most concrete 'text:' you can. Reference real files / commands / artefacts where useful.
 - Prefer 'pattern' for repeatable ways of doing things, 'anti-pattern' for things to avoid, 'decision' for explicit choices, 'tool'/'library' for new dependencies, 'project' for canonical per-feature summaries.
 - Skip lessons already captured in the root summary above.
@@ -226,7 +227,7 @@ Output only the fenced patch blocks (or NO_PATCHES). No preamble."
     writing==1 { print >> file }
   ' <<<"$raw"
 
-  echo "Wrote proposals to $PATCHES_DIR/. Review with: agentic-kit/tools/apply-patches.sh"
+  echo "Wrote proposals to $PATCHES_DIR/. Review with: talaka/shared/learning/tools/apply-patches.sh"
 }
 
 PROJECT_ROOT="$(pwd)"

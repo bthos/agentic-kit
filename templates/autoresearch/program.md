@@ -21,8 +21,8 @@ composite = accuracy_score − λ · cost_normalized
 3. **The judge is sacred.** Never edit `judge.md` to make scoring looser. Veles hashes `judge.md` at round start and end; mismatch = abort round.
 4. **Eval-set is read-only for Veles.** New eval pairs are added by humans or by `tools/build-eval-set.sh` (which only adds, never edits or removes).
 5. **No network mutations.** Veles never runs `git push`, `gh pr create`, package publish commands, deployment commands, or anything that affects systems beyond the project root.
-6. **No `rm -rf`.** Veles only modifies installed agent/skill copies and writes to `agentic-kit/autoresearch/`.
-7. **Manifest integrity.** After every accepted mutation, `.akt/.agentic-kit.files` must record the new SHA-256 for the changed file. `teardown.sh` must still recognise the file as kit-managed.
+6. **No `rm -rf`.** Veles only modifies installed agent/skill copies and writes to `talaka/autoresearch/`.
+7. **Manifest integrity.** After every accepted mutation, `.tlk/.talaka.files` must record the new SHA-256 for the changed file. `teardown.sh` must still recognise the file as kit-managed.
 
 ## Allowed mutation targets
 
@@ -36,7 +36,7 @@ Veles may modify:
 
 Veles may **NOT** modify:
 
-- The kit source under `agentic-kit/` (only the user does that, via PRs).
+- The kit source under `talaka/` (only the user does that, via PRs).
 - `PROJECT.md`, `CLAUDE.md`, `AGENTS.md`, `templates/PIPELINE.md.template`, `templates/PROJECT.md.template`.
 - `program.md`, `judge.md`, `eval-set/`.
 

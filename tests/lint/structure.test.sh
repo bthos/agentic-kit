@@ -60,13 +60,13 @@ test_no_plugin_dependency_in_shipped_artifacts() {
 
 test_managed_block_markers_are_balanced() {
   # lib.sh defines paired begin/end markers; render output must contain both.
-  source "$KIT_ROOT/tools/lib.sh"
-  local out; out=$(agentic_block_render ".akt/PIPELINE.md")
-  assert_contains "$out" "$AGENTIC_BLOCK_BEGIN"
-  assert_contains "$out" "$AGENTIC_BLOCK_END"
-  out=$(agentic_gitignore_render)
-  assert_contains "$out" "$AGENTIC_GITIGNORE_BEGIN"
-  assert_contains "$out" "$AGENTIC_GITIGNORE_END"
+  source "$KIT_ROOT/shared/lifecycle/tools/lib.sh"
+  local out; out=$(talaka_block_render ".tlk/PIPELINE.md")
+  assert_contains "$out" "$TALAKA_BLOCK_BEGIN"
+  assert_contains "$out" "$TALAKA_BLOCK_END"
+  out=$(talaka_gitignore_render)
+  assert_contains "$out" "$TALAKA_GITIGNORE_BEGIN"
+  assert_contains "$out" "$TALAKA_GITIGNORE_END"
 }
 
 test_shell_scripts_are_syntactically_valid() {

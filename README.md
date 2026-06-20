@@ -1,8 +1,8 @@
-# Agentic Kit
+# Talaka
 
-A reusable AI development pipeline — 4 agents, 4 skills, and a structured handoff protocol. Installs one Claude-shaped layout (`.claude/agents/`, `.claude/skills/`) with two entry-point files at the project root: **`CLAUDE.md`** (read natively by Claude Code) and **`AGENTS.md`** (the cross-IDE convention — read by any workspace-aware tool that follows the AGENTS.md spec). One install covers every IDE.
+A reusable AI development pipeline — 6 agents, 10 skills, and a structured handoff protocol. Installs one Claude-shaped layout (`.claude/agents/`, `.claude/skills/`) with two entry-point files at the project root: **`CLAUDE.md`** (read natively by Claude Code) and **`AGENTS.md`** (the cross-IDE convention — read by any workspace-aware tool that follows the AGENTS.md spec). One install covers every IDE.
 
-The kit is **minimally invasive**: every kit-touched path is either inside `.akt/`, inside `.claude/`, or wrapped in a removable `<!-- agentic-kit:start --> … <!-- agentic-kit:end -->` block in `CLAUDE.md` / `AGENTS.md` / `.gitignore`. `teardown.sh` strips the block (or removes the file when its SHA-256 still matches the kit copy recorded in `.akt/.agentic-kit.files`), so manual edits are always preserved.
+The kit is **minimally invasive** and **per-developer** (it commits nothing of its own): every kit-touched path is either inside the git-ignored `.tlk/`, inside `.claude/`, the optional committed `wiki/`, or wrapped in a removable `<!-- talaka:start --> … <!-- talaka:end -->` block in `CLAUDE.md` / `AGENTS.md` / `.gitignore`. `teardown.sh` strips the block (or removes the file when its SHA-256 still matches the kit copy recorded in `.tlk/.talaka.files`), so manual edits are always preserved.
 
 Import as a git submodule in under a minute.
 
@@ -11,10 +11,10 @@ Import as a git submodule in under a minute.
 A self-organizing team of AI agents for structured development. Each agent knows its role and who to hand off to next. Quality gates ensure nothing ships without passing Bagnik.
 
 ```
-Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
-     → Cmok /skill/ (mockups) → User UAT
-     → Laznik (arch + tests) → Bagnik (test gate)
-     → Cmok /agent/ (build) + Mokash (docs, parallel) → Bagnik (code QA)
+Idea → eliciting-requirements (spec) → designing-ux (UX) + Mokash (docs, parallel)
+     → creating-mockups (mockups) → User UAT
+     → planning-architecture (arch + tests) → Bagnik (test gate)
+     → Cmok (build) + Mokash (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
 ```
 
@@ -33,50 +33,55 @@ Idea → Vadavik (spec) → Lojma (UX) + Mokash (docs, parallel)
 
 | Skill    | Role                         |
 |----------|------------------------------|
-| Vadavik  | Spec & requirements          |
-| Lojma    | UX design                    |
-| Cmok     | UX mockups                   |
-| Laznik   | Architecture & tests         |
-| Yaga     | Hypothesis design for hard bugs |
+| eliciting-requirements  | Spec & requirements          |
+| designing-ux    | UX design                    |
+| creating-mockups | UX mockups                   |
+| planning-architecture   | Architecture & tests         |
+| diagnosing-bugs | Hypothesis design for hard bugs |
+| curating-knowledge    | Knowledge wiki — ingest / query / lint over `wiki/` (Karpathy's LLM-wiki pattern) |
+| designing-cli  | CLI factory — design agent-native CLIs from API specs (printing-press pattern) |
+| mapping-codebase | Codebase onboarding — structured map of an unfamiliar repo (tree, entry points, invocation edges, conventions) |
+| auditing-consistency | Cross-corpus drift audit — hardcoded values, contradictions, terminology drift, gaps; ranked + located, hands fixes to Cmok |
+| adapting-patterns | External pattern → project fit — research a gist/repo/tool, extract the core insight, design the adaptation |
 
 ## Quick start
 
 ```bash
 cd your-project
-git submodule add https://github.com/bthos/agentic-kit agentic-kit
+git submodule add https://github.com/bthos/talaka talaka
 
 # Interactive launcher — recommended for humans. Detects install stage and
 # only offers actions that make sense (init when not installed, validate +
 # edit PROJECT.md when unconfigured, full menu once ready).
-agentic-kit/kit.sh
+talaka/kit.sh
 
 # Or call init.sh directly — recommended for scripts and CI.
-agentic-kit/tools/init.sh
+talaka/shared/lifecycle/tools/init.sh
 ```
 
-`agentic-kit/kit.sh` is a stage-aware menu: at stage **0 (not installed)** it only shows `init`; at stage **1 (needs config)** it adds `probe`, `edit PROJECT.md`, `validate`, `teardown`, and an **Optional components** submenu; at stage **2 (ready)** it surfaces the full set — feature status, memory search, version bumps, memory rollover/promotion, distill lessons, apply patches. The **Optional components** submenu installs/removes opt-in add-ons (statusline, AutoResearch, memory Stop hook) from one place, each showing live `[installed]`/`[off]` status — adding a new add-on is one registry row. Press `h` for inline descriptions of every action. For CI / agents, pass an action as a positional argument: `agentic-kit/kit.sh status` runs once and exits; `agentic-kit/kit.sh --list-json` dumps the action registry as JSON; `agentic-kit/kit.sh --help` prints the full reference.
+`talaka/kit.sh` is a stage-aware menu: at stage **0 (not installed)** it only shows `init`; at stage **1 (needs config)** it adds `probe`, `edit PROJECT.md`, `validate`, `teardown`, and an **Optional components** submenu; at stage **2 (ready)** it surfaces the full set — feature status, memory search, version bumps, memory rollover/promotion, distill lessons, apply patches. The **Optional components** submenu installs/removes opt-in add-ons (statusline, AutoResearch, memory Stop hook) from one place, each showing live `[installed]`/`[off]` status — adding a new add-on is one registry row. Press `h` for inline descriptions of every action. For CI / agents, pass an action as a positional argument: `talaka/kit.sh status` runs once and exits; `talaka/kit.sh --list-json` dumps the action registry as JSON; `talaka/kit.sh --help` prints the full reference.
 
 > **Requirements.** Bash ≥ 4.0 (uses `read -a`, associative-style arrays, `[[ … ]]`). On Windows use **MSYS2 / Git Bash**. macOS / Linux work out of the box.
 
-`tools/init.sh` installs one layout regardless of which IDE you use. Non-interactive / CI:
+`shared/lifecycle/tools/init.sh` installs one layout regardless of which IDE you use. Non-interactive / CI:
 
 ```bash
-agentic-kit/tools/init.sh                                    # interactive
-agentic-kit/tools/init.sh --non-interactive                  # CI / agent
-agentic-kit/tools/init.sh -n                                 # short alias
+talaka/shared/lifecycle/tools/init.sh                                    # interactive
+talaka/shared/lifecycle/tools/init.sh --non-interactive                  # CI / agent
+talaka/shared/lifecycle/tools/init.sh -n                                 # short alias
 
 # Other non-interactive bulk choices:
-agentic-kit/tools/init.sh --skip-all       # keep all existing kit paths, no prompts
-agentic-kit/tools/init.sh --overwrite-all  # replace all kit-managed files, no prompts
+talaka/shared/lifecycle/tools/init.sh --skip-all       # keep all existing kit paths, no prompts
+talaka/shared/lifecycle/tools/init.sh --overwrite-all  # replace all kit-managed files, no prompts
 ```
 
 When a kit-managed path already exists, the interactive prompt is: **s**kip this file, **o**verwrite this file, overwrite **a**ll remaining, skip **r**est (this file and every later conflict), or **d**iff (show `diff -u` of your copy vs the kit's before you decide).
 
-> **`.akt/PROJECT.md` is never part of this prompt.** It holds *your* project config and is *meant* to diverge from the template, so init/update always **keep it** silently — there's no sensible "overwrite?" question to ask. Reset it from the template only with an explicit `--force` / `--overwrite-all`. If a kit update changes `PROJECT.md.template` (e.g. adds a new config field), init prints a one-line notice with a `diff` command so you can adopt new fields by hand — it still never overwrites your copy.
+> **`.tlk/PROJECT.md` is never part of this prompt.** It holds *your* project config and is *meant* to diverge from the template, so init/update always **keep it** silently — there's no sensible "overwrite?" question to ask. Reset it from the template only with an explicit `--force` / `--overwrite-all`. If a kit update changes `PROJECT.md.template` (e.g. adds a new config field), init prints a one-line notice with a `diff` command so you can adopt new fields by hand — it still never overwrites your copy.
 
-`--non-interactive` / `-n` is the recommended flag for agents and CI (aliases: `--yes`, `-y`): it skips existing files, suppresses all Y/n prompts, and prints a structured **`[AGENT ACTION REQUIRED]`** block instructing the calling agent to fill `.akt/PROJECT.md` itself — no nested CLI process is spawned. The agent reads the script output and uses its own tools (Read / Glob / Edit) to replace the placeholders.
+`--non-interactive` / `-n` is the recommended flag for agents and CI (aliases: `--yes`, `-y`): it skips existing files, suppresses all Y/n prompts, and prints a structured **`[AGENT ACTION REQUIRED]`** block instructing the calling agent to fill `.tlk/PROJECT.md` itself — no nested CLI process is spawned. The agent reads the script output and uses its own tools (Read / Glob / Edit) to replace the placeholders.
 
-Then open **`.akt/PROJECT.md`** and fill in the **Project-Specific Configuration** section:
+Then open **`.tlk/PROJECT.md`** and fill in the **Project-Specific Configuration** section:
 
 ```markdown
 - Test command:   `npm test`
@@ -84,7 +89,7 @@ Then open **`.akt/PROJECT.md`** and fill in the **Project-Specific Configuration
 - Version files:  `package.json, manifest.json`
 ```
 
-Start a feature by invoking the `/vadavik` skill. Skills are invoked with `/<skill-name>`; agents with `@<agent-name>`. The kit added managed blocks to `CLAUDE.md` and `AGENTS.md` that both point at `.akt/PIPELINE.md` — your IDE picks up whichever entry-point file it reads.
+Start a feature by invoking the `/eliciting-requirements` skill. Skills are invoked with `/<skill-name>`; agents with `@<agent-name>`. The kit added managed blocks to `CLAUDE.md` and `AGENTS.md` that both point at `.tlk/PIPELINE.md` — your IDE picks up whichever entry-point file it reads.
 
 That's it.
 
@@ -92,8 +97,8 @@ That's it.
 
 ```
 .
-├── agentic-kit/                              ← the submodule (read-only)
-├── .akt/                   ← all kit-managed project state lives here
+├── talaka/                              ← the submodule (read-only)
+├── .tlk/                   ← all per-developer kit state (git-ignored wholesale)
 │   ├── PIPELINE.md                           ← canonical pipeline doc (refreshed on update)
 │   ├── PROJECT.md                            ← project-specific config (you edit; kept on update)
 │   ├── PROJECT_PROFILE.md                    ← (optional, --tune) probed stack/conventions
@@ -104,73 +109,80 @@ That's it.
 │   ├── proposed-patches/<agent>.md           ← agent hardening patches awaiting review
 │   ├── features/<slug>/                      ← active feature (spec, UX, tech plan, handoffs)
 │   ├── archive/<slug>/                       ← completed features (moved by Zlydni)
-│   ├── .agentic-kit.cfg                      ← saved IDE + pipeline template SHA (gitignored)
-│   └── .agentic-kit.files                    ← SHA manifest for teardown (gitignored)
+│   ├── .talaka.cfg                      ← saved IDE + pipeline template SHA (gitignored)
+│   └── .talaka.files                    ← SHA manifest for teardown (gitignored)
 │
-├── .claude/                                  ← agent + skill copies
+├── .claude/                                  ← agent + skill copies (kit copies git-ignored; Veles ratchets them)
+│
+├── wiki/                                      ← curating-knowledge knowledge wiki — committed knowledge (project root, outside .tlk/)
 │
 ├── CLAUDE.md                                 ← Claude Code entry-point with managed include block
 ├── AGENTS.md                                 ← cross-IDE entry-point with the same managed block
 │
-└── .gitignore                                ← one kit-managed block (ephemeral + local bookkeeping)
+└── .gitignore                                ← one kit-managed block (ignores all of .tlk/ + kit .claude/ copies)
 ```
 
-Shared shell helpers live in **`agentic-kit/tools/lib.sh`** (sourced by `init.sh` / `update.sh` / `teardown.sh`, not run by hand). For a guided launcher use **`agentic-kit/kit.sh`** — a stage-aware menu that detects whether the kit is installed/configured and only offers actions that fit.
+Shared shell helpers live in **`talaka/shared/lifecycle/tools/lib.sh`** (sourced by `init.sh` / `update.sh` / `teardown.sh`, not run by hand). For a guided launcher use **`talaka/kit.sh`** — a stage-aware menu that detects whether the kit is installed/configured and only offers actions that fit.
 
-The IDE entry-point files are **never overwritten**. The kit only manages the content between its `<!-- agentic-kit:start -->` and `<!-- agentic-kit:end -->` markers — anything you add above or below is yours and survives every `init.sh` / `update.sh` / `teardown.sh` cycle.
+The IDE entry-point files are **never overwritten**. The kit only manages the content between its `<!-- talaka:start -->` and `<!-- talaka:end -->` markers — anything you add above or below is yours and survives every `init.sh` / `update.sh` / `teardown.sh` cycle.
 
 ### Managed `.gitignore` block
 
-`init.sh` appends **one** contiguous block delimited by `# >>> agentic-kit (managed) >>>` … `# <<< agentic-kit (managed) <<<`. Inside it, comments separate **(a) runtime / ephemeral** paths from **(b) per-machine bookkeeping** (`.akt/.agentic-kit.cfg` and `.akt/.agentic-kit.files`). `teardown.sh` strips the **whole** block in one pass — you do not maintain two independent ignore sections.
+Talaka is a **per-developer** tool, not a team-sync mechanism — it installs into your working tree but **commits nothing of its own**. `init.sh` appends **one** contiguous block delimited by `# >>> talaka (managed) >>>` … `# <<< talaka (managed) <<<` that ignores:
 
-**Do not** ignore the entire `.akt/` directory unless you also add negation rules so `PIPELINE.md` and `PROJECT.md` stay tracked — otherwise teammates never see the shared pipeline copy. The managed block lists only ephemeral paths plus the optional commented “ignore everything except PIPELINE/PROJECT” recipe for advanced setups.
+- **all of `.tlk/`** — memory, features, `PIPELINE.md`, `PROJECT.md`, bookkeeping. Every bit is personal working state; a second kit user just re-runs `init.sh` to regenerate it.
+- **the kit-installed `.claude/agents/*` and `.claude/skills/*` copies** — enumerated by name (so your own `.claude/` content stays tracked). These are per-developer because Veles ratchets them in place via AutoResearch.
+
+`teardown.sh` strips the **whole** block in one pass. A teammate who does not use Talaka sees none of this; the committed `CLAUDE.md` / `AGENTS.md` include just points at `.tlk/PIPELINE.md`, which is a harmless no-op when that personal file isn't present.
+
+The one deliberate exception is **curating-knowledge's `wiki/`**, which lives at the **project root** (outside `.tlk/`) precisely so it *can* be committed — it is curated, shareable knowledge rather than per-developer scratch.
 
 ## What `init.sh` does
 
-1. Creates `.akt/` and copies the canonical pipeline doc + project config:
-   - `.akt/PIPELINE.md` ← from `agentic-kit/templates/PIPELINE.md.template` (kit-managed; refreshed on `--force`)
-   - `.akt/PROJECT.md` ← from `agentic-kit/templates/PROJECT.md.template` (your edits preserved unless `--force`)
-2. Adds the managed `.gitignore` block described above — ephemeral directories and files under `.akt/`, plus `.akt/.agentic-kit.cfg` and `.akt/.agentic-kit.files`. **`PIPELINE.md` and `PROJECT.md` are not listed** so teams can commit them as usual.
+1. Creates `.tlk/` and copies the canonical pipeline doc + project config:
+   - `.tlk/PIPELINE.md` ← from `talaka/templates/PIPELINE.md.template` (kit-managed; refreshed on `--force`)
+   - `.tlk/PROJECT.md` ← from `talaka/templates/PROJECT.md.template` (your edits preserved unless `--force`)
+2. Adds the managed `.gitignore` block described above — ignores **all of `.tlk/`** (the kit commits nothing) plus the kit-installed `.claude/agents|skills` copies. curating-knowledge's root-level `wiki/` is intentionally left tracked.
 3. After any fresh copy of `PROJECT.md`, optionally fills placeholders via **`claude -p`** (Claude Code). If stdin is not a TTY but `/dev/tty` exists, the Y/n prompt is read from `/dev/tty` so the step is not skipped silently in some IDE terminals.
-4. Copies `agents/*.md` → `.claude/agents/` (records SHA-256 in **`.akt/.agentic-kit.files`**).
+4. Copies `agents/*.md` → `.claude/agents/` (records SHA-256 in **`.tlk/.talaka.files`**).
 5. Copies `skills/*/` → `.claude/skills/` (same).
 6. Adds the managed include block to `CLAUDE.md` and `AGENTS.md` (creates a stub if absent; appends to existing file if present).
 
-**`.akt/.agentic-kit.files`** records SHA-256 per kit-managed path (paths are relative to the **project root**, e.g. `.claude/agents/bagnik.md`). It sits beside `.akt/.agentic-kit.cfg` and is listed in the managed `.gitignore` block so it stays local to each checkout.
+**`.tlk/.talaka.files`** records SHA-256 per kit-managed path (paths are relative to the **project root**, e.g. `.claude/agents/bagnik.md`). It sits beside `.tlk/.talaka.cfg` and is listed in the managed `.gitignore` block so it stays local to each checkout.
 
-Shared scripts live only under **`agentic-kit/tools/`** — run them from the **project root**, for example `agentic-kit/tools/validate-config.sh`.
+Shared scripts live under **`talaka/shared/<category>/tools/`** (lifecycle, project, learning, debug, deferred, audit), and component scripts under their component (e.g. `talaka/memory/tools/`, `talaka/statusline/tools/`) — run them from the **project root**, for example `talaka/shared/project/tools/validate-config.sh`.
 
-The script is **idempotent** — existing kit-managed files prompt for overwrite (or **s** / **o** / **a** / **r** as above). For CI or scripts, use **`--force`** / **`--overwrite-all`** or **`--skip`** / **`--skip-all`** so nothing blocks on prompts. Each installed path's content hash is tracked in **`.akt/.agentic-kit.files`** for **`teardown.sh`** (remove only if unchanged). Managed include blocks are tracked with `block:<sha>` (block-only entries) or `stub:<sha>` (whole-file stubs we created from scratch).
+The script is **idempotent** — existing kit-managed files prompt for overwrite (or **s** / **o** / **a** / **r** as above). For CI or scripts, use **`--force`** / **`--overwrite-all`** or **`--skip`** / **`--skip-all`** so nothing blocks on prompts. Each installed path's content hash is tracked in **`.tlk/.talaka.files`** for **`teardown.sh`** (remove only if unchanged). Managed include blocks are tracked with `block:<sha>` (block-only entries) or `stub:<sha>` (whole-file stubs we created from scratch).
 
 ## Updating the kit
 
 One command (pulls the submodule's **remote** tracking branch, then runs `init.sh` with your usual flags):
 
 ```bash
-agentic-kit/tools/update.sh --skip          # example: match how you first ran init
-agentic-kit/tools/update.sh --non-interactive
-agentic-kit/tools/update.sh --no-pull --skip   # submodule already updated; only re-run init
+talaka/shared/lifecycle/tools/update.sh --skip          # example: match how you first ran init
+talaka/shared/lifecycle/tools/update.sh --non-interactive
+talaka/shared/lifecycle/tools/update.sh --no-pull --skip   # submodule already updated; only re-run init
 ```
 
 Equivalent manual steps:
 
 ```bash
-git submodule update --remote agentic-kit
-agentic-kit/tools/init.sh   # same --skip / --force / etc. as before
+git submodule update --remote talaka
+talaka/shared/lifecycle/tools/init.sh   # same --skip / --force / etc. as before
 
-git add agentic-kit
-git commit -m "chore: update agentic-kit"
+git add talaka
+git commit -m "chore: update talaka"
 ```
 
 **What updates automatically:**
-- New agents and skills — `init.sh` installs missing paths; existing files prompt (or follow **`--skip`** / **`--overwrite-all`**) and refresh hashes in **`.akt/.agentic-kit.files`** when overwritten
-- Scripts under `agentic-kit/tools/` — they ship with the submodule; `git submodule update` brings new versions
-- `.akt/PIPELINE.md` — refreshed in place when you pass `--force` (or answer **o**); `update.sh` warns you if `agentic-kit/templates/PIPELINE.md.template` has changed since last init so you know when a refresh is worth running
+- New agents and skills — `init.sh` installs missing paths; existing files prompt (or follow **`--skip`** / **`--overwrite-all`**) and refresh hashes in **`.tlk/.talaka.files`** when overwritten
+- Scripts under `talaka/shared/` and the component `tools/` dirs — they ship with the submodule; `git submodule update` brings new versions
+- `.tlk/PIPELINE.md` — refreshed in place when you pass `--force` (or answer **o**); `update.sh` warns you if `talaka/templates/PIPELINE.md.template` has changed since last init so you know when a refresh is worth running
 - The managed blocks in `CLAUDE.md` and `AGENTS.md` — refreshed in place; everything outside the markers is preserved
 - **Legacy IDE sweep** — `update.sh` automatically removes obsolete `.cursor/agents/`, `.cursor/skills/`, `.github/agents/`, `.github/instructions/`, and the managed block in `.github/copilot-instructions.md` left behind by prior kit versions. Only files whose SHA-256 still matches the kit manifest are removed; locally-edited files are skipped with a warning.
 
 **What does NOT update automatically:**
-- `.akt/PROJECT.md` — project-specific config, never touched (use `--force` to reset from the template)
+- `.tlk/PROJECT.md` — project-specific config, never touched (use `--force` to reset from the template)
 - User content **outside** the managed block in `CLAUDE.md` / `AGENTS.md`
 - Paths you keep via **`--skip`** / **`--skip-all`** during updates — unchanged until you overwrite
 
@@ -178,12 +190,12 @@ git commit -m "chore: update agentic-kit"
 
 ## Overriding an agent or skill
 
-Edit the installed copy under **`.claude/agents/`** or **`.claude/skills/`**. Once the file content differs from the last kit-installed bytes, its SHA-256 no longer matches **`.akt/.agentic-kit.files`**, so **`teardown.sh` leaves it in place** (treats it as manually edited).
+Edit the installed copy under **`.claude/agents/`** or **`.claude/skills/`**. Once the file content differs from the last kit-installed bytes, its SHA-256 no longer matches **`.tlk/.talaka.files`**, so **`teardown.sh` leaves it in place** (treats it as manually edited).
 
 To refresh from the kit later, remove the file or run **`init.sh`** with **`--overwrite-all`** / answer **o** at the prompt for that path.
 
 ```bash
-cp agentic-kit/agents/bagnik.md .claude/agents/bagnik.md   # optional: reset from kit, then edit
+cp talaka/agents/bagnik.md .claude/agents/bagnik.md   # optional: reset from kit, then edit
 # Edit .claude/agents/bagnik.md to your needs
 ```
 
@@ -192,29 +204,29 @@ cp agentic-kit/agents/bagnik.md .claude/agents/bagnik.md   # optional: reset fro
 ```bash
 # Strip managed blocks from CLAUDE.md and AGENTS.md, remove
 # kit-installed copies (only where SHA-256 still matches the manifest), strip the
-# managed .gitignore block, remove .akt/PIPELINE.md.
-agentic-kit/tools/teardown.sh
+# managed .gitignore block, remove .tlk/PIPELINE.md.
+talaka/shared/lifecycle/tools/teardown.sh
 
-# Same plus: delete .akt/PROJECT.md (after y/N confirmation)
-# and rmdir .akt/ if empty.
-agentic-kit/tools/teardown.sh --full-clean
+# Same plus: delete .tlk/PROJECT.md (after y/N confirmation)
+# and rmdir .tlk/ if empty.
+talaka/shared/lifecycle/tools/teardown.sh --full-clean
 
 # Same as the first plus: deinit and remove the kit submodule.
-agentic-kit/tools/teardown.sh --remove-submodule
+talaka/shared/lifecycle/tools/teardown.sh --remove-submodule
 
 # Preview without touching anything.
-agentic-kit/tools/teardown.sh --dry-run
+talaka/shared/lifecycle/tools/teardown.sh --dry-run
 ```
 
 `teardown.sh` is conservative by design:
 
 - **Managed include blocks** — stripped from `CLAUDE.md` and `AGENTS.md`. If the file was a kit-created stub (manifest entry begins with `stub:`) and still matches that stub byte-for-byte, the whole file is removed. Otherwise the file is kept and only the marked block is excised — your custom content survives.
 - **Managed `.gitignore` block** — stripped using the same start/end markers; the rest of your `.gitignore` is untouched.
-- **Agent / skill copies** under `.claude/` — deleted only when the on-disk SHA-256 still matches the value recorded in `.akt/.agentic-kit.files`. Files you edited by hand are left alone (the script reports them as "modified locally").
-- **`.akt/PIPELINE.md`** — same SHA-256 check.
-- **`.akt/PROJECT.md`** — kept by default (it has your project config); removed only with `--full-clean` (and only after a y/N prompt unless `--yes` is passed).
-- **`.akt/{memory,features,archive,proposed-patches}/`** — never touched by teardown. They are your project's runtime state.
-- **`.akt/scratch/`** — swept by `--full-clean`. Pure ephemera (commit messages, PR bodies, large request payloads) with no user state.
+- **Agent / skill copies** under `.claude/` — deleted only when the on-disk SHA-256 still matches the value recorded in `.tlk/.talaka.files`. Files you edited by hand are left alone (the script reports them as "modified locally").
+- **`.tlk/PIPELINE.md`** — same SHA-256 check.
+- **`.tlk/PROJECT.md`** — kept by default (it has your project config); removed only with `--full-clean` (and only after a y/N prompt unless `--yes` is passed).
+- **`.tlk/{memory,features,archive,proposed-patches}/`** — never touched by teardown. They are your project's runtime state.
+- **`.tlk/scratch/`** — swept by `--full-clean`. Pure ephemera (commit messages, PR bodies, large request payloads) with no user state.
 - **Legacy artefacts** — old `.cursor/agents/`, `.cursor/skills/`, `.github/agents/`, `.github/instructions/`, the managed block in `.github/copilot-instructions.md`, and any relative symlinks pointing into the kit are also cleaned up if their hashes match.
 
 ## Self-improving agents
@@ -223,9 +235,9 @@ The kit ships a three-layer self-tuning system so installed agents adapt to your
 
 | Layer | What it does | Trigger |
 |-------|--------------|---------|
-| **1. Probe** | `tools/probe-project.sh` writes `.akt/PROJECT_PROFILE.md` (stack, frameworks, test/build commands, conventions). All skills read it before starting. | `agentic-kit/tools/init.sh --tune` (or run `probe-project.sh` directly) |
-| **2. Lesson distillation** | After each archived feature, `tools/distill-lessons.sh` turns `LESSONS.md` files into structured entries across the **memory tree** (see below). With `--target=agents` it also proposes targeted patches to specific agent files; review with `tools/apply-patches.sh`. | Manual: `distill-lessons.sh --target=both` |
-| **3. AutoResearch ratchet (Veles)** | `agentic-kit/autoresearch/` — `program.md` (invariants + composite formula `accuracy − 0.3·cost`), `judge.md` (LLM-as-judge), `eval-set/` (auto-built from archive), `run.sh` (mutate → score → ratchet). Veles only accepts mutations that don't regress the composite metric and never edits tests, eval-set, or the judge. Mutation prompts now retrieve **prior rejected variants** and **top memory hits** before proposing — the **Karpathy AutoResearch** pattern that prevents reproposing already-failed ideas. | After Zlydni archive (auto, 2 rounds) or manual: `agentic-kit/autoresearch/run.sh --rounds=N` |
+| **1. Probe** | `shared/project/tools/probe-project.sh` writes `.tlk/PROJECT_PROFILE.md` (stack, frameworks, test/build commands, conventions). All skills read it before starting. | `talaka/shared/lifecycle/tools/init.sh --tune` (or run `probe-project.sh` directly) |
+| **2. Lesson distillation** | After each archived feature, `shared/learning/tools/distill-lessons.sh` turns `LESSONS.md` files into structured entries across the **memory tree** (see below). With `--target=agents` it also proposes targeted patches to specific agent files; review with `shared/learning/tools/apply-patches.sh`. | Manual: `distill-lessons.sh --target=both` |
+| **3. AutoResearch ratchet (Veles)** | `talaka/autoresearch/` — `program.md` (invariants + composite formula `accuracy − 0.3·cost`), `judge.md` (LLM-as-judge), `eval-set/` (auto-built from archive), `run.sh` (mutate → score → ratchet). Veles only accepts mutations that don't regress the composite metric and never edits tests, eval-set, or the judge. Mutation prompts now retrieve **prior rejected variants** and **top memory hits** before proposing — the **Karpathy AutoResearch** pattern that prevents reproposing already-failed ideas. | After Zlydni archive (auto, 2 rounds) or manual: `talaka/autoresearch/run.sh --rounds=N` |
 
 ### Memory layers
 
@@ -234,10 +246,10 @@ Memory is organised as a five-layer tree modelled on **OpenClaw's self-evolving 
 | Layer | Path | Purpose |
 |-------|------|---------|
 | **L0 — Enforcement** | `agents/*.md`, `skills/*/SKILL.md`, `autoresearch/program.md` | Hardened behavioural rules. Mutated only via `apply-patches.sh` or Veles. |
-| **L1 — Hot State** | `.akt/SESSION-STATE.md` | Active feature, active agent, in-flight decisions. Auto-cleared after 24h by `memory/tools/rollover.sh`. |
-| **L2 — Daily Memory** | `.akt/memory/YYYY-MM-DD.md` | Append-only log; agents write here as they work. |
-| **L3 — Long-term structured** | `.akt/memory/{preferences,system,projects,decisions}.md` | Curated facts grouped by entity type with explicit `id`, `decided`, `entities`, `supersedes` fields. |
-| **L4 — Root summary** | `.akt/MEMORY.md` | ≤2 KB index regenerated by `memory-promote.sh`. **Read first** by every skill. |
+| **L1 — Hot State** | `.tlk/SESSION-STATE.md` | Active feature, active agent, in-flight decisions. Auto-cleared after 24h by `memory/tools/rollover.sh`. |
+| **L2 — Daily Memory** | `.tlk/memory/YYYY-MM-DD.md` | Append-only log; agents write here as they work. |
+| **L3 — Long-term structured** | `.tlk/memory/{preferences,system,projects,decisions}.md` | Curated facts grouped by entity type with explicit `id`, `decided`, `entities`, `supersedes` fields. |
+| **L4 — Root summary** | `.tlk/MEMORY.md` | ≤2 KB index regenerated by `memory/tools/promote.sh`. **Read first** by every skill. |
 | **L5 — Semantic recall** | `memory/tools/search.sh` (+ optional `search.py`) | TF-IDF / TF-IDF-cosine top-k retrieval over every layer. |
 
 **Promotion state machine** (`memory/tools/promote.sh`):
@@ -250,33 +262,33 @@ observed → logged (L2) → curated (L3, 2-strike rule) → hardened (L0 patch)
 - **Single-shot curation:** a `--confidence high` entry promotes to L3 **immediately** (the schema treats `high` as a rule). Medium/low entries wait for the 2-strike rule below.
 - **2-strike rule:** if the same fact appears in two daily files it auto-promotes to L3 with `confidence: medium` (no manual curation required).
 - **Temporal awareness:** every L3 entry has `decided:`. New entries can declare `supersedes: mem_<id>`; the resolver tags the older entry `[superseded by …]` (no silent overwrites — the past is preserved).
-- **Custom ontology:** fixed `entity_type` set (`person | project | file | tool | library | pattern | anti-pattern | decision`) gives `memory-search.sh` and skills a stable contract.
+- **Custom ontology:** fixed `entity_type` set (`person | project | file | tool | library | pattern | anti-pattern | decision`) gives `memory/tools/search.sh` and skills a stable contract.
 - **Mandatory write checklists** in every skill prompt close OpenClaw's "agent forgets to remember" gap — agents now have explicit triggers for when to append to L2.
-- **Hardening:** `memory-promote.sh --propose-hardening` writes proposed agent patches to `.akt/proposed-patches/<agent>.md`; `tools/apply-patches.sh` lands them with manifest hash refresh.
+- **Hardening:** `memory/tools/promote.sh --propose-hardening` writes proposed agent patches to `.tlk/proposed-patches/<agent>.md`; `shared/learning/tools/apply-patches.sh` lands them with manifest hash refresh.
 
 **Common operations:**
 
 ```bash
 # Initialise (idempotent; runs automatically inside init.sh)
-agentic-kit/memory/tools/init.sh
+talaka/memory/tools/init.sh
 
 # Search
-agentic-kit/memory/tools/search.sh "auth flow"
-agentic-kit/memory/tools/search.sh "auth flow" --layer l3 --top-k 10
+talaka/memory/tools/search.sh "auth flow"
+talaka/memory/tools/search.sh "auth flow" --layer l3 --top-k 10
 
 # Write memory (agents call these; you can too)
-agentic-kit/memory/tools/log.sh --type decision --confidence high "Adopt trunk-based dev."
-agentic-kit/memory/tools/session.sh feature 2025-06-03-login
-agentic-kit/memory/tools/session.sh decision "Chose device flow over PKCE."
+talaka/memory/tools/log.sh --type decision --confidence high "Adopt trunk-based dev."
+talaka/memory/tools/session.sh feature 2025-06-03-login
+talaka/memory/tools/session.sh decision "Chose device flow over PKCE."
 
 # Curate + roll over (promote runs automatically on every log.sh write)
-agentic-kit/memory/tools/promote.sh
-agentic-kit/memory/tools/promote.sh --propose-hardening
-agentic-kit/memory/tools/rollover.sh
-agentic-kit/memory/tools/tick.sh          # promote + rollover in one call
+talaka/memory/tools/promote.sh
+talaka/memory/tools/promote.sh --propose-hardening
+talaka/memory/tools/rollover.sh
+talaka/memory/tools/tick.sh          # promote + rollover in one call
 ```
 
-Python TF-IDF (`memory-search.py`) is used automatically when `python3` + `scikit-learn` are available; otherwise the pure-bash search runs with no extra dependencies.
+Python TF-IDF (`memory/tools/search.py`) is used automatically when `python3` + `scikit-learn` are available; otherwise the pure-bash search runs with no extra dependencies.
 
 ### Scheduling regular maintenance
 
@@ -291,7 +303,7 @@ Pick **one** of the options below — they are alternatives, not all required. E
   "hooks": {
     "Stop": [
       { "hooks": [ { "type": "command",
-        "command": "agentic-kit/memory/tools/tick.sh >/dev/null 2>&1 || true" } ] }
+        "command": "talaka/memory/tools/tick.sh >/dev/null 2>&1 || true" } ] }
     ]
   }
 }
@@ -301,37 +313,37 @@ Pick **one** of the options below — they are alternatives, not all required. E
 
 ```cron
 # Daily at 03:00 — memory promote + rollover
-0 3 * * *  cd /path/to/your-project && agentic-kit/memory/tools/tick.sh >> .akt/memory/tick.log 2>&1
+0 3 * * *  cd /path/to/your-project && talaka/memory/tools/tick.sh >> .tlk/memory/tick.log 2>&1
 ```
 
-**Option 3 — macOS `launchd`** (if you prefer it to cron). Create `~/Library/LaunchAgents/dev.agentic-kit.tick.plist`:
+**Option 3 — macOS `launchd`** (if you prefer it to cron). Create `~/Library/LaunchAgents/dev.talaka.tick.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>Label</key><string>dev.agentic-kit.tick</string>
+  <key>Label</key><string>dev.talaka.tick</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string><string>-lc</string>
-    <string>cd /path/to/your-project &amp;&amp; agentic-kit/memory/tools/tick.sh</string>
+    <string>cd /path/to/your-project &amp;&amp; talaka/memory/tools/tick.sh</string>
   </array>
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
 </dict></plist>
 ```
 
-Then `launchctl load ~/Library/LaunchAgents/dev.agentic-kit.tick.plist`.
+Then `launchctl load ~/Library/LaunchAgents/dev.talaka.tick.plist`.
 
 **Option 4 — Windows Task Scheduler** (runs `tick.sh` through Git Bash). In an elevated PowerShell:
 
 ```powershell
 $bash = "C:\Program Files\Git\bin\bash.exe"
 $proj = "C:\path\to\your-project"
-schtasks /Create /SC DAILY /ST 03:00 /TN "agentic-kit tick" `
-  /TR "`"$bash`" -lc 'cd \"$proj\" && agentic-kit/memory/tools/tick.sh'"
+schtasks /Create /SC DAILY /ST 03:00 /TN "Talaka tick" `
+  /TR "`"$bash`" -lc 'cd \"$proj\" && talaka/memory/tools/tick.sh'"
 ```
 
-> Cron/launchd/Task Scheduler run with a minimal environment — always `cd` into the project root first (as shown) so relative paths like `.akt/` resolve, and use the **absolute** path to `bash` on Windows.
+> Cron/launchd/Task Scheduler run with a minimal environment — always `cd` into the project root first (as shown) so relative paths like `.tlk/` resolve, and use the **absolute** path to `bash` on Windows.
 
 #### Scheduling AutoResearch (optional, advanced)
 
@@ -341,26 +353,26 @@ Unlike the memory tick, **`autoresearch/run.sh` is not a good fit for a frequent
 - It **mutates your installed agent/skill files** (L0). The ratchet only accepts non-regressing changes, but it still rewrites files unattended.
 - It needs a non-empty **eval-set** (built from archived features) to have anything to score against.
 
-By design it runs **after a Zlydni archive** (auto, 2 rounds) or **manually** (`agentic-kit/autoresearch/run.sh --rounds=N`). That event-driven model is usually what you want. If you nonetheless want a periodic run, schedule it **infrequently** (e.g. weekly, off-hours), capture logs, and review the accepted mutations:
+By design it runs **after a Zlydni archive** (auto, 2 rounds) or **manually** (`talaka/autoresearch/run.sh --rounds=N`). That event-driven model is usually what you want. If you nonetheless want a periodic run, schedule it **infrequently** (e.g. weekly, off-hours), capture logs, and review the accepted mutations:
 
 ```cron
 # Sundays at 04:00 — 3 self-tuning rounds, logged (review the diffs afterwards)
-0 4 * * 0  cd /path/to/your-project && agentic-kit/autoresearch/run.sh --rounds=3 >> .akt/autoresearch/runs/cron.log 2>&1
+0 4 * * 0  cd /path/to/your-project && talaka/autoresearch/run.sh --rounds=3 >> .tlk/autoresearch/runs/cron.log 2>&1
 ```
 
 The same launchd / Windows Task Scheduler / Claude-hook mechanisms above work too — just point them at `autoresearch/run.sh --rounds=N` instead of `tick.sh`, and prefer a **weekly** cadence. (A `Stop` hook would fire it far too often.) `run.sh` no-ops cleanly when the eval-set is empty, so a scheduled run before you've archived any features does no harm.
 
-> **Override the artefacts directory.** Every memory / autoresearch script honours `ARTEFACTS_DIR` (e.g. `ARTEFACTS_DIR=.kit-state agentic-kit/memory/tools/search.sh "auth"`). The default is `.akt`, which `init.sh` records in `.akt/.agentic-kit.cfg` as `ARTEFACTS_DIR=…` for drift detection and tooling.
+> **Override the artefacts directory.** Every memory / autoresearch script honours `ARTEFACTS_DIR` (e.g. `ARTEFACTS_DIR=.kit-state talaka/memory/tools/search.sh "auth"`). The default is `.tlk`, which `init.sh` records in `.tlk/.talaka.cfg` as `ARTEFACTS_DIR=…` for drift detection and tooling.
 
 **Initialise AutoResearch:**
 
 ```bash
-agentic-kit/autoresearch/run.sh --init
+talaka/autoresearch/run.sh --init
 ```
 
-This builds `agentic-kit/autoresearch/eval-set/*.md` from existing archived features. Without an eval-set Veles cannot ratchet (it has no evidence). Cmok and Bagnik append per-run cost+accuracy to `.akt/features/<f>/metrics.jsonl` and `agentic-kit/autoresearch/runs/cost.jsonl` via `autoresearch/tools/record-metrics.sh` — the data Veles uses to compute the composite.
+This builds `talaka/autoresearch/eval-set/*.md` from existing archived features. Without an eval-set Veles cannot ratchet (it has no evidence). Cmok and Bagnik append per-run cost+accuracy to `.tlk/features/<f>/metrics.jsonl` and `talaka/autoresearch/runs/cost.jsonl` via `autoresearch/tools/record-metrics.sh` — the data Veles uses to compute the composite.
 
-**Override the judge model** in `.akt/PROJECT.md`:
+**Override the judge model** in `.tlk/PROJECT.md`:
 
 ```markdown
 - **Judge command:** `claude -p --allowedTools ''`   # default (Haiku-class)
@@ -368,85 +380,116 @@ This builds `agentic-kit/autoresearch/eval-set/*.md` from existing archived feat
 
 Set this to any CLI that accepts the prompt on stdin and emits a single `0` or `1` to stdout (e.g. `gemini -p`).
 
-## Feature artifacts
+## Knowledge wiki (curating-knowledge)
 
-All feature work lives under `.akt/`:
+`/curating-knowledge` maintains an LLM-owned wiki at **`wiki/`** (project root) — [Karpathy's LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): instead of re-reading raw documents at every query, the model incrementally builds a persistent, interlinked markdown wiki that sits between you and the sources, so knowledge **compounds** across sessions.
+
+Three layers: `sources/` (raw, immutable), `pages/` + `index.md` + `log.md` (LLM-owned), `SCHEMA.md` (conventions — amendable per project). Three operations:
 
 ```
-.akt/
+/curating-knowledge ingest <file|url>     # land the source, write/update 10-15 cross-linked pages, update index + log
+/curating-knowledge query "<question>"    # answer from the wiki with citations; persist nontrivial synthesis as a page
+/curating-knowledge lint                  # contradictions, stale claims, orphans, broken wikilinks, index drift
+```
+
+Bootstrap with `.claude/skills/curating-knowledge/new-wiki.sh`. The wiki lives at the **project root** (`wiki/`), deliberately outside the per-developer, git-ignored `.tlk/` tree — it is **committed** knowledge, kept under ~100k tokens so direct reading beats retrieval machinery (no vector DB). Memory holds facts about *the project*; the wiki holds knowledge distilled from *sources*. (Override its location with `BELUN_WIKI_DIR`.)
+
+## CLI factory (designing-cli)
+
+`/designing-cli <api-name|spec|url>` designs an **agent-native CLI** for any API, following the [CLI Printing Press](https://github.com/mvanhorn/cli-printing-press) methodology: find the API's **Non-Obvious Insight** (its secret identity beyond the marketed purpose), absorb the feature set of every competing tool (table stakes are Priority 1 — the anti-gaming rule), classify the domain archetype, and design ~10–15 deep commands instead of a wrapper per endpoint — including local persistence (SQLite + FTS for high-gravity resources) and compound insight commands (`sync`, `search`, `stale`, `health`, …).
+
+The skill is design-only and plugs into the normal pipeline: it bootstraps `.tlk/features/YYYY-MM-DD-cli-<slug>/` (via `.claude/skills/designing-cli/new-cli.sh`) with `research-brief.md`, `design.md` (the agent-native contract: typed exit codes `0/2/3/4/5/7`, `--json`/`--compact`/`--dry-run`/`--stdin`, auto-JSON when piped, bounded output), and `scorecard.md` — a two-tier 100-point QA contract. Then it hands off to `/planning-architecture`; **Bagnik gates code QA at ≥85/100** with mechanical verification layers (scorecard → dogfood → proof-of-behaviour → optional read-only live smoke test).
+
+## Feature artifacts
+
+All feature work lives under `.tlk/`:
+
+```
+.tlk/
 ├── features/
 │   └── YYYY-MM-DD-feature-name/   ← active feature (spec, UX, tech plan, handoffs)
 └── archive/
     └── YYYY-MM-DD-feature-name/   ← completed features (moved by Zlydni after commit)
 ```
 
-Vadavik creates the feature folder automatically when starting a new spec.
+eliciting-requirements creates the feature folder automatically when starting a new spec.
 
 ## Invocation reference
 
 | What | How |
 |------|-----|
-| Write or update spec | `/vadavik` |
-| Design UX | `/lojma` |
-| Create UX mockups | `/cmok` |
-| Architecture & tests | `/laznik` |
+| Write or update spec | `/eliciting-requirements` |
+| Design UX | `/designing-ux` |
+| Create UX mockups | `/creating-mockups` |
+| Architecture & tests | `/planning-architecture` |
 | Run test gate or code QA | `@bagnik` |
 | Build | `@cmok` |
 | Write docs | `@mokash` |
-| Investigate a hard bug (hypothesis) | `/yaga` |
+| Investigate a hard bug (hypothesis) | `/diagnosing-bugs` |
 | Investigate a hard bug (instrument + observe + strip) | `@yaga` |
+| Ingest / query / lint the knowledge wiki | `/curating-knowledge` |
+| Design an agent-native CLI for an API | `/designing-cli` |
+| Map an unfamiliar codebase | `/mapping-codebase` |
+| Audit a file corpus for consistency drift | `/auditing-consistency` |
+| Adapt an external pattern into the project | `/adapting-patterns` |
 | Commit | `@zlydni` |
 
 ## Scripts
 
-Each skill bundles its own script. Shared scripts live in `agentic-kit/tools/`. Run them from the **project root** so paths like `.akt/PROJECT.md` resolve correctly.
+Each skill bundles its own script. Shared scripts live under `talaka/shared/<category>/tools/`, and component scripts under their component (e.g. `talaka/memory/tools/`, `talaka/statusline/tools/`). Run them from the **project root** so paths like `.tlk/PROJECT.md` resolve correctly.
 
 ### Skill scripts (bundled, copied into `.claude/skills/` by `init.sh`)
 
 | Script | Invoked by | What it does |
 |--------|-----------|--------------|
-| `.claude/skills/vadavik/new-feature.sh <slug>` | Vadavik | Creates `.akt/features/YYYY-MM-DD-<slug>/` with `spec.md` skeleton and `handoff-log.md` |
-| `.claude/skills/laznik/check-coverage.sh [feature-path]` | Laznik | Runs test command, prints results, appends coverage entry to `handoff-log.md` |
-| `.claude/skills/yaga/new-investigation.sh <slug>` | Yaga | Creates `.akt/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, `handoff-log.md` skeletons. Probe snippets live under `.claude/skills/yaga/templates/probes/`. |
+| `.claude/skills/eliciting-requirements/new-feature.sh <slug>` | eliciting-requirements | Creates `.tlk/features/YYYY-MM-DD-<slug>/` with `spec.md` skeleton and `handoff-log.md` |
+| `.claude/skills/planning-architecture/check-coverage.sh [feature-path]` | planning-architecture | Runs test command, prints results, appends coverage entry to `handoff-log.md` |
+| `.claude/skills/diagnosing-bugs/new-investigation.sh <slug>` | diagnosing-bugs | Creates `.tlk/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, `handoff-log.md` skeletons. Probe snippets live under `.claude/skills/diagnosing-bugs/templates/probes/`. |
+| `.claude/skills/curating-knowledge/new-wiki.sh` | curating-knowledge | Bootstraps `wiki/` at the project root (`SCHEMA.md`, `index.md`, `log.md`, `pages/`, `sources/`). The wiki is committed knowledge — it lives outside the git-ignored `.tlk/` tree on purpose (override with `BELUN_WIKI_DIR`). |
+| `.claude/skills/designing-cli/new-cli.sh <api-slug>` | designing-cli | Creates `.tlk/features/YYYY-MM-DD-cli-<slug>/` with `research-brief.md`, `design.md`, `scorecard.md` (the ≥85/100 QA contract Bagnik gates on), and `handoff-log.md` |
+| `.claude/skills/mapping-codebase/new-map.sh <slug>` | mapping-codebase | Creates `.tlk/maps/YYYY-MM-DD-<slug>/` with `map.md`, `open-questions.md`, `handoff-log.md` skeletons |
+| `.claude/skills/auditing-consistency/new-audit.sh <slug>` | auditing-consistency | Creates `.tlk/audits/YYYY-MM-DD-<slug>/` with `audit.md` (ranked, located findings + recommended fixes) and `handoff-log.md` |
+| `.claude/skills/adapting-patterns/new-adaptation.sh <slug>` | adapting-patterns | Creates `.tlk/features/YYYY-MM-DD-adapt-<slug>/` with `research-brief.md`, `adaptation.md`, `handoff-log.md` skeletons |
 
 ### Shared tools
 
 | Script | What it does |
 |--------|-------------|
-| `agentic-kit/tools/bump-version.sh patch\|minor` | Bumps version in all files listed in `.akt/PROJECT.md` (Cmok uses `patch`, Zlydni uses `minor`) — run from project root |
-| `agentic-kit/tools/validate-config.sh` | Checks `.akt/PROJECT.md` for unfilled `<placeholder>` values — run after `init.sh` |
-| `agentic-kit/tools/feature-status.sh` | Shows pipeline status for active features in `.akt/features/` |
-| `agentic-kit/tools/yaga-log-server.py` | Yaga's local debug log server (Python 3 stdlib, loopback only). Captures runtime probes from instrumented code into `<investigation>/runtime.jsonl`. Endpoints: `/log`, `/console`, `/network`, `/tail`, `/stream`, `/shutdown`. |
-| `agentic-kit/tools/yaga-log-server.sh` | Degraded `nc`-based fallback when `python3` is unavailable. Same investigation contract, no SSE. |
-| `agentic-kit/tools/yaga-strip.sh <id>` | Removes every line carrying the `YAGA:<id>` sentinel. Self-blocks (non-zero exit) if residue remains. |
+| `talaka/shared/project/tools/bump-version.sh patch\|minor` | Bumps version in all files listed in `.tlk/PROJECT.md` (Cmok uses `patch`, Zlydni uses `minor`) — run from project root |
+| `talaka/shared/project/tools/validate-config.sh` | Checks `.tlk/PROJECT.md` for unfilled `<placeholder>` values — run after `init.sh` |
+| `talaka/shared/project/tools/feature-status.sh` | Shows pipeline status for active features in `.tlk/features/` |
+| `talaka/shared/debug/tools/debug-log-server.py` | Local debug log server (Python 3 stdlib, loopback only). Captures runtime probes from instrumented code into `<investigation>/runtime.jsonl`. Endpoints: `/log`, `/console`, `/network`, `/tail`, `/stream`, `/shutdown`. |
+| `talaka/shared/debug/tools/debug-log-server.sh` | Degraded `nc`-based fallback when `python3` is unavailable. Same investigation contract, no SSE. |
+| `talaka/shared/debug/tools/debug-strip.sh <id>` | Removes every line carrying the `DEBUG:<id>` sentinel. Self-blocks (non-zero exit) if residue remains. |
 
 ### Lifecycle scripts
 
 | Script | What it does |
 |--------|-------------|
 | `kit.sh` | **Recommended human entry point.** Stage-aware interactive launcher. Detects install state (not installed / needs config / ready) and surfaces only actions that make sense at the current stage: `init`, `probe`, edit + `validate` `PROJECT.md`, `update`, `teardown`, feature `status`, memory `search`, version `bump`, memory `rollover` / `promote`, `distill` lessons, apply `patches`. Press `h` inside the menu for one-line descriptions. |
-| `tools/init.sh` | Sets up `.akt/`; copies agents to `.claude/agents/` and skills to `.claude/skills/`; manages include blocks in `CLAUDE.md` and `AGENTS.md`; manages the `.gitignore` block; maintains **`.akt/.agentic-kit.files`**. |
-| `tools/update.sh` | `git submodule update --remote` for the kit, then re-runs `tools/init.sh` with the same arguments you pass (optional `--no-pull` to skip the fetch). After the refresh, sweeps obsolete Cursor/Copilot artefacts from prior kit versions (manifest-safety preserved). Warns if `templates/PIPELINE.md.template` drifted since last init. |
-| `tools/teardown.sh` | Strips managed include blocks from `CLAUDE.md` and `AGENTS.md`; strips the managed `.gitignore` block; removes kit-installed copies when SHA-256 matches **`.akt/.agentic-kit.files`**; sweeps any legacy `.cursor/` and `.github/` artefacts. `--full-clean` also removes `.akt/PROJECT.md`, `.akt/.agentic-kit.cfg`, and `.akt/scratch/`; `--remove-submodule` deinits git. |
-| `agentic-kit/tools/lib.sh` | Shared helpers (colors, paths, managed blocks, `.gitignore` renderer) — sourced by `tools/init.sh`, `tools/update.sh`, `tools/teardown.sh`, and some tools; not run directly. |
+| `shared/lifecycle/tools/init.sh` | Sets up `.tlk/`; copies agents to `.claude/agents/` and skills to `.claude/skills/`; manages include blocks in `CLAUDE.md` and `AGENTS.md`; manages the `.gitignore` block; maintains **`.tlk/.talaka.files`**. |
+| `shared/lifecycle/tools/update.sh` | `git submodule update --remote` for the kit, then re-runs `shared/lifecycle/tools/init.sh` with the same arguments you pass (optional `--no-pull` to skip the fetch). After the refresh, sweeps obsolete Cursor/Copilot artefacts from prior kit versions (manifest-safety preserved). Warns if `templates/PIPELINE.md.template` drifted since last init. |
+| `shared/lifecycle/tools/teardown.sh` | Strips managed include blocks from `CLAUDE.md` and `AGENTS.md`; strips the managed `.gitignore` block; removes kit-installed copies when SHA-256 matches **`.tlk/.talaka.files`**; sweeps any legacy `.cursor/` and `.github/` artefacts. `--full-clean` also removes `.tlk/PROJECT.md`, `.tlk/.talaka.cfg`, and `.tlk/scratch/`; `--remove-submodule` deinits git. |
+| `talaka/shared/lifecycle/tools/lib.sh` | Shared helpers (colors, paths, managed blocks, `.gitignore` renderer) — sourced by `shared/lifecycle/tools/init.sh`, `shared/lifecycle/tools/update.sh`, `shared/lifecycle/tools/teardown.sh`, and some tools; not run directly. |
 
 ## Handoff protocol
 
-See `.akt/PIPELINE.md` (Handoff Protocol section) — referenced from `CLAUDE.md` and `AGENTS.md` via the managed include block — for the full structured handoff format, handoff map, and agent-specific checklists.
+See `.tlk/PIPELINE.md` (Handoff Protocol section) — referenced from `CLAUDE.md` and `AGENTS.md` via the managed include block — for the full structured handoff format, handoff map, and agent-specific checklists.
 
 ## Team use
 
-Commit the submodule reference, the canonical pipeline, and the project config so the whole team shares the same pipeline version:
+Talaka is a **per-developer** tool — it does not assume your teammates use it, and it commits none of its own working state. All of `.tlk/` (including `PIPELINE.md` and `PROJECT.md`) is git-ignored: each developer who wants the kit runs `init.sh` to regenerate it locally.
+
+What you *can* commit is a small, deliberate surface that is harmless to non-kit teammates:
 
 ```bash
-git add agentic-kit .gitmodules
-git add .akt/PIPELINE.md .akt/PROJECT.md
-git add CLAUDE.md AGENTS.md
-git add .gitignore                                              # managed block (recommended)
-# (.akt/.agentic-kit.cfg and .agentic-kit.files are gitignored — do not commit)
-git commit -m "chore: add agentic-kit submodule"
+git add talaka .gitmodules            # pin the kit version for those who opt in
+git add CLAUDE.md AGENTS.md                # include block; a no-op when .tlk/PIPELINE.md is absent
+git add .gitignore                         # the managed block (keeps everyone's .tlk/ out of git)
+git add wiki/                              # curating-knowledge's committed knowledge (if you use it)
+git commit -m "chore: add talaka submodule"
 ```
 
-The managed `.gitignore` block excludes ephemeral tree paths and **`.akt/.agentic-kit.files`** / **`.akt/.agentic-kit.cfg`** so those stay local to each developer.
+Everything else — `.tlk/**`, the kit-installed `.claude/agents|skills` copies, `.talaka.cfg` / `.talaka.files` — is per-developer and stays out of git via the managed block. A teammate who does not use the kit sees only the dangling (no-op) include and the submodule pointer.
 
-Team members clone with `git clone --recurse-submodules` or run `git submodule update --init` after cloning.
+Kit users clone with `git clone --recurse-submodules` (or `git submodule update --init`), then run `talaka/shared/lifecycle/tools/init.sh`.

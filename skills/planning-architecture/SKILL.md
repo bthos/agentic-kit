@@ -1,12 +1,12 @@
 ---
-name: laznik
+name: planning-architecture
 description: Architecture and tests. Use when designing system architecture, making technical decisions, or writing and maintaining tests.
 disable-model-invocation: false
 ---
 
-# Laznik — Architecture & Tests
+# Planning Architecture & Tests
 
-You are Laznik. Your job is to keep the architecture sound and tests solid.
+Your job is to keep the architecture sound and tests solid.
 
 ## When to Use
 
@@ -18,7 +18,12 @@ You are Laznik. Your job is to keep the architecture sound and tests solid.
 
 ## Approach
 
-Note start time on entry: `start=$(date +%s)`
+On entry, note the start time and register yourself as the active agent (L1 hot state):
+
+```bash
+start=$(date +%s)
+talaka/memory/tools/session.sh agent planning-architecture
+```
 
 1. **Architecture** — Map components, boundaries, and data flow
 2. **Decisions** — Document tradeoffs and rationale
@@ -35,7 +40,7 @@ Note start time on entry: `start=$(date +%s)`
 ### Tech Plan Must Include
 
 - **UX states to cover:** [from ux-design.md] — empty, loading, error, success, retry.
-- When Lojma documents a11y requirements, add corresponding test assertions in tech plan.
+- When the UX design documents a11y requirements, add corresponding test assertions in tech plan.
 
 ### AC-to-Test Traceability (mandatory)
 
@@ -49,11 +54,11 @@ Every acceptance criterion from `spec.md` must appear in this table with a corre
 
 ## Feature Path
 
-When handoff specifies a feature path (`.akt/features/YYYY-MM-DD-feature-name/`), write tech plan and architecture docs there. Include this path in handoffs.
+When handoff specifies a feature path (`.tlk/features/YYYY-MM-DD-feature-name/`), write tech plan and architecture docs there. Include this path in handoffs.
 
 ## Fix Loop (invoked by Bagnik on test gate failure)
 
-When Bagnik fails the test gate and hands off to Laznik:
+When Bagnik fails the test gate and hands back to planning-architecture:
 
 1. **Analyze failures** — Read error output and stack traces from the handoff
 2. **Fix tests or arch** — Fix broken tests, adjust architecture, add missing coverage
@@ -63,32 +68,32 @@ When Bagnik fails the test gate and hands off to Laznik:
 
 ## Handoff
 
-**Receive from:** User (after UAT), Cmok (mockups), Bagnik (test gate fail)
+**Receive from:** User (after UAT), creating-mockups (mockups), Bagnik (test gate fail)
 **Hand off to:** Bagnik (test gate)
 
 Before handing off to Bagnik, run:
 
 ```bash
-/skills/laznik/check-coverage.sh <feature-path>
+/skills/planning-architecture/check-coverage.sh <feature-path>
 ```
 
-This runs the test command from `.akt/PROJECT.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output for the handoff.
+This runs the test command from `.tlk/PROJECT.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output for the handoff.
 
 **Handoff log:** The `check-coverage.sh` script appends automatically. If run manually, append to `handoff-log.md`:
 ```
-## HH:MM Laznik → Bagnik [test gate]
+## HH:MM planning-architecture → Bagnik [test gate]
 Coverage: [summary]. Gaps: [list]. Arch: [path]. Tests: [paths].
 ```
 
 Record metrics before handing off:
 ```bash
-.akt/autoresearch/tools/record-metrics.sh \
+.tlk/autoresearch/tools/record-metrics.sh \
   --feature <feature-path> \
-  --agent laznik \
+  --agent planning-architecture \
   --tokens <approx_tokens_used> \
   --wall-ms $(( ($(date +%s) - start) * 1000 ))
 ```
-Skip silently if `.akt/autoresearch/tools/record-metrics.sh` does not exist.
+Skip silently if `.tlk/autoresearch/tools/record-metrics.sh` does not exist.
 
 - **Always include:** "Coverage summary: [what tests cover]. Known gaps: [what's not yet tested]."
 - Format: "Context: test gate. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."
@@ -109,25 +114,43 @@ When uncertain, start minimal and expand only if coverage gaps or structural iss
 
 ## Project Profile
 
-If `.akt/PROJECT_PROFILE.md` exists, read it before starting — it captures the project's stack, conventions, and inferred priorities (test runner, module boundaries, error handling style).
+If `.tlk/PROJECT_PROFILE.md` exists, read it before starting — it captures the project's stack, conventions, and inferred priorities (test runner, module boundaries, error handling style).
 
 ## Memory
 
-Layered memory drives architecture and test choices (see `agentic-kit/templates/memory/SCHEMA.md`):
+Layered memory drives architecture and test choices (see `talaka/templates/memory/SCHEMA.md`):
 
-1. **Read** `.akt/MEMORY.md` (L4) first.
+1. **Read** `.tlk/MEMORY.md` (L4) first.
 2. **Drill** into `memory/system.md` (architecture, tooling) and `memory/decisions.md` (ADR-style records — note any `supersedes:` chains so you do not resurrect superseded designs).
-3. **Search**: `agentic-kit/memory/tools/search.sh "<component>"` for past test/arch decisions; `--layer l3` to focus.
+3. **Search**: `talaka/memory/tools/search.sh "<component>"` for past test/arch decisions; `--layer l3` to focus.
 4. **`high`-confidence entries are rules**, `medium` is advisory, `low` is reference only.
 
 ### Mandatory write checklist
 
-Before handing off to Bagnik, log via `agentic-kit/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to L2 and runs promotion) when any of these fire:
+Before handing off to Bagnik, log via `talaka/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to L2 and runs promotion) when any of these fire:
 
 - [ ] **Architectural decision** with explicit alternatives considered — `entity_type: decision`
 - [ ] **Test pattern** worth reusing or **anti-pattern** to avoid — `entity_type: pattern` / `anti-pattern`
 - [ ] **Tool/library** introduced for testing or build — `entity_type: tool` / `library`
 - [ ] **Module boundary** newly drawn — `entity_type: pattern` with `entities: [<module>]`
+
+Record in-flight decisions as you make them: `talaka/memory/tools/session.sh decision "Chose X over Y because …"` — these accumulate in L1 and Zlydni promotes them to L2 at feature close.
+
+## Deferring Decisions
+
+When an architecture or test decision cannot be resolved now (insufficient information, blocked by another feature, not relevant to current scope):
+
+1. **Log it** using:
+   ```bash
+   talaka/shared/deferred/tools/defer.sh --feature <feature-path> \
+     --title "<short title>" \
+     --deferred-by planning-architecture \
+     --trigger "<condition to revisit>" \
+     --context "<why deferred>"
+   ```
+2. **Note in handoff** — mention deferred decision count so downstream agents are aware.
+
+Do not silently skip decisions. If something is punted, it must be tracked.
 
 ## Guardrails
 
