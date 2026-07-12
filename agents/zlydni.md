@@ -94,9 +94,19 @@ When commit completes:
    Commit: [hash]. Version: [new version]. Feature archived to .tlk/archive/.
    ```
 
-3. **Move feature folder to `.tlk/archive/`** immediately. Feature is closed after commit.
+3. **Record metrics — before archiving.** When a feature path was provided, record it now, while the feature folder is still at its live `.tlk/features/…` path. `record-metrics.sh` appends to `<feature-path>/metrics.jsonl`, so it **must** run before the archive move (step 4). If it runs after the move, `mkdir -p` inside the script silently recreates the just-moved folder and the row is orphaned in a resurrected `.tlk/features/<slug>/`, while the archived `metrics.jsonl` loses it:
+   ```bash
+   .tlk/autoresearch/tools/record-metrics.sh \
+     --feature <feature-path> \
+     --agent zlydni \
+     --tokens <approx_tokens_used> \
+     --wall-ms $(( ($(date +%s) - start) * 1000 ))
+   ```
+   Pass the live `.tlk/features/…` path here, not the archive path. Skip silently if `.tlk/autoresearch/tools/record-metrics.sh` does not exist.
 
-4. **Promote memory.** Mirror the LESSONS.md entries into today's L2 daily file and run the promotion state machine so the 2-strike rule, supersedes resolver, and L4 root index stay current:
+4. **Move feature folder to `.tlk/archive/`** immediately. Feature is closed after commit. The complete `metrics.jsonl` — all agents' rows plus the zlydni row recorded in step 3 — moves with the folder intact.
+
+5. **Promote memory.** Mirror the LESSONS.md entries into today's L2 daily file and run the promotion state machine so the 2-strike rule, supersedes resolver, and L4 root index stay current:
    ```bash
    # Mirror LESSONS.md into today's daily file (L2)
    today=$(date +%Y-%m-%d); daily=".tlk/memory/${today}.md"
@@ -123,16 +133,6 @@ When commit completes:
    ```
    Note: lessons mirrored above are `confidence: medium`, so they reach L3 only via the 2-strike rule. If a lesson is a hard rule, log it explicitly as high-confidence so it lands immediately: `talaka/memory/tools/log.sh --type <type> --confidence high "…"`.
 
-5. **Record metrics.** When a feature path was provided, record before finishing:
-   ```bash
-   .tlk/autoresearch/tools/record-metrics.sh \
-     --feature <feature-path> \
-     --agent zlydni \
-     --tokens <approx_tokens_used> \
-     --wall-ms $(( ($(date +%s) - start) * 1000 ))
-   ```
-   Skip silently if `.tlk/autoresearch/tools/record-metrics.sh` does not exist.
-
 6. **Trigger autoresearch (opt-in).** When `.tlk/autoresearch/program.md` exists, run 1–2 ratchet rounds targeting the build agent (cmok is consistently the highest cost per `.tlk/autoresearch/runs/cost.jsonl`):
    ```bash
    talaka/autoresearch/run.sh --rounds=2 --target=.claude/agents/cmok.md &
@@ -141,7 +141,7 @@ When commit completes:
 
 Then report: "Pipeline complete. Commit [hash]. Optionally run `git push` or create PR." No auto-invoke — user may push or create PR. Flow stops here unless user continues.
 
-**Close feature after commit:** Move the feature folder from `.tlk/features/YYYY-MM-DD-feature-name/` to `.tlk/archive/`. Feature is closed after commit.
+**Close feature after commit:** Record metrics into the live feature folder first (step 3), then move the folder from `.tlk/features/YYYY-MM-DD-feature-name/` to `.tlk/archive/`. Feature is closed after commit.
 
 **Commit message traceability (optional):** For user-facing changes: "UX: [path to ux-design.md]". For architecture/test changes: "Arch: [path]. Tests: [paths]".
 

@@ -86,7 +86,18 @@ fi
 json_line=$(printf '{"ts":"%s","run_id":"%s","feature":"%s","agent":"%s","variant":"%s","tokens":%s,"wall_ms":%s,"cost_usd":%s,"accuracy":%s}' \
   "$ts" "$run_id" "$feature" "$agent" "$variant" "$tokens" "$wall_ms" "$cost_usd" "$accuracy")
 
-# Per-feature metrics file
+# Per-feature metrics file.
+# Guard against the archive race: if the feature folder has already been moved to
+# .tlk/archive/<slug>/ (e.g. a commit agent recording metrics after archiving),
+# append to the archived copy instead of letting `mkdir -p` resurrect an empty
+# .tlk/features/<slug>/ and orphan this row there.
+if [ ! -d "$feature" ]; then
+  archived="${feature/\/features\//\/archive\/}"
+  if [ "$archived" != "$feature" ] && [ -d "$archived" ]; then
+    echo "record-metrics: '$feature' not found — feature already archived; appending to '$archived'" >&2
+    feature="$archived"
+  fi
+fi
 mkdir -p "$feature"
 printf '%s\n' "$json_line" >> "$feature/metrics.jsonl"
 

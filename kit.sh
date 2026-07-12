@@ -23,7 +23,14 @@ KIT_SLUG="${KIT_SLUG:-talaka}"
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$KIT/.." && pwd)"
 ARTEFACTS_NAME="${ARTEFACTS_DIR:-.tlk}"
-ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"
+# Resolve ARTEFACTS_DIR: join a relative name onto the project root, but use an
+# already-absolute value (POSIX /… or Windows drive X:/…) as-is. Joining an
+# absolute path would double it and, on Windows, mangle the mid-path drive colon
+# into a stray "D/proj/.tlk" tree. (Mirrors shared/lifecycle/tools/lib.sh.)
+case "$ARTEFACTS_NAME" in
+  /*) ARTEFACTS="$ARTEFACTS_NAME" ;;
+  *)  if [ "${ARTEFACTS_NAME:1:1}" = ":" ]; then ARTEFACTS="$ARTEFACTS_NAME"; else ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"; fi ;;
+esac
 CFG="$ARTEFACTS/.${KIT_SLUG}.cfg"
 PROJECT_MD="$ARTEFACTS/PROJECT.md"
 

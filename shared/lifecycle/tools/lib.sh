@@ -88,7 +88,22 @@ _LIB_SELFDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$(cd "$_LIB_SELFDIR/../../.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUBMODULE_DIR=$(basename "$SCRIPT_DIR")
-ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"
+
+# ARTEFACTS_DIR is normally a bare relative name (default ".tlk") that we resolve
+# against the project root. But several callers export it already resolved to an
+# absolute path (ARTEFACTS_DIR="$ARTEFACTS") so child tools land in the same place
+# regardless of cwd. Joining an absolute value onto PROJECT_ROOT would double it —
+# and on Windows/Git Bash (where pwd yields "D:/proj") the mid-path drive colon in
+# "D:/proj/D:/proj/.tlk" is illegal, so the OS silently drops it and creates a
+# stray "D/proj/.tlk" tree under the project root. Only join when it is relative.
+case "$ARTEFACTS_NAME" in
+  /*) ARTEFACTS="$ARTEFACTS_NAME" ;;                              # POSIX absolute
+  *)  if [ "${ARTEFACTS_NAME:1:1}" = ":" ]; then
+        ARTEFACTS="$ARTEFACTS_NAME"                               # Windows drive path (X:/… or X:\…)
+      else
+        ARTEFACTS="$PROJECT_ROOT/$ARTEFACTS_NAME"                 # relative name → join
+      fi ;;
+esac
 KIT_CFG="$ARTEFACTS/.${KIT_SLUG}.cfg"
 KIT_FILES_MANIFEST="$ARTEFACTS/.${KIT_SLUG}.files"
 
