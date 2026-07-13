@@ -20,7 +20,7 @@ test_init_creates_full_layout() {
   assert_file_exists "$proj/.tlk/PIPELINE.md"
   assert_file_exists "$proj/.tlk/PROJECT.md"
   assert_file_exists "$proj/.claude/agents/cmok.md"        "an agent was installed"
-  assert_file_exists "$proj/.claude/skills/eliciting-requirements/SKILL.md" "a skill was installed"
+  assert_file_exists "$proj/.claude/skills/requirements-eliciting/SKILL.md" "a skill was installed"
   assert_file_exists "$proj/.tlk/.talaka.files"        "manifest written"
 
   assert_file_contains "$proj/CLAUDE.md" "<!-- talaka:start -->"

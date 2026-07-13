@@ -133,7 +133,7 @@ fi
   echo ""
   echo "Read this file at the start of every task. Treat it as **factual context** about the project, not as a rule book. Cross-check against \`PROJECT.md\` (which the user fills in)."
   echo ""
-  echo "- **eliciting-requirements / designing-ux / planning-architecture / creating-mockups / Mokash** — read this before producing artefacts to match the project's stack and conventions."
+  echo "- **requirements-eliciting / ux-designing / architecture-planning / mockups-creating / Mokash** — read this before producing artefacts to match the project's stack and conventions."
   echo "- **Cmok (build) / Bagnik / Zlydni** — use the commands above as fallback if \`PROJECT.md\` is incomplete."
 } > "$PROFILE_FILE"
 

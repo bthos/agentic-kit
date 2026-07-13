@@ -23,9 +23,9 @@ check() {
 
 suggest_next() {
   local dir="$1"
-  if [ ! -f "$dir/spec.md" ];        then echo "  → Next: /eliciting-requirements (write spec)"; return; fi
-  if [ ! -f "$dir/ux-design.md" ];   then echo "  → Next: /designing-ux (UX design)"; return; fi
-  if [ ! -f "$dir/tech-plan.md" ];   then echo "  → Next: /planning-architecture (arch + tests)"; return; fi
+  if [ ! -f "$dir/spec.md" ];        then echo "  → Next: /requirements-eliciting (write spec)"; return; fi
+  if [ ! -f "$dir/ux-design.md" ];   then echo "  → Next: /ux-designing (UX design)"; return; fi
+  if [ ! -f "$dir/tech-plan.md" ];   then echo "  → Next: /architecture-planning (arch + tests)"; return; fi
   echo "  → Check handoff-log.md for current state"
 }
 
@@ -39,7 +39,7 @@ last_activity() {
 
 if [ ! -d "$FEATURES_DIR" ]; then
   echo "No active features ($FEATURES_DIR/ does not exist)."
-  echo "Start one with: /eliciting-requirements"
+  echo "Start one with: /requirements-eliciting"
   exit 0
 fi
 
@@ -68,7 +68,7 @@ done
 
 if [ $found -eq 0 ]; then
   echo "No active features in $FEATURES_DIR"
-  echo "Start one with: /eliciting-requirements"
+  echo "Start one with: /requirements-eliciting"
 fi
 
 if [ -d "$ARCHIVE_DIR" ]; then

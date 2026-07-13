@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# designing-cli (CLI factory) — new-cli.sh bootstrap behaviour.
+# cli-designing (CLI factory) — new-cli.sh bootstrap behaviour.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
 
 test_new_cli_requires_slug() {
   local proj; proj=$(make_tmp_project)
   install_kit_into "$proj"
-  if ( cd "$proj" && bash talaka/skills/designing-cli/new-cli.sh ) >/dev/null 2>&1; then
+  if ( cd "$proj" && bash talaka/skills/cli-designing/new-cli.sh ) >/dev/null 2>&1; then
     fail "new-cli.sh should fail without a slug"
   fi
 }
@@ -13,7 +13,7 @@ test_new_cli_requires_slug() {
 test_new_cli_creates_feature_folder() {
   local proj; proj=$(make_tmp_project)
   install_kit_into "$proj"
-  ( cd "$proj" && bash talaka/skills/designing-cli/new-cli.sh linear ) >/dev/null
+  ( cd "$proj" && bash talaka/skills/cli-designing/new-cli.sh linear ) >/dev/null
 
   local dir="$proj/.tlk/features/$(date +%Y-%m-%d)-cli-linear"
   assert_dir_exists  "$dir"
@@ -36,12 +36,12 @@ test_new_cli_creates_feature_folder() {
 test_new_cli_is_idempotent() {
   local proj; proj=$(make_tmp_project)
   install_kit_into "$proj"
-  ( cd "$proj" && bash talaka/skills/designing-cli/new-cli.sh linear ) >/dev/null
+  ( cd "$proj" && bash talaka/skills/cli-designing/new-cli.sh linear ) >/dev/null
   local dir="$proj/.tlk/features/$(date +%Y-%m-%d)-cli-linear"
   echo "USER-EDIT" >> "$dir/design.md"
 
   local out
-  out=$( cd "$proj" && bash talaka/skills/designing-cli/new-cli.sh linear )
+  out=$( cd "$proj" && bash talaka/skills/cli-designing/new-cli.sh linear )
   assert_contains "$out" "already exists" "second run refuses to clobber"
   assert_file_contains "$dir/design.md" "USER-EDIT" "re-run preserves user edits"
 }
@@ -50,7 +50,7 @@ test_new_cli_emits_feature_path() {
   local proj; proj=$(make_tmp_project)
   install_kit_into "$proj"
   local out
-  out=$( cd "$proj" && bash talaka/skills/designing-cli/new-cli.sh espn )
+  out=$( cd "$proj" && bash talaka/skills/cli-designing/new-cli.sh espn )
   assert_contains "$out" "FEATURE_PATH=.tlk/features/$(date +%Y-%m-%d)-cli-espn" \
     "prints machine-readable FEATURE_PATH"
 }

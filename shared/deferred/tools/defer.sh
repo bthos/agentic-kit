@@ -17,7 +17,7 @@ Usage: $0 --feature <feature-path> --title <title> --deferred-by <agent> \\
 Options:
   --feature      Path to the feature folder (e.g. .tlk/features/2026-06-07-auth)
   --title        Short title for the decision
-  --deferred-by  Agent that deferred (planning-architecture, designing-ux, creating-mockups, etc.)
+  --deferred-by  Agent that deferred (architecture-planning, ux-designing, mockups-creating, etc.)
   --trigger      Condition to revisit (e.g. "after MVP ships")
   --context      1-2 sentences why this was deferred
 EOF
@@ -64,7 +64,7 @@ NEXT_ID=$(printf "%03d" $(( ${LAST_ID:-0} + 1 )))
 cat >> "$DEFERRED_FILE" <<EOF
 
 ## DD-${NEXT_ID}: ${TITLE}
-- **Assigned to:** eliciting-requirements
+- **Assigned to:** requirements-eliciting
 - **Deferred by:** ${DEFERRED_BY}
 - **Date:** ${DATE}
 - **Trigger:** ${TRIGGER}

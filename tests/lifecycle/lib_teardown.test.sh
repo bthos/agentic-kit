@@ -55,7 +55,7 @@ test_dry_run_does_not_delete() {
 }
 
 test_tree_removed_when_tree_hash_matches() {
-  local rel=".claude/skills/eliciting-requirements"; local abs="$PROJECT_ROOT/$rel"
+  local rel=".claude/skills/requirements-eliciting"; local abs="$PROJECT_ROOT/$rel"
   mkdir -p "$abs"
   printf 'a\n' > "$abs/SKILL.md"; printf 'b\n' > "$abs/helper.sh"
   manifest_set_hash "$rel" "$(kit_sha256_tree "$abs")"
@@ -64,7 +64,7 @@ test_tree_removed_when_tree_hash_matches() {
 }
 
 test_tree_kept_when_modified() {
-  local rel=".claude/skills/eliciting-requirements"; local abs="$PROJECT_ROOT/$rel"
+  local rel=".claude/skills/requirements-eliciting"; local abs="$PROJECT_ROOT/$rel"
   mkdir -p "$abs"; printf 'a\n' > "$abs/SKILL.md"
   manifest_set_hash "$rel" "$(kit_sha256_tree "$abs")"
   printf 'local edit\n' >> "$abs/SKILL.md"   # user changed it after install

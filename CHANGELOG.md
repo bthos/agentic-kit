@@ -10,6 +10,54 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ## [Unreleased]
 
+### Added — 3-way merge on update (autoresearch edits survive kit refreshes)
+- **Installed agents/skills are now reconciled with a 3-way merge on update instead of being
+  skipped or clobbered.** Previously, once Veles (`autoresearch/tools/ratchet.sh`) ratcheted a
+  whole-file improvement into `.claude/agents/*.md` (or `apply-patches.sh` appended a block), the
+  next `update.sh`/`init.sh` either skipped the file (kit changes never landed — silent drift) or,
+  under `--force`/overwrite, discarded the local improvement. The refresh now merges
+  `local ⨝ base ⨝ new-kit`.
+- **Merge base snapshot (`.tlk/.base/`).** `install-helpers.sh` snapshots each kit file it installs
+  as the merge ancestor. This is mandatory rather than optional: the installed copies are gitignored
+  (`talaka_gitignore_render` enumerates them), so git holds no ancestor to recover. `update.sh` also
+  seeds the base pre-pull for the first update after adopting this feature. The base store is written
+  **only by the installer, only from kit source** — Veles/apply-patches must never touch it (a
+  comment in `ratchet.sh` records why).
+- **Conflict handling.** Non-overlapping changes merge silently. A true overlap is interactive
+  (`[k]eep-merged with markers / take-[o]urs / take-[t]heirs / [d]iff`); under
+  `--skip`/`--non-interactive` the local copy is kept and the incoming kit is dropped to
+  `.tlk/.conflicts/<path>.newkit` for review (base is *not* advanced, so the next update re-attempts);
+  `--force`/`--overwrite-all` takes the kit version.
+- **Readable diffs + CRLF fix.** The interactive conflict prompt (`init.sh`) now renders a colored,
+  word-level, CR-normalized diff (`git diff --no-index --word-diff`) with a `+adds / -dels` summary
+  instead of a plain `diff -u`. All merge/diff/compare paths strip `\r` first, and `*.md` /
+  `*.template` are pinned to `eol=lf` in `.gitattributes` — a CRLF-source-vs-LF-copy mismatch (under
+  `core.autocrlf=true`) no longer reports a one-line change as a whole-file diff.
+- New helpers in `lib.sh`: `kit_base_write`/`kit_base_has`/`kit_base_path`, `kit_strip_cr`,
+  `kit_three_way_merge`, `kit_three_way_merge_tree`, `kit_render_diff`, `kit_render_conflict`.
+  Covered by `tests/lifecycle/merge_helpers.test.sh` (unit) and
+  `tests/lifecycle/merge_on_update.test.sh` (end-to-end).
+
+### Added — three more skills (research, prompt-building, critical-thinking)
+- **`tasks-researching`** — pre-planning research. Reads the codebase + external sources, documents
+  **only** verified findings (never assumptions), evaluates alternatives, and converges on ONE
+  recommended approach in `research-brief.md`. Read-only / design-only; hands off to
+  `/architecture-planning`. Talaka-native adaptation of the Microsoft edge-ai *task-researcher* role.
+  Bootstrap: `.claude/skills/tasks-researching/new-research.sh <slug>` →
+  `.tlk/features/YYYY-MM-DD-research-<slug>/`. Covered by `tests/skills/researching-tasks.test.sh`.
+- **`prompts-building`** — prompt engineering. A Builder/Tester loop that authors and validates
+  agent/skill prompts against the kit's own conventions (kit tool names, calm imperative voice,
+  standard section layout, memory/handoff wiring). Edits prompt files (L0), not application code;
+  complements Veles' automated ratchet. Ad-hoc utility — no bootstrap.
+- **`assumptions-challenging`** — critical-thinking side-loop. Challenges assumptions and
+  stress-tests an approach before it's committed; advisory and read-only (it questions, it doesn't
+  edit or decide) and deliberately does **not** claim L1 hot state so it can be invoked mid-pipeline
+  without displacing the active agent. Ad-hoc — no bootstrap.
+- **Renamed** `thinking-critically` → `assumptions-challenging` to satisfy the skill naming
+  convention (noun-first, then gerund). No downstream references existed yet.
+- All three are auto-discovered by `init.sh`/`lib.sh` (no registry edits). README and
+  `PIPELINE.md.template` updated (skills tables, invocation reference, handoff map).
+
 ### Added — `decay-variants.sh` (Навь retention)
 - **`autoresearch/tools/decay-variants.sh`** — the one sanctioned way to prune variant
   history (`.tlk/autoresearch/variants/`). Deletes round snapshots older than a retention
@@ -19,20 +67,20 @@ tags yet — entries are dated and grouped by submodule HEAD).
   `tests/autoresearch/decay-variants.test.sh`.
 
 ### Added — three new skills (mined from session history)
-- **`mapping-codebase`** — codebase onboarding. Produces a structured `map.md` of an unfamiliar
+- **`codebase-mapping`** — codebase onboarding. Produces a structured `map.md` of an unfamiliar
   repo (orientation, tree, entry points, component boundaries, invocation edges, conventions).
-  Design-only; hands off to `/planning-architecture` or `/eliciting-requirements`. Bootstrap:
-  `.claude/skills/mapping-codebase/new-map.sh <slug>` → `.tlk/maps/YYYY-MM-DD-<slug>/`.
-- **`auditing-consistency`** — cross-corpus drift audit. Sweeps a file set (agents, skills,
+  Design-only; hands off to `/architecture-planning` or `/requirements-eliciting`. Bootstrap:
+  `.claude/skills/codebase-mapping/new-map.sh <slug>` → `.tlk/maps/YYYY-MM-DD-<slug>/`.
+- **`consistency-auditing`** — cross-corpus drift audit. Sweeps a file set (agents, skills,
   scripts, docs, config) for hardcoded values, contradictions, terminology drift, duplication,
   gaps, and platform pitfalls; emits a ranked, located `audit.md` with a recommended fix per
-  finding. Hands fixes to `@cmok`. Bootstrap: `.claude/skills/auditing-consistency/new-audit.sh
+  finding. Hands fixes to `@cmok`. Bootstrap: `.claude/skills/consistency-auditing/new-audit.sh
   <slug>` → `.tlk/audits/YYYY-MM-DD-<slug>/`. Complements the mechanical
   `shared/audit/tools/lean-claude.sh`.
-- **`adapting-patterns`** — external pattern → project fit. Researches a gist/repo/tool, names
+- **`patterns-adapting`** — external pattern → project fit. Researches a gist/repo/tool, names
   the core insight, separates essential mechanics from incidental context, and designs the
   adaptation as a self-contained carrier (skill/agent/tool). Design-only; hands off to
-  `/planning-architecture`. Bootstrap: `.claude/skills/adapting-patterns/new-adaptation.sh
+  `/architecture-planning`. Bootstrap: `.claude/skills/patterns-adapting/new-adaptation.sh
   <slug>` → `.tlk/features/YYYY-MM-DD-adapt-<slug>/`.
 - All three are auto-discovered by `init.sh`/`lib.sh` (no registry edits), follow the design-only
   + handoff convention, ship `new-*.sh` bootstraps + templates, and are covered by per-skill
@@ -64,16 +112,16 @@ tags yet — entries are dated and grouped by submodule HEAD).
   3. Re-run `talaka/shared/lifecycle/tools/init.sh`.
 
 ### Added
-- **curating-knowledge (formerly Belun / Белун) — knowledge-wiki skill** (`skills/curating-knowledge/`). Karpathy's LLM-wiki
+- **knowledge-curating (formerly Belun / Белун) — knowledge-wiki skill** (`skills/knowledge-curating/`). Karpathy's LLM-wiki
   pattern built into the kit: an LLM-owned, interlinked markdown wiki at `wiki/`
   sitting between raw sources and queries so knowledge compounds across sessions.
-  Three operations (`/curating-knowledge ingest|query|lint`), three layers (immutable `sources/`,
+  Three operations (`/knowledge-curating ingest|query|lint`), three layers (immutable `sources/`,
   LLM-owned `pages/` + `index.md` + `log.md`, project-amendable `SCHEMA.md`), and a
   bootstrap script (`new-wiki.sh`, idempotent). The wiki lives at the **project root**,
   outside the per-developer (git-ignored) `.tlk/` tree — it's committed knowledge,
   kept ≤~100k tokens so direct reading beats retrieval machinery (no vector DB).
-  Override its home with `BELUN_WIKI_DIR`. Tests: `tests/skills/curating-knowledge.test.sh`.
-- **designing-cli (formerly Zhyzhal / Жыжаль) — CLI-factory skill** (`skills/designing-cli/`). The CLI Printing
+  Override its home with `BELUN_WIKI_DIR`. Tests: `tests/skills/knowledge-curating.test.sh`.
+- **cli-designing (formerly Zhyzhal / Жыжаль) — CLI-factory skill** (`skills/cli-designing/`). The CLI Printing
   Press methodology as a design-only kit skill: find the API's Non-Obvious Insight,
   absorb competitor table stakes (anti-gaming rule: they're Priority 1), classify the
   domain archetype, and design ~10–15 deep commands with local persistence
@@ -82,7 +130,7 @@ tags yet — entries are dated and grouped by submodule HEAD).
   `new-cli.sh <slug>` bootstraps a normal feature folder with `research-brief.md`,
   `design.md`, and `scorecard.md` (two-tier 100-point QA contract; Bagnik gates code
   QA at ≥85 via scorecard → dogfood → proof-of-behaviour → optional read-only live
-  smoke test), then hands off to `/planning-architecture`. Tests: `tests/skills/designing-cli.test.sh`.
+  smoke test), then hands off to `/architecture-planning`. Tests: `tests/skills/cli-designing.test.sh`.
 - **Test suite (`tests/`).** Zero-dependency bash harness (`tests/lib.sh`) + runner
   (`tests/run.sh`) covering the lifecycle layer (`lib.sh` managed blocks, manifest,
   SHA-gated teardown, init↔teardown round-trip), memory (init/promote/rollover/
@@ -115,9 +163,9 @@ tags yet — entries are dated and grouped by submodule HEAD).
 - **Skills renamed from mythology to purpose-based gerund names** (aligning with
   Anthropic's skill-authoring naming convention — the `name` + `description` drive
   model selection, so the identifier now states the activity). Mapping:
-  `vadavik`→`eliciting-requirements`, `lojma`→`designing-ux`, `cmok`→`creating-mockups`,
-  `laznik`→`planning-architecture`, `yaga`→`diagnosing-bugs`, `belun`→`curating-knowledge`,
-  `zhyzhal`→`designing-cli`. Invocations change accordingly (`/eliciting-requirements`, …).
+  `vadavik`→`requirements-eliciting`, `lojma`→`ux-designing`, `cmok`→`mockups-creating`,
+  `laznik`→`architecture-planning`, `yaga`→`bugs-diagnosing`, `belun`→`knowledge-curating`,
+  `zhyzhal`→`cli-designing`. Invocations change accordingly (`/requirements-eliciting`, …).
   The six **agents keep** their mythology names (`bagnik`, `cmok`, `mokash`, `veles`, `yaga`,
   `zlydni`); this resolves the prior `cmok`/`yaga` skill-vs-agent name collision (the build
   agent is still `@cmok`, the debug agent still `@yaga` with its `debug-*` tooling and `DEBUG:`
@@ -214,7 +262,7 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ### Added
 - **Yaga (Яга)** — diagnostic side-loop for hard bugs. Ships as both a skill
-  (`/diagnosing-bugs`, hypothesis design) and an agent (`@yaga`, instrument → observe →
+  (`/bugs-diagnosing`, hypothesis design) and an agent (`@yaga`, instrument → observe →
   hand-to-Cmok → strip). Includes a single-file Python 3 **debug log server**
   (`shared/debug/tools/debug-log-server.py`, loopback-only HTTP, `/log` `/console` `/network`
   `/tail` `/stream` `/shutdown`, JSONL output), a bash/netcat fallback

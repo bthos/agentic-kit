@@ -34,7 +34,7 @@ ensure_file() {
 _Updated by every agent on entry/exit. Pruned by \`memory/tools/rollover.sh\` when stale (>24h)._
 
 $FEATURE_HDR
-_(none — set by eliciting-requirements or whoever starts the next feature)_
+_(none — set by requirements-eliciting or whoever starts the next feature)_
 
 $AGENT_HDR
 _(none)_

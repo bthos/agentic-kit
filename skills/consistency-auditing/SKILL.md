@@ -1,0 +1,62 @@
+---
+name: consistency-auditing
+description: Cross-corpus consistency audit. Sweeps a set of files (agents, skills, scripts, docs, config) for drift — hardcoded values that should be variables, contradictory or duplicated instructions, terminology mismatches, gaps, and platform pitfalls. Produces a ranked audit.md with every file:line location and a recommended fix per finding. No code edits. Hand off to @cmok to apply the fixes.
+disable-model-invocation: false
+---
+
+# Auditing Consistency — Cross-Corpus Drift Audit (skill)
+
+You read a body of instruction-bearing files — agents, skills, scripts, docs, config — and find where they have **drifted out of agreement** with each other. A value hardcoded in five places that should live in one. Two files that instruct opposite things. The same concept named three ways. A reference to a flag that no longer exists. You produce a ranked, located, fixable audit. You do **not** edit code — `@cmok` applies the fixes.
+
+This is the reasoning half of consistency work; the mechanical half (`talaka/shared/audit/tools/lean-claude.sh`, `talaka/shared/project/tools/validate-config.sh`) checks what a linter can. This skill finds what only reading can: contradictions and conceptual drift across files.
+
+## When to Use
+
+- `/consistency-auditing` — audit the whole instruction/config/doc corpus.
+- `/consistency-auditing <glob|dir>` — scope to a subset (e.g. `agents/*.md`, `*/tools/*.sh`).
+- After a rename or refactor that touched many files, or when you suspect a value/term has drifted across the codebase.
+
+## Bootstrap
+
+```bash
+.claude/skills/consistency-auditing/new-audit.sh <slug>
+```
+
+The slug should name the audit's theme (`model-naming`, `artefact-paths`, `post-rename`). Creates `.tlk/audits/YYYY-MM-DD-<slug>/` with `audit.md` and `handoff-log.md`.
+
+## Approach
+
+1. **Read `.tlk/MEMORY.md`** (L4) and search `talaka/memory/tools/search.sh "<keywords>"`. Prior **decisions** and **anti-patterns** define what "consistent" means here — they name the canonical source you'll converge findings on. An audit without the conventions is just opinion.
+2. **Fix the corpus and the dimensions.** Write the globs you're auditing into `audit.md`, and tick which dimensions you're checking (below). Scope beats breadth — a focused audit that closes is worth more than an open-ended one.
+3. **Collect evidence mechanically, then reason.** Use search to enumerate every occurrence of a value/term across the corpus (`rg -n`), so no instance is missed; then read the surrounding intent to judge whether a difference is drift or deliberate.
+4. **Write findings.** One per row, ranked by severity. Each finding lists **every** location (`path:line`), names the **single source of truth** the corpus should converge on, and a concrete fix `@cmok` can apply.
+5. **Hand off to `@cmok`.** Append to `handoff-log.md`. The audit is the fix contract; `@cmok` applies it, `@bagnik` gates the result.
+
+## Dimensions
+
+- **Hardcoded values** — literals repeated across files that should reference one variable / config key (artefact paths, model names, URLs, thresholds).
+- **Contradictions** — two files that instruct opposite things; the costliest category, rank high.
+- **Terminology drift** — one concept named differently across files; includes the name-vs-version question (is "the model" a name or a pinned id?).
+- **Duplication** — the same instruction copied where copies can silently diverge; recommend a single canonical home + links.
+- **Gaps** — a referenced file / flag / command / counterpart that does not exist, or a missing pair (a `--init` with no teardown).
+- **Platform pitfalls** — OS/shell hazards handled inconsistently across scripts (e.g. long command lines that should route through a temp file rather than be passed inline).
+
+## Finding quality bar
+
+A good finding is:
+
+- **Located** — cites `file:line` for *every* instance, found by search, not memory.
+- **Categorised** — tagged with one dimension above.
+- **Severity-ranked** — `high` (wrong/contradictory behaviour) → `med` (will bite on next change) → `low` (cosmetic).
+- **Actionable** — names the canonical source and the exact change, so `@cmok` doesn't re-investigate.
+
+## Guardrails
+
+- **No code edits.** This skill is design-only; it produces the audit, not the patch.
+- **Evidence over hunch.** Enumerate every instance by search before asserting an inconsistency — a missed instance becomes a half-fix that re-drifts.
+- **Don't flag intentional variation.** Different by design is not drift. If unsure, record it as a question, not a finding.
+- **Converge, don't scatter.** Always name one canonical source; a finding that says "make these agree" without saying *to which* is not actionable.
+
+## Memory
+
+Read L4 first (`.tlk/MEMORY.md`); drill into `memory/anti-patterns.md` if present. When the audit confirms a convention the whole corpus must follow (the canonical home for a value, the agreed term), log it so future audits and agents enforce it: `talaka/memory/tools/log.sh --type decision "<the convention>"`.

@@ -62,7 +62,7 @@ if [ ! -f "$SESSION_STATE" ] || $FORCE; then
 _Updated by every agent on entry/exit. Pruned by `memory/tools/rollover.sh` when stale (>24h)._
 
 ## Active feature
-_(none — set by eliciting-requirements or whoever starts the next feature)_
+_(none — set by requirements-eliciting or whoever starts the next feature)_
 
 ## Active agent
 _(none)_

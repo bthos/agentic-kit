@@ -24,7 +24,7 @@ project root/
 │   ├── PIPELINE.md                ← canonical pipeline (kit-managed; refreshed on init)
 │   ├── PROJECT.md                 ← project-specific config (you edit this)
 │   ├── memory/                    ← layered memory (auto-managed)
-│   ├── features/                  ← active feature folders (created per /eliciting-requirements)
+│   ├── features/                  ← active feature folders (created per /requirements-eliciting)
 │   ├── archive/                   ← completed features (moved by Zlydni)
 │   └── scratch/                   ← ephemeral runtime files (auto-managed)
 ├── CLAUDE.md                      ← Claude Code entry-point with managed include block
@@ -50,14 +50,14 @@ Any workspace-aware IDE discovers the kit through `CLAUDE.md` or `AGENTS.md` (th
 A self-organizing team of agents. Each agent knows who to hand off to next based on the context it receives. Nothing ships without passing Bagnik.
 
 ```
-Idea → eliciting-requirements (spec) → designing-ux (UX) + Mokash (docs, parallel)
-     → creating-mockups (mockups) → User UAT
-     → planning-architecture (arch + tests) → Bagnik (test gate)
+Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, parallel)
+     → mockups-creating (mockups) → User UAT
+     → architecture-planning (arch + tests) → Bagnik (test gate)
      → Cmok (build) + Mokash (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
 
     [side-loop] Yaga — invoked ad-hoc on hard bugs:
-       /diagnosing-bugs (hypothesis) → @yaga (instrument + observe) → @cmok (fix)
+       /bugs-diagnosing (hypothesis) → @yaga (instrument + observe) → @cmok (fix)
        → @bagnik (gate) → @yaga (strip instrumentation) → @zlydni
 ```
 
@@ -76,25 +76,28 @@ Idea → eliciting-requirements (spec) → designing-ux (UX) + Mokash (docs, par
 
 | Skill     | Role                          |
 |-----------|-------------------------------|
-| eliciting-requirements   | Spec & requirements           |
-| designing-ux     | UX design                     |
-| creating-mockups | UX mockups               |
-| planning-architecture    | Architecture & tests          |
-| diagnosing-bugs | Hypothesis design for hard bugs |
-| curating-knowledge     | Knowledge wiki — ingest / query / lint over `wiki/` |
-| designing-cli   | CLI factory — design agent-native CLIs from API specs |
-| mapping-codebase | Codebase onboarding — structured map of an unfamiliar repo |
-| auditing-consistency | Cross-corpus drift audit — ranked, located findings → Cmok |
-| adapting-patterns | External pattern → project fit — research, extract, adapt |
+| requirements-eliciting   | Spec & requirements           |
+| ux-designing     | UX design                     |
+| mockups-creating | UX mockups               |
+| architecture-planning    | Architecture & tests          |
+| bugs-diagnosing | Hypothesis design for hard bugs |
+| knowledge-curating     | Knowledge wiki — ingest / query / lint over `wiki/` |
+| cli-designing   | CLI factory — design agent-native CLIs from API specs |
+| codebase-mapping | Codebase onboarding — structured map of an unfamiliar repo |
+| consistency-auditing | Cross-corpus drift audit — ranked, located findings → Cmok |
+| patterns-adapting | External pattern → project fit — research, extract, adapt |
+| tasks-researching | Pre-planning research — verified findings, converge on one approach |
+| prompts-building | Build & validate agent/skill prompts (Builder/Tester loop) |
+| assumptions-challenging | Critical-thinking side-loop — challenge assumptions before commit |
 
 ### Invocation
 
 | Kind | Names |
 |------|--------|
-| Skills | `/eliciting-requirements`, `/designing-ux`, `/planning-architecture`, `/creating-mockups`, `/diagnosing-bugs`, `/curating-knowledge`, `/designing-cli`, `/mapping-codebase`, `/auditing-consistency`, `/adapting-patterns` |
+| Skills | `/requirements-eliciting`, `/ux-designing`, `/architecture-planning`, `/mockups-creating`, `/bugs-diagnosing`, `/knowledge-curating`, `/cli-designing`, `/codebase-mapping`, `/consistency-auditing`, `/patterns-adapting`, `/tasks-researching`, `/prompts-building`, `/assumptions-challenging` |
 | Agents | `@bagnik`, `@cmok` (build), `@mokash`, `@veles`, `@yaga`, `@zlydni` |
 
-The build implementation after Bagnik passes is the `@cmok` agent. The mockup phase uses the `/creating-mockups` skill. They are distinct roles: the build agent keeps the mythology name `cmok`, while skills use purpose-based names.
+The build implementation after Bagnik passes is the `@cmok` agent. The mockup phase uses the `/mockups-creating` skill. They are distinct roles: the build agent keeps the mythology name `cmok`, while skills use purpose-based names.
 
 The **Handoff Map** below uses the same `/…` and `@…` tokens.
 
@@ -104,7 +107,7 @@ The **Handoff Map** below uses the same `/…` and `@…` tokens.
 
 Structured handoff format for agent-to-agent transitions. Explicit handoffs reduce context loss.
 
-*Agents: eliciting-requirements, designing-ux, planning-architecture, Cmok, Bagnik, Zlydni, Mokash, Veles, Yaga.*
+*Agents: requirements-eliciting, ux-designing, architecture-planning, Cmok, Bagnik, Zlydni, Mokash, Veles, Yaga.*
 
 ### Autonomous Flow
 
@@ -112,19 +115,19 @@ Agents hand off to each other without user intervention where possible. Flow sto
 
 | Transition | Auto? | User stop? |
 |------------|-------|------------|
-| eliciting-requirements → designing-ux | yes | — |
-| designing-ux → Mokash + creating-mockups | yes | — |
-| creating-mockups → User UAT | — | **Yes** — user must approve mockups |
-| User UAT → planning-architecture | — | **Yes** — user confirms to proceed |
-| planning-architecture → Bagnik | yes | — |
+| requirements-eliciting → ux-designing | yes | — |
+| ux-designing → Mokash + mockups-creating | yes | — |
+| mockups-creating → User UAT | — | **Yes** — user must approve mockups |
+| User UAT → architecture-planning | — | **Yes** — user confirms to proceed |
+| architecture-planning → Bagnik | yes | — |
 | Bagnik (test gate pass) → Cmok build | yes | — |
 | Cmok build → Bagnik + Mokash | yes | — |
 | Bagnik (code QA pass) → Zlydni | yes | — |
-| Bagnik (test gate fail) → planning-architecture | yes | — |
+| Bagnik (test gate fail) → architecture-planning | yes | — |
 | Bagnik (code QA fail) → Cmok | yes | — |
 | Zlydni → End | — | Optional — user may push |
 
-**Parallel docs (Mokash):** Mokash runs alongside designing-ux or Cmok whenever the flow calls for docs + design or docs + build. In Claude Code this is enabled with `background: true`; other IDEs may not expose a background flag, but the same handoff context should still be passed in parallel.
+**Parallel docs (Mokash):** Mokash runs alongside ux-designing or Cmok whenever the flow calls for docs + design or docs + build. In Claude Code this is enabled with `background: true`; other IDEs may not expose a background flag, but the same handoff context should still be passed in parallel.
 
 ### Principles
 
@@ -155,7 +158,7 @@ When handing off to another agent, include:
 - **Blockers:** [None | List if any]
 
 ### Next Agent
-**Invoke:** name the next **role** from the Handoff Map (e.g. `/eliciting-requirements`, `/planning-architecture`, `@bagnik`, `@cmok` for build, `@mokash`, `@zlydni`).
+**Invoke:** name the next **role** from the Handoff Map (e.g. `/requirements-eliciting`, `/architecture-planning`, `@bagnik`, `@cmok` for build, `@mokash`, `@zlydni`).
 **Why:** [One-line justification for this agent]
 **Prompt:** [Suggested prompt for next agent]
 ```
@@ -164,10 +167,10 @@ When handing off to another agent, include:
 
 ### Agent-Specific Handoff Checklists
 
-**eliciting-requirements → designing-ux:** Open questions listed? Deferred decisions documented? Feature path included?
-**designing-ux → creating-mockups:** States matrix for each screen? UX path? Key decisions?
-**designing-ux → Mokash:** UX path? Key flows to document?
-**planning-architecture → Bagnik:** Coverage summary? Known gaps? Arch path? Test paths?
+**requirements-eliciting → ux-designing:** Open questions listed? Deferred decisions documented? Feature path included?
+**ux-designing → mockups-creating:** States matrix for each screen? UX path? Key decisions?
+**ux-designing → Mokash:** UX path? Key flows to document?
+**architecture-planning → Bagnik:** Coverage summary? Known gaps? Arch path? Test paths?
 **Cmok → Bagnik:** Feature path? What was built? Changed files? New storage/API?
 **Cmok → Mokash:** What was built? Feature path? Spec/UX/tech plan paths?
 **Bagnik → Zlydni:** Bagnik passed. Feature path. Changed files. Safe to commit.
@@ -176,34 +179,38 @@ When handing off to another agent, include:
 
 | From | To | Invocation | Auto? |
 |------|-----|------------|-------|
-| Idea/User | eliciting-requirements | `/eliciting-requirements` | — |
-| eliciting-requirements | designing-ux | `/designing-ux` | yes |
-| designing-ux | Mokash (parallel) | `@mokash` | yes |
-| designing-ux | creating-mockups | `/creating-mockups` (mockups) | yes |
-| creating-mockups | User UAT | — | **STOP** |
-| User UAT | planning-architecture | `/planning-architecture` | **STOP** |
-| planning-architecture | Bagnik | `@bagnik` (test gate) | yes |
+| Idea/User | requirements-eliciting | `/requirements-eliciting` | — |
+| requirements-eliciting | ux-designing | `/ux-designing` | yes |
+| ux-designing | Mokash (parallel) | `@mokash` | yes |
+| ux-designing | mockups-creating | `/mockups-creating` (mockups) | yes |
+| mockups-creating | User UAT | — | **STOP** |
+| User UAT | architecture-planning | `/architecture-planning` | **STOP** |
+| architecture-planning | Bagnik | `@bagnik` (test gate) | yes |
 | Bagnik (test gate pass) | Cmok | `@cmok` (build) | yes |
 | Cmok | Mokash (parallel) | `@mokash` | yes |
 | Cmok | Bagnik | `@bagnik` (code QA) | yes |
 | Bagnik (code QA pass) | Zlydni | `@zlydni` | yes |
-| Bagnik (test gate fail) | planning-architecture | `/planning-architecture` | yes |
+| Bagnik (test gate fail) | architecture-planning | `/architecture-planning` | yes |
 | Bagnik (code QA fail) | Cmok | `@cmok` | yes |
 | Zlydni | End | — | Optional push |
-| *(side-loop)* User / Cmok / Bagnik | Yaga | `/diagnosing-bugs` then `@yaga` | **STOP** (user authorises) |
+| *(side-loop)* User / Cmok / Bagnik | Yaga | `/bugs-diagnosing` then `@yaga` | **STOP** (user authorises) |
 | Yaga (findings) | Cmok | `@cmok` (fix) | yes |
 | Bagnik (Yaga-originated pass) | Yaga | `@yaga` (strip) | yes |
-| *(entry)* Idea/User (new CLI) | designing-cli | `/designing-cli` | — |
-| designing-cli (design done) | planning-architecture | `/planning-architecture` | yes |
-| *(entry)* Idea/User (new pattern) | adapting-patterns | `/adapting-patterns` | — |
-| adapting-patterns (design done) | planning-architecture | `/planning-architecture` | yes |
-| *(ad-hoc)* User | curating-knowledge | `/curating-knowledge` | — |
-| *(ad-hoc)* User / before planning | mapping-codebase | `/mapping-codebase` | — |
-| auditing-consistency (findings) | Cmok | `@cmok` (apply fixes) | yes |
+| *(entry)* Idea/User (new CLI) | cli-designing | `/cli-designing` | — |
+| cli-designing (design done) | architecture-planning | `/architecture-planning` | yes |
+| *(entry)* Idea/User (new pattern) | patterns-adapting | `/patterns-adapting` | — |
+| patterns-adapting (design done) | architecture-planning | `/architecture-planning` | yes |
+| *(entry)* Idea/User (uncertain approach) | tasks-researching | `/tasks-researching` | — |
+| tasks-researching (brief done) | architecture-planning | `/architecture-planning` | yes |
+| *(ad-hoc)* User | knowledge-curating | `/knowledge-curating` | — |
+| *(ad-hoc)* User / before planning | codebase-mapping | `/codebase-mapping` | — |
+| *(ad-hoc)* User | prompts-building | `/prompts-building` | — |
+| *(side-loop)* User / any agent | assumptions-challenging | `/assumptions-challenging` | — |
+| consistency-auditing (findings) | Cmok | `@cmok` (apply fixes) | yes |
 
 *The **Invocation** column uses `/` for skills and `@` for agents — the kit's universal shorthand.*
 
-**Bagnik context inference:** Bagnik determines its role from who invoked it. From planning-architecture = test gate (fail → planning-architecture, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bagnik passes — no iteration limit.
+**Bagnik context inference:** Bagnik determines its role from who invoked it. From architecture-planning = test gate (fail → architecture-planning, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bagnik passes — no iteration limit.
 
 ### Quality Gates
 
@@ -214,7 +221,7 @@ When handing off to another agent, include:
 
 ### Handoff Log
 
-Each feature folder contains a `handoff-log.md` created by **`.claude/skills/eliciting-requirements/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh`). Every agent appends one entry before handing off:
+Each feature folder contains a `handoff-log.md` created by **`.claude/skills/requirements-eliciting/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh`). Every agent appends one entry before handing off:
 
 ```markdown
 ## HH:MM [From] → [To] [context]
@@ -230,7 +237,7 @@ This gives any agent a full chain of custody when context is lost, especially ac
 2. **Include feature path** — Always pass `.tlk/features/YYYY-MM-DD-feature-name/` in handoffs
 3. **Summarize decisions** — Don't make the next agent re-derive
 4. **Flag blockers early** — Hand back to the appropriate agent
-5. **Parallel handoffs** — Mokash can run alongside designing-ux or Cmok; pass same context to both
+5. **Parallel handoffs** — Mokash can run alongside ux-designing or Cmok; pass same context to both
 6. **Close feature after commit** — After Zlydni commit, move feature folder to `.tlk/archive/`
 7. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
 8. **Mokash handoff template:** Feature path, Spec path, UX path, Tech plan path, What was built, Document: [scope]
@@ -272,7 +279,7 @@ Memory only fills if agents actually write it. Do not paste YAML by hand — cal
 ```bash
 # On entry — record who/what is active (L1):
 talaka/memory/tools/session.sh agent <your-name>
-talaka/memory/tools/session.sh feature <slug>     # eliciting-requirements, when starting a feature
+talaka/memory/tools/session.sh feature <slug>     # requirements-eliciting, when starting a feature
 
 # As you make an in-flight decision (L1):
 talaka/memory/tools/session.sh decision "Chose X over Y because …"
@@ -291,18 +298,18 @@ entries wait for the 2-strike rule (same fact on two different days). Reserve
 
 **Temporal awareness:** entries declaring `supersedes: mem_<id>` cause the older entry to be tagged `[superseded by …]` instead of being deleted (Навь principle — past is preserved, just deprioritised in retrieval).
 
-## Knowledge wiki (curating-knowledge)
+## Knowledge wiki (knowledge-curating)
 
-`/curating-knowledge` maintains an LLM-owned wiki at `wiki/` (project root; Karpathy's LLM-wiki pattern): `sources/` (raw, immutable) → `pages/` + `index.md` + `log.md` (LLM-owned, interlinked) → `SCHEMA.md` (conventions). Operations: `ingest` (land a source, update 10–15 cross-linked pages + index + log), `query` (answer from the wiki with citations; persist nontrivial synthesis), `lint` (contradictions, stale claims, orphans, broken wikilinks). Bootstrap: `.claude/skills/curating-knowledge/new-wiki.sh`.
+`/knowledge-curating` maintains an LLM-owned wiki at `wiki/` (project root; Karpathy's LLM-wiki pattern): `sources/` (raw, immutable) → `pages/` + `index.md` + `log.md` (LLM-owned, interlinked) → `SCHEMA.md` (conventions). Operations: `ingest` (land a source, update 10–15 cross-linked pages + index + log), `query` (answer from the wiki with citations; persist nontrivial synthesis), `lint` (contradictions, stale claims, orphans, broken wikilinks). Bootstrap: `.claude/skills/knowledge-curating/new-wiki.sh`.
 
 Boundary with memory: the **wiki** holds knowledge distilled from *sources* (papers, docs, articles); the **memory tree** holds facts about *this project and how to work on it*. The wiki is committed to git — it is deliberately outside the kit's managed `.gitignore` block.
 
-## CLI factory (designing-cli)
+## CLI factory (cli-designing)
 
-`/designing-cli <api-name|spec|url>` designs an agent-native CLI (CLI Printing Press pattern) and feeds it into the normal pipeline. It bootstraps `.tlk/features/YYYY-MM-DD-cli-<slug>/` (`.claude/skills/designing-cli/new-cli.sh <slug>`) with three artifacts that carry the methodology to downstream agents:
+`/cli-designing <api-name|spec|url>` designs an agent-native CLI (CLI Printing Press pattern) and feeds it into the normal pipeline. It bootstraps `.tlk/features/YYYY-MM-DD-cli-<slug>/` (`.claude/skills/cli-designing/new-cli.sh <slug>`) with three artifacts that carry the methodology to downstream agents:
 
 - `research-brief.md` — spec provenance, the **Non-Obvious Insight**, ecosystem absorption (competitor table stakes = Priority 1), domain archetype, high-gravity resources.
 - `design.md` — ~10–15 deep commands (depth over breadth), local persistence (`sync`/`search`/`sql`), and the **agent-native contract**: typed exit codes `0/2/3/4/5/7`, `--json`/`--compact`/`--dry-run`/`--stdin`, auto-JSON when piped, bounded output with continuation hints.
 - `scorecard.md` — two-tier 100-point QA contract. **Bagnik gates code QA at ≥85/100**: scorecard → dogfood → proof-of-behaviour → optional read-only live smoke test.
 
-Flow: `/designing-cli` (design) → `/planning-architecture` (arch + tests) → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA, scorecard-gated) → `@zlydni`.
+Flow: `/cli-designing` (design) → `/architecture-planning` (arch + tests) → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA, scorecard-gated) → `@zlydni`.

@@ -63,7 +63,7 @@ All feature artifacts live in `.tlk/features/YYYY-MM-DD-feature-name/`. Read spe
 What was built: [2–3 sentences]. Changed files: [list]. Divergence: [none|description].
 ```
 
-**Design drift:** When implementation diverges from UX or tech plan, note in handoff. designing-ux and planning-architecture can update or accept.
+**Design drift:** When implementation diverges from UX or tech plan, note in handoff. ux-designing and architecture-planning can update or accept.
 **Before Bagnik handoff — self-check:** Implementation matches tech-plan.md? If not, note divergence in handoff.
 **States confirmation:** Before build, confirm: "Implementing states: [list from ux-design.md]. Any additions?"
 

@@ -106,6 +106,14 @@ case "$ARTEFACTS_NAME" in
 esac
 KIT_CFG="$ARTEFACTS/.${KIT_SLUG}.cfg"
 KIT_FILES_MANIFEST="$ARTEFACTS/.${KIT_SLUG}.files"
+# Merge-base snapshots (the last kit version each managed file was installed from —
+# the common ancestor for the 3-way merge on update) and a drop-zone for the
+# incoming kit copy when a merge conflict is left unresolved. Both live under the
+# gitignored artefacts dir; the base store is the ONLY reliable ancestor because
+# the installed .claude/agents|skills copies are themselves gitignored (no git
+# history to recover). Written exclusively by the installer, only from kit source.
+KIT_BASE_DIR="$ARTEFACTS/.base"
+KIT_CONFLICTS_DIR="$ARTEFACTS/.conflicts"
 
 # One-time migration from older layouts (manifest + cfg at project root).
 kit_migrate_legacy_root_state() {
@@ -220,6 +228,138 @@ kit_is_git_clean() {
     && git ls-files --error-unmatch -- "$rel" >/dev/null 2>&1 \
     && git diff --quiet -- "$rel" 2>/dev/null \
     && git diff --cached --quiet -- "$rel" 2>/dev/null )
+}
+
+# ---------------------------------------------------------------------------
+# Merge-base snapshot store (.tlk/.base) + 3-way merge on update
+#
+# The installed agent/skill copies are gitignored, so git holds no ancestor for
+# them. We snapshot the kit source we install as the merge base; on the next
+# update we 3-way merge  local ⨝ base ⨝ newkit  to carry local edits (Veles
+# ratchets, apply-patches, hand edits) forward across kit refreshes.
+#
+# All comparisons strip CR first: kit source may check out CRLF under
+# autocrlf=true while LLM-written proposals are LF, and a CRLF-vs-LF pair would
+# otherwise register as an all-lines diff / spurious conflict.
+# ---------------------------------------------------------------------------
+kit_base_path()  { printf '%s/%s' "$KIT_BASE_DIR" "$1"; }
+kit_base_has()   { [ -e "$(kit_base_path "$1")" ]; }
+
+# Snapshot a kit SOURCE file/dir as the merge base for <rel>. Installer-only.
+kit_base_write() {
+  local rel="$1" src="$2" dest
+  [ "${DRY_RUN:-false}" = "true" ] && return 0
+  dest="$(kit_base_path "$rel")"
+  mkdir -p "$(dirname "$dest")" 2>/dev/null || true
+  rm -rf "$dest" 2>/dev/null || true
+  if [ -d "$src" ]; then cp -R "$src" "$dest"; else cp "$src" "$dest"; fi
+}
+
+kit_base_remove() {
+  [ "${DRY_RUN:-false}" = "true" ] && return 0
+  rm -rf "$(kit_base_path "$1")" 2>/dev/null || true
+}
+
+# Copy a file with all CR bytes stripped into a tracked temp; echo the temp path.
+kit_strip_cr() {
+  local src="$1" t
+  t=$(kit_mktemp "tlk-nocr") || return 1
+  if [ -f "$src" ]; then tr -d '\r' < "$src" > "$t" 2>/dev/null || cp "$src" "$t"; fi
+  printf '%s' "$t"
+}
+
+# 3-way merge one file.  Args: local base newkit outfile
+# Returns 0 = clean (outfile is the merge), 1 = conflicts (outfile has <<< markers),
+# 2 = unavailable/error (outfile untouched — caller should fall back).
+kit_three_way_merge() {
+  local lcl="$1" base="$2" new="$3" out="$4"
+  command -v git &>/dev/null || return 2
+  local l b n rc
+  l=$(kit_strip_cr "$lcl") || return 2
+  b=$(kit_strip_cr "$base") || return 2
+  n=$(kit_strip_cr "$new") || return 2
+  # merge-file rewrites its first arg; -p prints to stdout instead. current=local,
+  # ancestor=base, other=newkit → "local edits kept, kit changes applied".
+  git merge-file -p --diff3 "$l" "$b" "$n" > "$out" 2>/dev/null
+  rc=$?
+  [ "$rc" -eq 0 ] && return 0
+  [ "$rc" -ge 1 ] && [ "$rc" -lt 128 ] && return 1   # conflict count
+  return 2                                            # 255/-1 → error
+}
+
+# 3-way merge a directory tree, file by file, across the union of paths in the
+# three trees. Args: local_dir base_dir new_dir out_dir
+# Returns 0 clean / 1 any conflict / 2 error. out_dir is (re)built from scratch.
+kit_three_way_merge_tree() {
+  local ldir="$1" bdir="$2" ndir="$3" out="$4"
+  command -v git &>/dev/null || return 2
+  rm -rf "$out"; mkdir -p "$out"
+  local union; union=$(kit_mktemp "tlk-union") || return 2
+  {
+    [ -d "$ldir" ] && ( cd "$ldir" && find . -type f )
+    [ -d "$bdir" ] && ( cd "$bdir" && find . -type f )
+    [ -d "$ndir" ] && ( cd "$ndir" && find . -type f )
+  } | LC_ALL=C sort -u > "$union"
+
+  local conflicts=0 f lf bf nf has_l has_b has_n rc
+  while IFS= read -r f; do
+    f="${f#./}"
+    [ -z "$f" ] && continue
+    lf="$ldir/$f"; bf="$bdir/$f"; nf="$ndir/$f"
+    has_l=0; has_b=0; has_n=0
+    [ -f "$lf" ] && has_l=1; [ -f "$bf" ] && has_b=1; [ -f "$nf" ] && has_n=1
+    mkdir -p "$(dirname "$out/$f")" 2>/dev/null || true
+    if [ $has_l -eq 1 ] && [ $has_b -eq 1 ] && [ $has_n -eq 1 ]; then
+      kit_three_way_merge "$lf" "$bf" "$nf" "$out/$f"; rc=$?
+      [ $rc -eq 1 ] && conflicts=$((conflicts+1))
+      [ $rc -ge 2 ] && cp "$lf" "$out/$f"           # error → keep local
+    elif [ $has_n -eq 1 ] && [ $has_l -eq 1 ] && [ $has_b -eq 0 ]; then
+      if cmp -s "$lf" "$nf"; then cp "$nf" "$out/$f"
+      else kit_three_way_merge "$lf" /dev/null "$nf" "$out/$f"; [ $? -eq 1 ] && conflicts=$((conflicts+1)); fi
+    elif [ $has_n -eq 1 ] && [ $has_l -eq 0 ]; then
+      # kit has it, local doesn't: local deleted an unchanged file → keep deleted;
+      # otherwise (kit added, or kit changed a file local removed) → take kit.
+      if [ $has_b -eq 1 ] && cmp -s "$bf" "$nf"; then :; else cp "$nf" "$out/$f"; fi
+    elif [ $has_n -eq 0 ] && [ $has_l -eq 1 ]; then
+      # kit lacks it: kit deleted an unchanged file → drop; else keep local.
+      if [ $has_b -eq 1 ] && cmp -s "$bf" "$lf"; then :; else cp "$lf" "$out/$f"; fi
+    fi
+  done < "$union"
+
+  [ "$conflicts" -gt 0 ] && return 1 || return 0
+}
+
+# ---------------------------------------------------------------------------
+# Readable diff / conflict rendering
+# ---------------------------------------------------------------------------
+# Colored, word-level, CR-normalized diff between two files (falls back to plain
+# `diff -u` when git is absent). Prints a "+adds / -dels" summary header so a
+# one-line change reads as one line rather than a whole-file churn.
+kit_render_diff() {
+  local a="$1" b="$2" na nb
+  na=$(kit_strip_cr "$a" 2>/dev/null) || na="$a"
+  nb=$(kit_strip_cr "$b" 2>/dev/null) || nb="$b"
+  if command -v git &>/dev/null; then
+    local stat adds dels coloropt="--color=never"
+    [ -t 1 ] && coloropt="--color=always"
+    stat=$(git diff --no-index --numstat -- "$na" "$nb" 2>/dev/null | head -n1)
+    adds=$(printf '%s' "$stat" | awk '{print $1}'); dels=$(printf '%s' "$stat" | awk '{print $2}')
+    printf "  ${DIM}~ %s  +%s / -%s${RESET}\n" "$(basename "$a")" "${adds:-0}" "${dels:-0}"
+    git diff --no-index "$coloropt" --word-diff=color -- "$na" "$nb" 2>/dev/null
+    local rc=$?
+    [ "$rc" -le 1 ] && return 0   # 0 identical, 1 differ — both fine
+  fi
+  diff -u "$na" "$nb" 2>/dev/null || true
+}
+
+# Print just the conflicted regions of a merged-with-markers file.
+kit_render_conflict() {
+  local merged="$1"
+  awk '
+    /^<<<<<<< / { inc=1 }
+    inc         { print }
+    /^>>>>>>> / { inc=0; print "  ·····" }
+  ' "$merged"
 }
 
 # ---------------------------------------------------------------------------
@@ -494,7 +634,7 @@ $TALAKA_GITIGNORE_BEGIN
 #
 # The kit commits nothing of its own: a teammate who does not use talaka
 # sees none of this, and a second kit user just re-runs init.sh to regenerate
-# it. Everything below is personal working state. (curating-knowledge's wiki/ lives at the
+# it. Everything below is personal working state. (knowledge-curating's wiki/ lives at the
 # project root, outside this dir, precisely so it CAN be committed.)
 #
 # --- Artefacts: all per-developer pipeline state (memory, features, PIPELINE.md, PROJECT.md, …) ---

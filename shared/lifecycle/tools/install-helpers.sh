@@ -45,6 +45,7 @@ install_kit_copy_file() {
     have=$(kit_sha256_file "$target")
     if [ "$have" = "$want" ]; then
       manifest_set_hash "$rel_path" "$want"
+      kit_base_write "$rel_path" "$src_file"
       info "$label (matches kit)"
       return 0
     fi
@@ -60,6 +61,7 @@ install_kit_copy_file() {
       have_clean=$(kit_sha256_file "$clean_tmp")
       if [ "$have_clean" = "$want" ]; then
         manifest_set_hash "$rel_path" "$have"
+        kit_base_write "$rel_path" "$src_file"
         info "$label (matches kit + project patches preserved)"
         return 0
       fi
@@ -68,9 +70,64 @@ install_kit_copy_file() {
     # Branch 3: file exists. Try cheap path: clean git checkout matching kit.
     if [ -n "$recorded" ] && [ "$recorded" = "$want" ] && kit_is_git_clean "$rel_path"; then
       manifest_set_hash "$rel_path" "$want"
+      kit_base_write "$rel_path" "$src_file"
       info "$label (matches kit, git-clean)"
       return 0
     fi
+
+    # 3-way merge: carry local edits (Veles ratchets, apply-patches, hand edits)
+    # across the kit refresh. Ancestor = the base snapshot from the last install.
+    # Skipped under --force/overwrite-all (take kit) and when no ancestor exists.
+    local base_file merged mrc
+    base_file="$(kit_base_path "$rel_path")"
+    if [ "${MODE:-}" != "force" ] && ! $OVERWRITE_ALL && [ -f "$base_file" ]; then
+      merged=$(kit_mktemp "tlk-merged") || return 1
+      # `|| mrc=$?` keeps a non-zero merge (conflict) from tripping `set -e` in
+      # init.sh, and suppresses -e inside the merge helper body too.
+      mrc=0
+      kit_three_way_merge "$target" "$base_file" "$src_file" "$merged" || mrc=$?
+      if [ "$mrc" -eq 0 ]; then
+        if cmp -s "$merged" "$target"; then
+          kit_base_write "$rel_path" "$src_file"
+          manifest_set_hash "$rel_path" "$have"
+          info "$label (up to date; local edits kept)"
+        else
+          cp "$merged" "$target"
+          kit_base_write "$rel_path" "$src_file"
+          manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
+          success "$label (merged: kit update + local edits)"
+        fi
+        return 0
+      elif [ "$mrc" -eq 1 ]; then
+        local decision="skip"
+        if [ "${MODE:-}" != "skip" ] && [ -t 0 ] && declare -F ask_merge_conflict >/dev/null; then
+          ask_merge_conflict "$label" "$merged"; decision="$MERGE_DECISION"
+        fi
+        case "$decision" in
+          merged)
+            cp "$merged" "$target"
+            kit_base_write "$rel_path" "$src_file"
+            manifest_set_hash "$rel_path" "$(kit_sha256_file "$target")"
+            warn "$label (merged WITH CONFLICT MARKERS — resolve <<<<<<< in $rel_path)"
+            return 0 ;;
+          theirs)
+            rm -f "$target"; cp "$src_file" "$target"
+            kit_base_write "$rel_path" "$src_file"
+            manifest_set_hash "$rel_path" "$want"
+            success "$label (took kit version)"
+            return 0 ;;
+          ours|skip|*)
+            # Keep local; DO NOT advance base (local does not reflect newkit yet,
+            # so re-attempt on the next update). Drop the incoming kit for review.
+            mkdir -p "$KIT_CONFLICTS_DIR/$(dirname "$rel_path")" 2>/dev/null || true
+            cp "$src_file" "$KIT_CONFLICTS_DIR/$rel_path.newkit" 2>/dev/null || true
+            warn "$label (merge conflict — kept local; incoming kit → $ARTEFACTS_NAME/.conflicts/$rel_path.newkit)"
+            return 1 ;;
+        esac
+      fi
+      # mrc >= 2 → merge unavailable; fall through to legacy skip/overwrite.
+    fi
+
     if [ -n "$recorded" ] && [ "$have" = "$recorded" ]; then
       if ! should_overwrite "$label" "$target" "$src_file"; then
         skip "$label (kit updated in submodule — use --force to refresh)"
@@ -97,6 +154,7 @@ install_kit_copy_file() {
 
   if $copy_now; then
     cp "$src_file" "$target"
+    kit_base_write "$rel_path" "$src_file"
     # Re-append project patches that were saved before overwrite
     if [ -n "$saved_patches" ]; then
       printf '\n%s\n' "$saved_patches" >> "$target"
@@ -139,9 +197,54 @@ install_kit_copy_tree() {
     have=$(kit_sha256_tree "$target")
     if [ "$have" = "$want" ]; then
       manifest_set_hash "$rel_path" "$want"
+      kit_base_write "$rel_path" "$src_dir"
       info "$label (matches kit)"
       return 0
     fi
+
+    # 3-way merge the skill tree file-by-file, carrying local edits across the
+    # refresh. Ancestor = the base snapshot from the last install. Skipped under
+    # --force/overwrite-all and when no ancestor tree exists.
+    local base_dir merged_dir trc
+    base_dir="$(kit_base_path "$rel_path")"
+    if [ "${MODE:-}" != "force" ] && ! $OVERWRITE_ALL && [ -d "$base_dir" ]; then
+      merged_dir=$(kit_mktemp -d "tlk-merged-tree") || return 1
+      trc=0
+      kit_three_way_merge_tree "$target" "$base_dir" "$src_dir" "$merged_dir" || trc=$?
+      if [ "$trc" -eq 0 ]; then
+        rm -rf "$target"; cp -R "$merged_dir" "$target"
+        kit_base_write "$rel_path" "$src_dir"
+        manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
+        success "$label (merged: kit update + local edits)"
+        return 0
+      elif [ "$trc" -eq 1 ]; then
+        local decision="skip"
+        if [ "${MODE:-}" != "skip" ] && [ -t 0 ] && declare -F ask_merge_conflict >/dev/null; then
+          ask_merge_conflict "$label (skill)" "$merged_dir"; decision="$MERGE_DECISION"
+        fi
+        case "$decision" in
+          merged)
+            rm -rf "$target"; cp -R "$merged_dir" "$target"
+            kit_base_write "$rel_path" "$src_dir"
+            manifest_set_hash "$rel_path" "$(kit_sha256_tree "$target")"
+            warn "$label (merged WITH CONFLICT MARKERS — resolve <<<<<<< under $rel_path)"
+            return 0 ;;
+          theirs)
+            rm -rf "$target"; cp -R "$src_dir" "$target"
+            kit_base_write "$rel_path" "$src_dir"
+            manifest_set_hash "$rel_path" "$want"
+            success "$label (took kit version)"
+            return 0 ;;
+          ours|skip|*)
+            mkdir -p "$KIT_CONFLICTS_DIR/$rel_path.newkit" 2>/dev/null || true
+            cp -R "$src_dir"/. "$KIT_CONFLICTS_DIR/$rel_path.newkit/" 2>/dev/null || true
+            warn "$label (merge conflict — kept local; incoming kit → $ARTEFACTS_NAME/.conflicts/$rel_path.newkit)"
+            return 1 ;;
+        esac
+      fi
+      # trc >= 2 → merge unavailable; fall through to legacy skip/overwrite.
+    fi
+
     if [ -n "$recorded" ] && [ "$have" = "$recorded" ]; then
       if ! should_overwrite "$label"; then
         skip "$label (kit skill updated — use --force)"
@@ -183,6 +286,7 @@ install_kit_copy_tree() {
 
     rm -rf "$target"
     cp -R "$src_dir" "$target"
+    kit_base_write "$rel_path" "$src_dir"
 
     # Re-append saved project patches
     local had_patches=false

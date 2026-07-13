@@ -353,9 +353,9 @@ if $PROPOSE_HARDENING; then
                  | grep -v '^- id:' | sed 's/^[[:space:]]\+//')
     case "$line" in
       *preferences.md*) agent="cmok" ;;
-      *system.md*)      agent="planning-architecture" ;;
-      *projects.md*)    agent="eliciting-requirements" ;;
-      *decisions.md*)   agent="planning-architecture" ;;
+      *system.md*)      agent="architecture-planning" ;;
+      *projects.md*)    agent="requirements-eliciting" ;;
+      *decisions.md*)   agent="architecture-planning" ;;
       *)                agent="cmok" ;;
     esac
     out="$PATCHES_DIR/${agent}.md"

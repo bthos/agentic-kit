@@ -25,9 +25,9 @@ test_sets_active_feature() {
 
 test_sets_active_agent() {
   local art; art=$(_art)
-  _s "$art" agent "eliciting-requirements" >/dev/null 2>&1
+  _s "$art" agent "requirements-eliciting" >/dev/null 2>&1
   local line; line=$(awk '/^## Active agent/{getline; print; exit}' "$(_file "$art")")
-  assert_eq "eliciting-requirements" "$line"
+  assert_eq "requirements-eliciting" "$line"
 }
 
 test_decisions_accumulate() {

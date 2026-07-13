@@ -143,7 +143,10 @@ fi
 
 # Decision: accept if proposal does NOT regress
 if awk -v a="$comp_prop" -v b="$comp_base" 'BEGIN{exit !(a >= b)}'; then
-  # Refresh manifest hash so teardown.sh still treats target as kit-managed
+  # Refresh manifest hash so teardown.sh still treats target as kit-managed.
+  # NOTE: deliberately do NOT touch the merge-base snapshot ($ARTEFACTS/.base):
+  # it must stay = the kit source ancestor so the update 3-way merge can compute
+  # "local edits" as (accepted target − base). Only the installer writes .base.
   new_hash=$(kit_sha256_file "$target" || true)
   if [ -n "$new_hash" ]; then
     rel_target="${target#./}"

@@ -24,7 +24,7 @@
 #       features, PIPELINE.md, PROJECT.md, bookkeeping — every bit is personal
 #       working state) plus the kit-installed .claude/agents|skills copies. A
 #       second kit user just re-runs this script to regenerate it all; a
-#       teammate who does not use the kit sees none of it. (curating-knowledge's wiki/ lives
+#       teammate who does not use the kit sees none of it. (knowledge-curating's wiki/ lives
 #       at the project root, outside .tlk/, so it CAN be committed.)
 #
 # Flags:
@@ -78,7 +78,7 @@ show_help() {
        at .tlk/PIPELINE.md. Existing user content is preserved verbatim.
     4. Adds a managed .gitignore block. The kit is per-developer and commits
        nothing: the block ignores all of .tlk/ plus the kit's .claude/ copies.
-       (curating-knowledge's wiki/ lives at the project root so it stays committable.)
+       (knowledge-curating's wiki/ lives at the project root so it stays committable.)
 
   CROSS-IDE
     Claude Code reads CLAUDE.md natively. Any other workspace-aware IDE picks
@@ -163,7 +163,33 @@ ask_conflict() {
       a|A) OVERWRITE_ALL=true; return 0 ;;
       r|R) SKIP_ALL=true; return 1 ;;
       s|S|"") return 1 ;;
-      d|D) $_can_diff && diff -u "$current" "$incoming" || true ;;
+      d|D) $_can_diff && kit_render_diff "$current" "$incoming" || true ;;
+      *) ;;
+    esac
+  done
+}
+
+# Prompt shown when a 3-way merge (install-helpers) hits a real overlap. Sets the
+# global MERGE_DECISION to: merged | ours | theirs | skip. Honours overwrite-all /
+# skip-rest, and falls back to "skip" with no TTY.
+MERGE_DECISION="skip"
+ask_merge_conflict() {
+  local label="$1" merged="$2"
+  MERGE_DECISION="skip"
+  if $OVERWRITE_ALL; then MERGE_DECISION="theirs"; return; fi
+  if $SKIP_ALL;      then MERGE_DECISION="skip";   return; fi
+  if [ ! -t 0 ];     then MERGE_DECISION="skip";   return; fi
+  while true; do
+    printf "  ${YELLOW}conflict${RESET} %s — kit update overlaps your local edits.\n" "$label"
+    printf "  [${BOLD}k${RESET}]eep merged (markers)  take-[${BOLD}o${RESET}]urs  take-[${BOLD}t${RESET}]heirs  [${BOLD}d${RESET}]iff  [${BOLD}s${RESET}]kip  "
+    read -r -n1 choice
+    printf '\n'
+    case "$choice" in
+      k|K) MERGE_DECISION="merged"; return ;;
+      o|O) MERGE_DECISION="ours";   return ;;
+      t|T) MERGE_DECISION="theirs"; return ;;
+      s|S|"") MERGE_DECISION="skip"; return ;;
+      d|D) [ -f "$merged" ] && kit_render_conflict "$merged" || true ;;
       *) ;;
     esac
   done
@@ -619,7 +645,7 @@ printf "  ${DIM}%-38s${RESET} %s\n" "Skills installed:"  "${CYAN}.claude/skills/
 printf "  ${DIM}%-38s${RESET} %s\n" "Statusline:"        "${CYAN}.claude/settings.json (statusLine)${RESET}"
 
 printf "\n  ${BOLD}Next steps${RESET}\n"
-printf "  ${DIM}%-38s${RESET} %s\n" "Start a feature:"       "${CYAN}/eliciting-requirements${RESET}"
+printf "  ${DIM}%-38s${RESET} %s\n" "Start a feature:"       "${CYAN}/requirements-eliciting${RESET}"
 printf "  ${DIM}%-38s${RESET} %s\n" "Check feature status:"  "${CYAN}${SUBMODULE_DIR}/shared/project/tools/feature-status.sh${RESET}"
 printf "  ${DIM}%-38s${RESET} %s\n" "Validate config:"       "${CYAN}${SUBMODULE_DIR}/shared/project/tools/validate-config.sh${RESET}"
 printf "  ${DIM}%-38s${RESET} %s\n" "After submodule update:" "${CYAN}${SUBMODULE_DIR}/shared/lifecycle/tools/update.sh${RESET}"

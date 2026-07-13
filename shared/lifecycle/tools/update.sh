@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Pull the latest talaka submodule revision, then re-run init with the
 # same flags you use day-to-day. The pipeline doc, project config, and the
-# kit-managed include blocks in CLAUDE.md and AGENTS.md are refreshed in
-# place — your edits outside the marked blocks are preserved.
+# kit-managed include blocks in CLAUDE.md and AGENTS.md are refreshed in place.
+#
+# Installed agents/skills are reconciled with a 3-way merge (local ⨝ base ⨝
+# new-kit): your local edits — Veles autoresearch ratchets, apply-patches, hand
+# tweaks — are carried forward and merged with the incoming kit changes. Only a
+# genuine overlap surfaces as a conflict to resolve; nothing is silently lost.
 #
 # After the refresh, this script sweeps any obsolete .cursor/ and .github/
 # artefacts left behind by older kit versions. Only manifest-matching files
@@ -37,8 +41,11 @@ talaka / update.sh
 
   Pull the latest talaka submodule revision, then re-run init.sh with the
   same flags you use day-to-day. The pipeline doc, project config, and the
-  managed include blocks in CLAUDE.md / AGENTS.md are refreshed in place —
-  your edits outside the marked blocks are preserved.
+  managed include blocks in CLAUDE.md / AGENTS.md are refreshed in place.
+
+  Installed agents/skills are reconciled with a 3-way merge (local ⨝ base ⨝
+  new-kit): local edits (Veles ratchets, apply-patches, hand tweaks) are merged
+  with the incoming kit changes. Only true overlaps surface as a conflict.
 
   After the refresh, sweeps any obsolete .cursor/ and .github/ artefacts left
   behind by older kit versions. Only manifest-matching files are removed;
@@ -81,6 +88,34 @@ info "submodule:    $SUBMODULE_DIR/"
 info "artefacts:    $ARTEFACTS_NAME/  (PIPELINE.md will be refreshed; PROJECT.md kept)"
 
 cd "$PROJECT_ROOT"
+
+# Seed merge-base snapshots BEFORE pulling. The current (pre-pull) kit source is
+# the ancestor of whatever is installed now, so it is the correct base for the
+# 3-way merge init.sh will run after the refresh. Only seed what is missing —
+# never overwrite an existing base (that would corrupt the ancestor). This makes
+# the very first update after adopting merge-on-update reconcile cleanly instead
+# of falling back to a whole-file prompt.
+header "Merge base (3-way merge on refresh)"
+_seeded=0
+for _f in "$SCRIPT_DIR"/agents/*.md; do
+  [ -e "$_f" ] || continue
+  _rel=".claude/agents/$(basename "$_f")"
+  if [ -e "$PROJECT_ROOT/$_rel" ] && ! kit_base_has "$_rel"; then
+    kit_base_write "$_rel" "$_f"; _seeded=$((_seeded + 1))
+  fi
+done
+for _d in "$SCRIPT_DIR"/skills/*/; do
+  [ -d "$_d" ] || continue
+  _rel=".claude/skills/$(basename "$_d")"
+  if [ -e "$PROJECT_ROOT/$_rel" ] && ! kit_base_has "$_rel"; then
+    kit_base_write "$_rel" "${_d%/}"; _seeded=$((_seeded + 1))
+  fi
+done
+if [ "$_seeded" -gt 0 ]; then
+  info "Seeded $_seeded merge-base snapshot(s) under $ARTEFACTS_NAME/.base/ (first update)."
+else
+  info "Merge base already present — local edits will be merged with the refresh."
+fi
 
 if $PULL; then
   header "git submodule update --remote"

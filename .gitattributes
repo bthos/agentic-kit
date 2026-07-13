@@ -6,3 +6,12 @@
 *.bash  text eol=lf
 *.py    text eol=lf
 *.snippet text eol=lf
+
+# Markdown and templates are the kit's agent/skill SOURCE (the "new-kit" side of
+# the update merge). Pin them to LF so a Windows checkout with autocrlf=true does
+# not hand init.sh CRLF source that would diff/merge against LF installed copies
+# as an all-lines change. (The installed copies are gitignored, so attributes
+# can't reach them — the merge/diff helpers also strip CR at runtime; this keeps
+# the source clean at rest.)
+*.md       text eol=lf
+*.template text eol=lf

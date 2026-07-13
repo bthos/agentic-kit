@@ -1,6 +1,6 @@
 # Talaka
 
-A reusable AI development pipeline — 6 agents, 10 skills, and a structured handoff protocol. Installs one Claude-shaped layout (`.claude/agents/`, `.claude/skills/`) with two entry-point files at the project root: **`CLAUDE.md`** (read natively by Claude Code) and **`AGENTS.md`** (the cross-IDE convention — read by any workspace-aware tool that follows the AGENTS.md spec). One install covers every IDE.
+A reusable AI development pipeline — 6 agents, 13 skills, and a structured handoff protocol. Installs one Claude-shaped layout (`.claude/agents/`, `.claude/skills/`) with two entry-point files at the project root: **`CLAUDE.md`** (read natively by Claude Code) and **`AGENTS.md`** (the cross-IDE convention — read by any workspace-aware tool that follows the AGENTS.md spec). One install covers every IDE.
 
 The kit is **minimally invasive** and **per-developer** (it commits nothing of its own): every kit-touched path is either inside the git-ignored `.tlk/`, inside `.claude/`, the optional committed `wiki/`, or wrapped in a removable `<!-- talaka:start --> … <!-- talaka:end -->` block in `CLAUDE.md` / `AGENTS.md` / `.gitignore`. `teardown.sh` strips the block (or removes the file when its SHA-256 still matches the kit copy recorded in `.tlk/.talaka.files`), so manual edits are always preserved.
 
@@ -11,9 +11,9 @@ Import as a git submodule in under a minute.
 A self-organizing team of AI agents for structured development. Each agent knows its role and who to hand off to next. Quality gates ensure nothing ships without passing Bagnik.
 
 ```
-Idea → eliciting-requirements (spec) → designing-ux (UX) + Mokash (docs, parallel)
-     → creating-mockups (mockups) → User UAT
-     → planning-architecture (arch + tests) → Bagnik (test gate)
+Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, parallel)
+     → mockups-creating (mockups) → User UAT
+     → architecture-planning (arch + tests) → Bagnik (test gate)
      → Cmok (build) + Mokash (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
 ```
@@ -33,16 +33,19 @@ Idea → eliciting-requirements (spec) → designing-ux (UX) + Mokash (docs, par
 
 | Skill    | Role                         |
 |----------|------------------------------|
-| eliciting-requirements  | Spec & requirements          |
-| designing-ux    | UX design                    |
-| creating-mockups | UX mockups                   |
-| planning-architecture   | Architecture & tests         |
-| diagnosing-bugs | Hypothesis design for hard bugs |
-| curating-knowledge    | Knowledge wiki — ingest / query / lint over `wiki/` (Karpathy's LLM-wiki pattern) |
-| designing-cli  | CLI factory — design agent-native CLIs from API specs (printing-press pattern) |
-| mapping-codebase | Codebase onboarding — structured map of an unfamiliar repo (tree, entry points, invocation edges, conventions) |
-| auditing-consistency | Cross-corpus drift audit — hardcoded values, contradictions, terminology drift, gaps; ranked + located, hands fixes to Cmok |
-| adapting-patterns | External pattern → project fit — research a gist/repo/tool, extract the core insight, design the adaptation |
+| requirements-eliciting  | Spec & requirements          |
+| ux-designing    | UX design                    |
+| mockups-creating | UX mockups                   |
+| architecture-planning   | Architecture & tests         |
+| bugs-diagnosing | Hypothesis design for hard bugs |
+| knowledge-curating    | Knowledge wiki — ingest / query / lint over `wiki/` (Karpathy's LLM-wiki pattern) |
+| cli-designing  | CLI factory — design agent-native CLIs from API specs (printing-press pattern) |
+| codebase-mapping | Codebase onboarding — structured map of an unfamiliar repo (tree, entry points, invocation edges, conventions) |
+| consistency-auditing | Cross-corpus drift audit — hardcoded values, contradictions, terminology drift, gaps; ranked + located, hands fixes to Cmok |
+| patterns-adapting | External pattern → project fit — research a gist/repo/tool, extract the core insight, design the adaptation |
+| tasks-researching | Pre-planning research — reads codebase + external sources, verified findings only, converges on ONE approach in `research-brief.md`, hands off to architecture-planning |
+| prompts-building | Prompt engineering — Builder/Tester loop that authors and validates agent/skill prompts against the kit's own conventions |
+| assumptions-challenging | Critical-thinking side-loop — challenges assumptions and stress-tests an approach before it's committed (advisory, read-only) |
 
 ## Quick start
 
@@ -89,7 +92,7 @@ Then open **`.tlk/PROJECT.md`** and fill in the **Project-Specific Configuration
 - Version files:  `package.json, manifest.json`
 ```
 
-Start a feature by invoking the `/eliciting-requirements` skill. Skills are invoked with `/<skill-name>`; agents with `@<agent-name>`. The kit added managed blocks to `CLAUDE.md` and `AGENTS.md` that both point at `.tlk/PIPELINE.md` — your IDE picks up whichever entry-point file it reads.
+Start a feature by invoking the `/requirements-eliciting` skill. Skills are invoked with `/<skill-name>`; agents with `@<agent-name>`. The kit added managed blocks to `CLAUDE.md` and `AGENTS.md` that both point at `.tlk/PIPELINE.md` — your IDE picks up whichever entry-point file it reads.
 
 That's it.
 
@@ -114,7 +117,7 @@ That's it.
 │
 ├── .claude/                                  ← agent + skill copies (kit copies git-ignored; Veles ratchets them)
 │
-├── wiki/                                      ← curating-knowledge knowledge wiki — committed knowledge (project root, outside .tlk/)
+├── wiki/                                      ← knowledge-curating knowledge wiki — committed knowledge (project root, outside .tlk/)
 │
 ├── CLAUDE.md                                 ← Claude Code entry-point with managed include block
 ├── AGENTS.md                                 ← cross-IDE entry-point with the same managed block
@@ -135,14 +138,14 @@ Talaka is a **per-developer** tool, not a team-sync mechanism — it installs in
 
 `teardown.sh` strips the **whole** block in one pass. A teammate who does not use Talaka sees none of this; the committed `CLAUDE.md` / `AGENTS.md` include just points at `.tlk/PIPELINE.md`, which is a harmless no-op when that personal file isn't present.
 
-The one deliberate exception is **curating-knowledge's `wiki/`**, which lives at the **project root** (outside `.tlk/`) precisely so it *can* be committed — it is curated, shareable knowledge rather than per-developer scratch.
+The one deliberate exception is **knowledge-curating's `wiki/`**, which lives at the **project root** (outside `.tlk/`) precisely so it *can* be committed — it is curated, shareable knowledge rather than per-developer scratch.
 
 ## What `init.sh` does
 
 1. Creates `.tlk/` and copies the canonical pipeline doc + project config:
    - `.tlk/PIPELINE.md` ← from `talaka/templates/PIPELINE.md.template` (kit-managed; refreshed on `--force`)
    - `.tlk/PROJECT.md` ← from `talaka/templates/PROJECT.md.template` (your edits preserved unless `--force`)
-2. Adds the managed `.gitignore` block described above — ignores **all of `.tlk/`** (the kit commits nothing) plus the kit-installed `.claude/agents|skills` copies. curating-knowledge's root-level `wiki/` is intentionally left tracked.
+2. Adds the managed `.gitignore` block described above — ignores **all of `.tlk/`** (the kit commits nothing) plus the kit-installed `.claude/agents|skills` copies. knowledge-curating's root-level `wiki/` is intentionally left tracked.
 3. After any fresh copy of `PROJECT.md`, optionally fills placeholders via **`claude -p`** (Claude Code). If stdin is not a TTY but `/dev/tty` exists, the Y/n prompt is read from `/dev/tty` so the step is not skipped silently in some IDE terminals.
 4. Copies `agents/*.md` → `.claude/agents/` (records SHA-256 in **`.tlk/.talaka.files`**).
 5. Copies `skills/*/` → `.claude/skills/` (same).
@@ -175,7 +178,8 @@ git commit -m "chore: update talaka"
 ```
 
 **What updates automatically:**
-- New agents and skills — `init.sh` installs missing paths; existing files prompt (or follow **`--skip`** / **`--overwrite-all`**) and refresh hashes in **`.tlk/.talaka.files`** when overwritten
+- New agents and skills — `init.sh` installs missing paths and refreshes hashes in **`.tlk/.talaka.files`**
+- **Locally-improved agents/skills are 3-way merged, not clobbered.** `init.sh` snapshots the kit version it installs as a merge base under **`.tlk/.base/`**; on the next update it merges `local ⨝ base ⨝ new-kit`, so your local edits — Veles autoresearch ratchets, `apply-patches.sh` blocks, hand tweaks — are carried forward and combined with the incoming kit changes. Non-overlapping changes merge silently; a genuine overlap surfaces as a conflict (interactive: `[k]eep-merged / take-[o]urs / take-[t]heirs`; under `--skip`/`--non-interactive` the local copy is kept and the incoming kit is dropped to `.tlk/.conflicts/…` for review). `--force`/`--overwrite-all` still takes the kit version outright. All comparisons are CR-normalized, so a CRLF-vs-LF mismatch no longer shows a one-line change as a whole-file diff.
 - Scripts under `talaka/shared/` and the component `tools/` dirs — they ship with the submodule; `git submodule update` brings new versions
 - `.tlk/PIPELINE.md` — refreshed in place when you pass `--force` (or answer **o**); `update.sh` warns you if `talaka/templates/PIPELINE.md.template` has changed since last init so you know when a refresh is worth running
 - The managed blocks in `CLAUDE.md` and `AGENTS.md` — refreshed in place; everything outside the markers is preserved
@@ -380,25 +384,25 @@ This builds `talaka/autoresearch/eval-set/*.md` from existing archived features.
 
 Set this to any CLI that accepts the prompt on stdin and emits a single `0` or `1` to stdout (e.g. `gemini -p`).
 
-## Knowledge wiki (curating-knowledge)
+## Knowledge wiki (knowledge-curating)
 
-`/curating-knowledge` maintains an LLM-owned wiki at **`wiki/`** (project root) — [Karpathy's LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): instead of re-reading raw documents at every query, the model incrementally builds a persistent, interlinked markdown wiki that sits between you and the sources, so knowledge **compounds** across sessions.
+`/knowledge-curating` maintains an LLM-owned wiki at **`wiki/`** (project root) — [Karpathy's LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): instead of re-reading raw documents at every query, the model incrementally builds a persistent, interlinked markdown wiki that sits between you and the sources, so knowledge **compounds** across sessions.
 
 Three layers: `sources/` (raw, immutable), `pages/` + `index.md` + `log.md` (LLM-owned), `SCHEMA.md` (conventions — amendable per project). Three operations:
 
 ```
-/curating-knowledge ingest <file|url>     # land the source, write/update 10-15 cross-linked pages, update index + log
-/curating-knowledge query "<question>"    # answer from the wiki with citations; persist nontrivial synthesis as a page
-/curating-knowledge lint                  # contradictions, stale claims, orphans, broken wikilinks, index drift
+/knowledge-curating ingest <file|url>     # land the source, write/update 10-15 cross-linked pages, update index + log
+/knowledge-curating query "<question>"    # answer from the wiki with citations; persist nontrivial synthesis as a page
+/knowledge-curating lint                  # contradictions, stale claims, orphans, broken wikilinks, index drift
 ```
 
-Bootstrap with `.claude/skills/curating-knowledge/new-wiki.sh`. The wiki lives at the **project root** (`wiki/`), deliberately outside the per-developer, git-ignored `.tlk/` tree — it is **committed** knowledge, kept under ~100k tokens so direct reading beats retrieval machinery (no vector DB). Memory holds facts about *the project*; the wiki holds knowledge distilled from *sources*. (Override its location with `BELUN_WIKI_DIR`.)
+Bootstrap with `.claude/skills/knowledge-curating/new-wiki.sh`. The wiki lives at the **project root** (`wiki/`), deliberately outside the per-developer, git-ignored `.tlk/` tree — it is **committed** knowledge, kept under ~100k tokens so direct reading beats retrieval machinery (no vector DB). Memory holds facts about *the project*; the wiki holds knowledge distilled from *sources*. (Override its location with `BELUN_WIKI_DIR`.)
 
-## CLI factory (designing-cli)
+## CLI factory (cli-designing)
 
-`/designing-cli <api-name|spec|url>` designs an **agent-native CLI** for any API, following the [CLI Printing Press](https://github.com/mvanhorn/cli-printing-press) methodology: find the API's **Non-Obvious Insight** (its secret identity beyond the marketed purpose), absorb the feature set of every competing tool (table stakes are Priority 1 — the anti-gaming rule), classify the domain archetype, and design ~10–15 deep commands instead of a wrapper per endpoint — including local persistence (SQLite + FTS for high-gravity resources) and compound insight commands (`sync`, `search`, `stale`, `health`, …).
+`/cli-designing <api-name|spec|url>` designs an **agent-native CLI** for any API, following the [CLI Printing Press](https://github.com/mvanhorn/cli-printing-press) methodology: find the API's **Non-Obvious Insight** (its secret identity beyond the marketed purpose), absorb the feature set of every competing tool (table stakes are Priority 1 — the anti-gaming rule), classify the domain archetype, and design ~10–15 deep commands instead of a wrapper per endpoint — including local persistence (SQLite + FTS for high-gravity resources) and compound insight commands (`sync`, `search`, `stale`, `health`, …).
 
-The skill is design-only and plugs into the normal pipeline: it bootstraps `.tlk/features/YYYY-MM-DD-cli-<slug>/` (via `.claude/skills/designing-cli/new-cli.sh`) with `research-brief.md`, `design.md` (the agent-native contract: typed exit codes `0/2/3/4/5/7`, `--json`/`--compact`/`--dry-run`/`--stdin`, auto-JSON when piped, bounded output), and `scorecard.md` — a two-tier 100-point QA contract. Then it hands off to `/planning-architecture`; **Bagnik gates code QA at ≥85/100** with mechanical verification layers (scorecard → dogfood → proof-of-behaviour → optional read-only live smoke test).
+The skill is design-only and plugs into the normal pipeline: it bootstraps `.tlk/features/YYYY-MM-DD-cli-<slug>/` (via `.claude/skills/cli-designing/new-cli.sh`) with `research-brief.md`, `design.md` (the agent-native contract: typed exit codes `0/2/3/4/5/7`, `--json`/`--compact`/`--dry-run`/`--stdin`, auto-JSON when piped, bounded output), and `scorecard.md` — a two-tier 100-point QA contract. Then it hands off to `/architecture-planning`; **Bagnik gates code QA at ≥85/100** with mechanical verification layers (scorecard → dogfood → proof-of-behaviour → optional read-only live smoke test).
 
 ## Feature artifacts
 
@@ -412,26 +416,29 @@ All feature work lives under `.tlk/`:
     └── YYYY-MM-DD-feature-name/   ← completed features (moved by Zlydni after commit)
 ```
 
-eliciting-requirements creates the feature folder automatically when starting a new spec.
+requirements-eliciting creates the feature folder automatically when starting a new spec.
 
 ## Invocation reference
 
 | What | How |
 |------|-----|
-| Write or update spec | `/eliciting-requirements` |
-| Design UX | `/designing-ux` |
-| Create UX mockups | `/creating-mockups` |
-| Architecture & tests | `/planning-architecture` |
+| Write or update spec | `/requirements-eliciting` |
+| Design UX | `/ux-designing` |
+| Create UX mockups | `/mockups-creating` |
+| Architecture & tests | `/architecture-planning` |
 | Run test gate or code QA | `@bagnik` |
 | Build | `@cmok` |
 | Write docs | `@mokash` |
-| Investigate a hard bug (hypothesis) | `/diagnosing-bugs` |
+| Investigate a hard bug (hypothesis) | `/bugs-diagnosing` |
 | Investigate a hard bug (instrument + observe + strip) | `@yaga` |
-| Ingest / query / lint the knowledge wiki | `/curating-knowledge` |
-| Design an agent-native CLI for an API | `/designing-cli` |
-| Map an unfamiliar codebase | `/mapping-codebase` |
-| Audit a file corpus for consistency drift | `/auditing-consistency` |
-| Adapt an external pattern into the project | `/adapting-patterns` |
+| Ingest / query / lint the knowledge wiki | `/knowledge-curating` |
+| Design an agent-native CLI for an API | `/cli-designing` |
+| Map an unfamiliar codebase | `/codebase-mapping` |
+| Audit a file corpus for consistency drift | `/consistency-auditing` |
+| Adapt an external pattern into the project | `/patterns-adapting` |
+| Research a task before planning it | `/tasks-researching` |
+| Build or improve an agent/skill prompt | `/prompts-building` |
+| Stress-test an approach / challenge assumptions | `/assumptions-challenging` |
 | Commit | `@zlydni` |
 
 ## Scripts
@@ -442,14 +449,15 @@ Each skill bundles its own script. Shared scripts live under `talaka/shared/<cat
 
 | Script | Invoked by | What it does |
 |--------|-----------|--------------|
-| `.claude/skills/eliciting-requirements/new-feature.sh <slug>` | eliciting-requirements | Creates `.tlk/features/YYYY-MM-DD-<slug>/` with `spec.md` skeleton and `handoff-log.md` |
-| `.claude/skills/planning-architecture/check-coverage.sh [feature-path]` | planning-architecture | Runs test command, prints results, appends coverage entry to `handoff-log.md` |
-| `.claude/skills/diagnosing-bugs/new-investigation.sh <slug>` | diagnosing-bugs | Creates `.tlk/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, `handoff-log.md` skeletons. Probe snippets live under `.claude/skills/diagnosing-bugs/templates/probes/`. |
-| `.claude/skills/curating-knowledge/new-wiki.sh` | curating-knowledge | Bootstraps `wiki/` at the project root (`SCHEMA.md`, `index.md`, `log.md`, `pages/`, `sources/`). The wiki is committed knowledge — it lives outside the git-ignored `.tlk/` tree on purpose (override with `BELUN_WIKI_DIR`). |
-| `.claude/skills/designing-cli/new-cli.sh <api-slug>` | designing-cli | Creates `.tlk/features/YYYY-MM-DD-cli-<slug>/` with `research-brief.md`, `design.md`, `scorecard.md` (the ≥85/100 QA contract Bagnik gates on), and `handoff-log.md` |
-| `.claude/skills/mapping-codebase/new-map.sh <slug>` | mapping-codebase | Creates `.tlk/maps/YYYY-MM-DD-<slug>/` with `map.md`, `open-questions.md`, `handoff-log.md` skeletons |
-| `.claude/skills/auditing-consistency/new-audit.sh <slug>` | auditing-consistency | Creates `.tlk/audits/YYYY-MM-DD-<slug>/` with `audit.md` (ranked, located findings + recommended fixes) and `handoff-log.md` |
-| `.claude/skills/adapting-patterns/new-adaptation.sh <slug>` | adapting-patterns | Creates `.tlk/features/YYYY-MM-DD-adapt-<slug>/` with `research-brief.md`, `adaptation.md`, `handoff-log.md` skeletons |
+| `.claude/skills/requirements-eliciting/new-feature.sh <slug>` | requirements-eliciting | Creates `.tlk/features/YYYY-MM-DD-<slug>/` with `spec.md` skeleton and `handoff-log.md` |
+| `.claude/skills/architecture-planning/check-coverage.sh [feature-path]` | architecture-planning | Runs test command, prints results, appends coverage entry to `handoff-log.md` |
+| `.claude/skills/bugs-diagnosing/new-investigation.sh <slug>` | bugs-diagnosing | Creates `.tlk/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, `handoff-log.md` skeletons. Probe snippets live under `.claude/skills/bugs-diagnosing/templates/probes/`. |
+| `.claude/skills/knowledge-curating/new-wiki.sh` | knowledge-curating | Bootstraps `wiki/` at the project root (`SCHEMA.md`, `index.md`, `log.md`, `pages/`, `sources/`). The wiki is committed knowledge — it lives outside the git-ignored `.tlk/` tree on purpose (override with `BELUN_WIKI_DIR`). |
+| `.claude/skills/cli-designing/new-cli.sh <api-slug>` | cli-designing | Creates `.tlk/features/YYYY-MM-DD-cli-<slug>/` with `research-brief.md`, `design.md`, `scorecard.md` (the ≥85/100 QA contract Bagnik gates on), and `handoff-log.md` |
+| `.claude/skills/codebase-mapping/new-map.sh <slug>` | codebase-mapping | Creates `.tlk/maps/YYYY-MM-DD-<slug>/` with `map.md`, `open-questions.md`, `handoff-log.md` skeletons |
+| `.claude/skills/consistency-auditing/new-audit.sh <slug>` | consistency-auditing | Creates `.tlk/audits/YYYY-MM-DD-<slug>/` with `audit.md` (ranked, located findings + recommended fixes) and `handoff-log.md` |
+| `.claude/skills/patterns-adapting/new-adaptation.sh <slug>` | patterns-adapting | Creates `.tlk/features/YYYY-MM-DD-adapt-<slug>/` with `research-brief.md`, `adaptation.md`, `handoff-log.md` skeletons |
+| `.claude/skills/tasks-researching/new-research.sh <slug>` | tasks-researching | Creates `.tlk/features/YYYY-MM-DD-research-<slug>/` with `research-brief.md` (verified findings + single recommended approach) and `handoff-log.md` |
 
 ### Shared tools
 
@@ -486,7 +494,7 @@ What you *can* commit is a small, deliberate surface that is harmless to non-kit
 git add talaka .gitmodules            # pin the kit version for those who opt in
 git add CLAUDE.md AGENTS.md                # include block; a no-op when .tlk/PIPELINE.md is absent
 git add .gitignore                         # the managed block (keeps everyone's .tlk/ out of git)
-git add wiki/                              # curating-knowledge's committed knowledge (if you use it)
+git add wiki/                              # knowledge-curating's committed knowledge (if you use it)
 git commit -m "chore: add talaka submodule"
 ```
 
