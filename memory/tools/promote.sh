@@ -114,18 +114,38 @@ l3_target_for_type() {
 
 # normalise_key TEXT → lowercased, whitespace-collapsed key (matches the 2-strike key).
 normalise_key() {
-  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' '
+  printf '%s' "${1,,}" | tr -s '[:space:]' ' '
+}
+
+# l3_has_key/load_l3_keys cache each target's normalised keys once instead of
+# re-parsing the whole target file (list_entries → awk, plus a normalise_key
+# tr-pipe per existing entry) on every single candidate check. Re-scanning per
+# candidate makes promotion O(daily entries × L3 entries) in subprocess
+# spawns — fine on Linux, but each awk/tr spawn is expensive enough on
+# Windows/Git-Bash that a memory tree with a few hundred entries turns the
+# Stop hook into a many-minute hang. Loading each target once amortises this
+# to O(L3 entries) total, regardless of how many candidates are checked.
+declare -A L3_KEYS_LOADED   # target path -> 1 once its existing keys are cached
+declare -A L3_KEYS          # "target|normalised-key" -> 1
+
+load_l3_keys() {
+  local target="$1" f s e payload etype id conf k2 composite
+  [ -n "${L3_KEYS_LOADED[$target]:-}" ] && return
+  L3_KEYS_LOADED[$target]=1
+  [ -f "$target" ] || return
+  while IFS=$'\t' read -r f s e payload etype id conf; do
+    [ -z "$payload" ] && continue
+    k2=$(normalise_key "$payload")
+    composite="$target|$k2"
+    L3_KEYS[$composite]=1
+  done < <(list_entries "$target")
 }
 
 # l3_has_key TARGET KEY → 0 if an L3 entry in TARGET already carries this key.
 l3_has_key() {
-  local target="$1" key="$2" f s e payload etype id conf k2
-  [ -f "$target" ] || return 1
-  while IFS=$'\t' read -r f s e payload etype id conf; do
-    k2=$(normalise_key "$payload")
-    [ "$k2" = "$key" ] && return 0
-  done < <(list_entries "$target")
-  return 1
+  local target="$1" key="$2" composite="$1|$2"
+  load_l3_keys "$target"
+  [ -n "${L3_KEYS[$composite]:-}" ]
 }
 
 # append_l3 TARGET ETYPE TEXT IDKEY CONFIDENCE SOURCE — append a curated L3 entry.
@@ -146,6 +166,8 @@ append_l3() {
     echo "  text: |"
     printf '%s\n' "$text" | fold -s -w 100 | sed 's/^/    /'
   } >> "$target"
+  L3_KEYS_LOADED[$target]=1
+  L3_KEYS[$target|$idkey]=1
 }
 
 # ---------------------------------------------------------------------------
@@ -155,6 +177,7 @@ hash_pending_in_file() {
   local file="$1"
   [ -f "$file" ] || return 0
   $DRY_RUN && { grep -c '^- id: pending' "$file" 2>/dev/null || echo 0; return 0; }
+  grep -q '^- id: pending' "$file" 2>/dev/null || return 0
 
   python3 - "$file" <<'PY' 2>/dev/null || awk_fallback "$file"
 import re, sys, hashlib, pathlib
