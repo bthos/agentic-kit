@@ -51,7 +51,7 @@ done
 echo "Created: $MAP_DIR"
 echo "  map.md            (structured codebase map — fill this in)"
 echo "  open-questions.md (unknowns surfaced for the user / next role)"
-echo "  handoff-log.md    (handoff entries)"
+echo "  handoff-log.md    (workers append return entries here)"
 echo ""
 echo "MAP_PATH=$MAP_DIR"
 echo "MAP_ID=$MAP_ID"

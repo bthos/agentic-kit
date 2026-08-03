@@ -87,6 +87,8 @@ Record in-flight calls as you make them with `talaka/memory/tools/session.sh dec
 ## Guardrails
 
 - **Edit prompt files, not application code.** This skill authors and hardens prompts (`agents/*.md`, `skills/*/SKILL.md`, `autoresearch/*.md`). It does not implement features — that is `@cmok`.
+- **Never write an invocation into a prompt.** Kit prompts route through the coordinator: a worker logs, returns, and *recommends*. A prompt you author must not tell its agent to launch, spawn, or auto-invoke another agent — see `.tlk/PIPELINE.md` → Coordinator Protocol. `tests/lint/structure.test.sh` enforces this.
+- **No invocations of your own.** Never launch another agent or skill while running.
 - **Never invent requirements.** Every instruction traces to a source or the user's request; add nothing that is not there.
 - **No conflicting instructions.** A prompt you ship must not contradict itself — resolve clashes in favour of the authoritative source.
 - **Never finalize without a Tester cycle.** At least one full Builder→Tester→Builder loop, with Tester's output visible in the conversation, before you call a prompt done.

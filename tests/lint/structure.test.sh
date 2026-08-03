@@ -58,6 +58,51 @@ test_no_plugin_dependency_in_shipped_artifacts() {
   fi
 }
 
+test_no_agent_to_agent_invocation_in_shipped_prompts() {
+  # Coordinator-driven routing: a worker (agent or skill) does its task, appends
+  # a return entry to handoff-log.md, and returns. Only the coordinator invokes
+  # agents. Shipped prompts must therefore never instruct an agent to launch
+  # another one. Naming an agent as a *recommendation* is fine — calling one is
+  # not, so these patterns match imperatives, not mentions.
+  local pat hits
+  local -a patterns=(
+    'auto-invoke'
+    '[Aa]uto invoke'
+    '[Uu]se the \*\*Agent tool\*\*'
+    '[Uu]se the Agent tool'
+    '[Ll]aunch (both )?(agent|agents) `'
+    '[Ll]aunch the Agent tool'
+    '[Vv]ia the Task tool'
+    '[Rr]e-invoke `?@'
+    '[Ii]mmediately invoke'
+  )
+  # Prohibitions are themselves phrased with these words ("Never auto-invoke…"),
+  # so drop any hit whose line carries a negation marker. What survives is an
+  # imperative — the thing we actually ban.
+  local negated='[Nn]ever|[Dd]o not|[Dd]oes not|[Dd]on.t|must not|[Nn]o agent|without'
+  for pat in "${patterns[@]}"; do
+    hits=$(grep -rInE --exclude-dir=tests --exclude-dir=.git "$pat" \
+             "$KIT_ROOT/agents" "$KIT_ROOT/skills" "$KIT_ROOT/templates" 2>/dev/null \
+           | grep -vE "$negated" || true)
+    if [ -n "$hits" ]; then
+      fail "agent-to-agent invocation instruction found (pattern: $pat):"
+      printf '        %s\n' "$hits" >&2
+    fi
+  done
+}
+
+test_every_agent_states_the_no_invocation_rule() {
+  # Every shipped agent prompt must carry the rule explicitly — a worker that
+  # only inherits it from PIPELINE.md loses it the moment it runs with a
+  # trimmed context.
+  local f
+  for f in "$KIT_ROOT"/agents/*.md; do
+    [ -f "$f" ] || continue
+    grep -qiE 'do not invoke|does not invoke|never .*(launch|invoke).*(agent|skill)' "$f" \
+      || fail "$(basename "$f"): missing an explicit 'do not invoke another agent' rule"
+  done
+}
+
 test_managed_block_markers_are_balanced() {
   # lib.sh defines paired begin/end markers; render output must contain both.
   source "$KIT_ROOT/shared/lifecycle/tools/lib.sh"

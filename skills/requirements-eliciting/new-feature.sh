@@ -66,16 +66,20 @@ EOF
 cat > "$FEATURE_DIR/handoff-log.md" <<EOF
 # Handoff Log — ${DATE}-${SLUG}
 
-<!-- Append one entry per handoff. Format:
-## HH:MM [From] → [To] [context]
-Key decisions: ...
+<!-- The coordinator's event track. Every worker appends ONE entry before
+     returning; no worker invokes another. Format:
+## HH:MM [Worker] → Coordinator [context] [done|pass|fail|blocked]
+Result: ...
 Artifacts: ...
+Recommend: [@agent | /skill | STOP — user input needed | END]
+Why: ...
+Blockers: [None | ...]
 -->
 EOF
 
 echo "Created: $FEATURE_DIR"
 echo "  spec.md         (fill in requirements)"
 echo "  deferred.md     (deferred decisions tracker)"
-echo "  handoff-log.md  (agents append entries here)"
+echo "  handoff-log.md  (workers append return entries here)"
 echo ""
 echo "FEATURE_PATH=$FEATURE_DIR"

@@ -52,12 +52,14 @@ This creates `.tlk/features/YYYY-MM-DD-<slug>/` with a `spec.md` skeleton and `h
 
 When a handoff already specifies a feature path, use it instead of creating a new one.
 
-## Handoff
+## Return to Coordinator
 
-**Receive from:** Idea/User
-**Hand off to:** ux-designing (with spec); optionally Mokash in parallel
+**You do not invoke anyone.** You write the spec, log, and return. The coordinator reads your return entry and decides what runs next — normally `/ux-designing`, plus `@mokash` in parallel when the spec has user-facing flows.
 
-When spec is ready, record metrics then launch agents:
+- **Never** use the Agent/Task tool. Never launch, spawn, or "auto-invoke" `/ux-designing`, `@mokash`, or anything else.
+- **Do** name what you recommend and hand the coordinator the payloads it needs to relay.
+
+When the spec is ready:
 
 1. **Record metrics:**
    ```bash
@@ -69,29 +71,27 @@ When spec is ready, record metrics then launch agents:
    ```
    Skip silently if `.tlk/autoresearch/tools/record-metrics.sh` does not exist.
 
-2. **Use the Agent tool** to launch agent `ux-designing` with prompt:
+2. **Append the first log entry.** The feature folder you created already contains `handoff-log.md`:
    ```
-   Design UX for [feature] based on spec at [path]. Key decisions: [list]. Acceptance criteria: [list]. Open questions: [list]. Feature path: [path].
+   ## HH:MM requirements-eliciting → Coordinator [spec] done
+   Result: spec written. Key ACs: [count]. Open questions: [count]. Deferred: [count].
+   Artifacts: [feature-path]/spec.md
+   Recommend: /ux-designing (+ @mokash in parallel if user-facing flows)
+   Why: [one line]
    ```
 
-When spec is substantial (has user-facing flows), **also use the Agent tool** to launch agent `mokash` in parallel with prompt:
-```
-Feature path: [path]. Spec path: [path]. Document: [user guide | API | both]. Key flows: [list from spec].
-```
+3. **Return** with the payloads the coordinator will relay:
 
-**Handoff checklist (before invoking ux-designing):**
+   **For ux-designing:** Feature path. Spec path. Key decisions. Acceptance criteria. Open questions.
+   **For Mokash (only when the spec has user-facing flows):** Feature path. Spec path. Document scope: [user guide | API | both]. Key flows from the spec.
+
+**Self-check before returning:**
 - [ ] Open questions listed?
 - [ ] Deferred decisions documented?
-- [ ] Feature path included?
+- [ ] Feature path included in the return?
 - [ ] Architecture implications noted (if relevant)?
 
-**Handoff log:** After creating the feature folder (which includes a `handoff-log.md`), append the first entry:
-```
-## HH:MM requirements-eliciting → ux-designing [spec]
-Spec: [path]. Key ACs: [count]. Open questions: [count].
-```
-
-**Spec update notification:** When updating spec mid-pipeline, include "Spec updated at [path]" in handoff.
+**Spec update notification:** When updating a spec mid-pipeline, put "Spec updated at [path]" in your return so the coordinator can re-brief downstream workers that already ran.
 
 ## Project Profile
 

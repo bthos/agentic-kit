@@ -50,7 +50,7 @@ done
 
 echo "Created: $FEATURE_DIR"
 echo "  research-brief.md (verified findings + single recommended approach — fill this in)"
-echo "  handoff-log.md    (handoff entries)"
+echo "  handoff-log.md    (workers append return entries here)"
 echo ""
 echo "FEATURE_PATH=$FEATURE_DIR"
 echo "RESEARCH_ID=$RESEARCH_ID"

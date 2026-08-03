@@ -61,12 +61,14 @@ When finding missing or ambiguous requirements, add "Spec feedback: [gap or ques
 
 When handoff specifies a feature path (`.tlk/features/YYYY-MM-DD-feature-name/`), write UX artifacts there. Include this path in handoffs.
 
-## Handoff
+## Return to Coordinator
 
-**Receive from:** requirements-eliciting (spec)
-**Hand off to:** mockups-creating (mockups), Mokash (parallel docs)
+**You do not invoke anyone.** You design, log, and return. The coordinator reads your return entry and decides what runs next — normally `/mockups-creating`, plus `@mokash` in parallel.
 
-When UX design is complete, record metrics then launch agents:
+- **Never** use the Agent/Task tool. Never launch, spawn, or "auto-invoke" `/mockups-creating`, `@mokash`, or anything else.
+- **Do** name what you recommend and hand the coordinator the payloads it needs to relay.
+
+When the UX design is complete:
 
 1. **Record metrics:**
    ```bash
@@ -78,17 +80,19 @@ When UX design is complete, record metrics then launch agents:
    ```
    Skip silently if `.tlk/autoresearch/tools/record-metrics.sh` does not exist.
 
-2. **mockups-creating** (mockups) — launch agent `mockups-creating` with prompt:
+2. **Append your log entry** to `handoff-log.md`:
    ```
-   Create mockups from UX design at [path]. Feature path: [path]. States to implement: [list from states matrix]. Key decisions: [list]. Accessibility: [notes].
+   ## HH:MM ux-designing → Coordinator [UX] done
+   Result: UX design complete. Screens: [count]. States covered: [list]. ACs covered: [list].
+   Artifacts: [feature-path]/ux-design.md
+   Recommend: /mockups-creating (+ @mokash in parallel)
+   Why: [one line]
    ```
 
-3. **Mokash** (parallel docs) — launch agent `mokash` in parallel with prompt:
-   ```
-   Feature path: [path]. Spec: [path]. UX: [path]. Document: [user guide | API | both]. Key flows to document: [list from ux-design.md].
-   ```
+3. **Return** with the payloads the coordinator will relay:
 
-Launch both using the Agent tool. Do not wait for user confirmation.
+   **For mockups-creating:** Feature path. UX design path. States to implement (from the states matrix). Key decisions. Accessibility notes.
+   **For Mokash:** Feature path. Spec path. UX path. Document scope: [user guide | API | both]. Key flows to document.
 
 ## Project Profile
 
@@ -121,4 +125,4 @@ Record in-flight decisions as you make them: `talaka/memory/tools/session.sh dec
 - Focus on structure and flow, not pixel-perfect visuals
 - Consider edge cases (empty states, errors)
 
-**Mode-like constraint:** Use search tools to explore the codebase. You may create or update design artifacts (markdown, ASCII wireframes). Do NOT write application code, run build commands, or implement features. If the user asks to implement, suggest handing off to Cmok.
+**Mode-like constraint:** Use search tools to explore the codebase. You may create or update design artifacts (markdown, ASCII wireframes). Do NOT write application code, run build commands, or implement features. If asked to implement, return and recommend `@cmok` — do not invoke it.

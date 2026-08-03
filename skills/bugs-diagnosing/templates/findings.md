@@ -38,6 +38,8 @@
 - [item]
 - [item]
 
-## Handoff to Cmok
+## Fix contract for Cmok
 
-Cmok: implement the **smallest** change in the listed files that resolves the named mechanism. Do not refactor. Do not expand. After build + tests pass, hand to Bagnik. When Bagnik passes code QA, re-invoke `@yaga` for instrumentation strip.
+Cmok: implement the **smallest** change in the listed files that resolves the named mechanism. Do not refactor. Do not expand. When build + tests pass, log and return to the coordinator — do not invoke Bagnik yourself.
+
+Coordinator: after Bagnik passes code QA on this fix, invoke `@yaga` again for the instrumentation strip. The probes are still in the tree until that runs.

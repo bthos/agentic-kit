@@ -1,6 +1,6 @@
 ---
 name: bugs-diagnosing
-description: Hypothesis design for hard bugs. Reads the bug + relevant code and produces a structured hypothesis.md with ranked hypotheses and an instrumentation plan. No code edits, no log server. Hand off to @yaga (agent) for the execution loop.
+description: Hypothesis design for hard bugs. Reads the bug + relevant code and produces a structured hypothesis.md with ranked hypotheses and an instrumentation plan. No code edits, no log server. Logs and returns to the coordinator, recommending @yaga for the execution loop.
 disable-model-invocation: false
 ---
 
@@ -25,7 +25,15 @@ This skill frames the riddle before the search begins. You read the bug, read th
    ```
    The slug should be short and bug-shaped (`login-stuck-spinner`, `pdf-export-blank-page`). The script creates `.tlk/debug/YYYY-MM-DD-<slug>/` with `hypothesis.md`, `instrumentation-log.md`, `findings.md`, and `handoff-log.md` templates.
 5. **Fill `hypothesis.md`.** Use the template that was created. The hypothesis section is the contract — `@yaga` will refuse to instrument without it.
-6. **Hand off to the agent.** Append to `handoff-log.md` and tell the user how to proceed: `@yaga` to run the execution loop.
+6. **Log and return.** Append your return entry to `handoff-log.md`, then return to the coordinator — **do not invoke `@yaga` yourself**. Yaga is a user-authorised side-loop; the coordinator surfaces the recommendation and the user decides.
+
+```
+## HH:MM bugs-diagnosing → Coordinator [hypothesis] done
+Result: [N] ranked hypotheses with probes. Investigation: .tlk/debug/YYYY-MM-DD-<slug>/
+Artifacts: hypothesis.md
+Recommend: @yaga (user-authorised) — run the instrumentation loop
+Why: the hypotheses are falsifiable and bounded; evidence beats another guess.
+```
 
 ## Hypothesis quality bar
 
@@ -52,11 +60,12 @@ Pick the minimum number of probes that can discriminate between hypotheses. A pr
 ## Output
 
 - `.tlk/debug/YYYY-MM-DD-<slug>/hypothesis.md` populated with bug statement, ranked hypotheses, instrumentation plan, and success criteria.
-- Handoff log entry directing the user (or `@yaga` agent) to start the execution loop.
+- A return entry in the log recommending `@yaga` for the execution loop.
 
 ## Guardrails
 
 - **No code edits.** Not even comments. This skill is design-only.
+- **No invocations.** Never launch `@yaga` or any other agent. Recommend, log, return — the coordinator routes.
 - **No log server.** That is `@yaga`'s job.
 - **No premature ranking.** If you cannot reason about likelihood, instrument both equally — confirmation by run-cost, not by hunch.
 - **No fix proposals.** Findings come from evidence, not hypothesis. `findings.md` is written by `@yaga` after probes have run.

@@ -50,7 +50,7 @@ done
 
 echo "Created: $AUDIT_DIR"
 echo "  audit.md       (ranked findings + recommended fix per finding)"
-echo "  handoff-log.md (handoff entries)"
+echo "  handoff-log.md (workers append return entries here)"
 echo ""
 echo "AUDIT_PATH=$AUDIT_DIR"
 echo "AUDIT_ID=$AUDIT_ID"

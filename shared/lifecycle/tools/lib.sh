@@ -571,7 +571,10 @@ $TALAKA_BLOCK_BEGIN
 -->
 
 > **$KIT_BRAND pipeline** — read [\`$pipeline_rel\`]($pipeline_rel) before any task.
-> It defines the agent roles, handoff protocol, and quality gates used in this project.
+> It defines the agent roles, the coordinator protocol, and the quality gates used in this project.
+> **You are the coordinator.** Agents and skills never invoke each other: each does its task,
+> appends a return entry to the feature's \`handoff-log.md\`, and returns to you. You read that
+> log and decide who runs next. Their \`Recommend:\` line is an input, not a jump.
 > Project-specific config: [\`$ARTEFACTS_NAME/PROJECT.md\`]($ARTEFACTS_NAME/PROJECT.md).
 
 @$pipeline_rel

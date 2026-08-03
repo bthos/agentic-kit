@@ -30,7 +30,15 @@ The slug should name the audit's theme (`model-naming`, `artefact-paths`, `post-
 2. **Fix the corpus and the dimensions.** Write the globs you're auditing into `audit.md`, and tick which dimensions you're checking (below). Scope beats breadth — a focused audit that closes is worth more than an open-ended one.
 3. **Collect evidence mechanically, then reason.** Use search to enumerate every occurrence of a value/term across the corpus (`rg -n`), so no instance is missed; then read the surrounding intent to judge whether a difference is drift or deliberate.
 4. **Write findings.** One per row, ranked by severity. Each finding lists **every** location (`path:line`), names the **single source of truth** the corpus should converge on, and a concrete fix `@cmok` can apply.
-5. **Hand off to `@cmok`.** Append to `handoff-log.md`. The audit is the fix contract; `@cmok` applies it, `@bagnik` gates the result.
+5. **Log and return.** Append your return entry to `handoff-log.md`, then return to the coordinator — **do not invoke `@cmok` yourself**. The audit is the fix contract; the coordinator routes it to `@cmok`, who applies it, and `@bagnik` gates the result.
+
+```
+## HH:MM consistency-auditing → Coordinator [audit] done
+Result: [N] findings — [high]/[med]/[low]. Corpus: [globs].
+Artifacts: [audit-path]/audit.md
+Recommend: @cmok (apply the fixes)
+Why: every finding names its canonical source and exact change; no re-investigation needed.
+```
 
 ## Dimensions
 
@@ -53,6 +61,7 @@ A good finding is:
 ## Guardrails
 
 - **No code edits.** This skill is design-only; it produces the audit, not the patch.
+- **No invocations.** Never launch another agent or skill. Recommend, log, return — the coordinator routes.
 - **Evidence over hunch.** Enumerate every instance by search before asserting an inconsistency — a missed instance becomes a half-fix that re-drifts.
 - **Don't flag intentional variation.** Different by design is not drift. If unsure, record it as a question, not a finding.
 - **Converge, don't scatter.** Always name one canonical source; a finding that says "make these agree" without saying *to which* is not actionable.

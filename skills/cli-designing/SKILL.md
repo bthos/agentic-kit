@@ -1,6 +1,6 @@
 ---
 name: cli-designing
-description: CLI factory — design an agent-native CLI for any API (printing-press pattern). Finds the API's non-obvious value, absorbs the feature set of every competing tool, designs a deep command surface with local persistence, and writes the 100-point scorecard the build is gated on. Hand off to /architecture-planning for the build pipeline.
+description: CLI factory — design an agent-native CLI for any API (printing-press pattern). Finds the API's non-obvious value, absorbs the feature set of every competing tool, designs a deep command surface with local persistence, and writes the 100-point scorecard the build is gated on. Logs and returns to the coordinator, recommending /architecture-planning for the build pipeline.
 disable-model-invocation: false
 ---
 
@@ -71,15 +71,26 @@ Fill `design.md`:
 
 - **Language.** Default to the project's stack (`.tlk/PROJECT.md`); for a standalone tool, Go + Cobra is the reference (single static binary — the friendliest install for agents). Record the choice and why.
 
-## Phase 3 — Handoff to the pipeline
+## Phase 3 — Return to the coordinator
 
-The build is **not** yours. Append to `handoff-log.md` and hand off to `/architecture-planning` (architecture + tests), citing all three artifacts. From there the normal flow applies: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA, **scorecard-gated**) → `@zlydni`.
+The build is **not** yours, and neither is the routing. Append your return entry to `handoff-log.md`, then return — **do not invoke any agent or skill**:
+
+```
+## HH:MM cli-designing → Coordinator [design] done
+Result: CLI design complete. Commands: [count]. NOI: [one line].
+Artifacts: research-brief.md, design.md, scorecard.md
+Recommend: /architecture-planning (arch + tests)
+Why: design and QA contract are settled; the build needs tests first.
+```
+
+From there the coordinator runs the normal route: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA, **scorecard-gated**) → `@zlydni`. Cite all three artifacts in your return so it can relay them.
 
 `scorecard.md` is the QA contract: two tiers, 100 points, **Grade A (≥85) required to ship**. Tier 1 scores the agent-native infrastructure; Tier 2 scores domain correctness (paths valid against the spec, auth protocol fidelity, sync→upsert→search pipeline actually flows, no dead flags). Bagnik scores it during code QA and blocks below 85. Verification is mechanical, in layers: scorecard → dogfood (run every command; dead flags, invalid paths, auth mismatches) → proof-of-behaviour (write through the pipeline, read it back) → optional **read-only** live smoke test.
 
 ## Guardrails
 
 - **No build.** You produce designs and contracts; `@cmok` builds. Don't scaffold code beyond illustrative snippets in `design.md`.
+- **No invocations.** Never launch another agent or skill. Recommend, log, return — the coordinator routes.
 - **No NOI, no design.** If you cannot articulate the non-obvious insight, say so and ask the user whether a plain wrapper is genuinely what they want.
 - **Anti-gaming.** Ecosystem table stakes are Priority 1; scorecard optimisation is last. Never trade a competitor-parity feature for scorecard points.
 - **Live API calls during design are read-only**, rate-limit-respecting, and recorded in the brief (endpoints touched, when, what was observed).

@@ -54,13 +54,24 @@ Fill `adaptation.md`:
 - **Self-containment.** State any external runtime dependency introduced. The adapted artifact must stand on its own — never leave a hard dependency on an external plugin/tool unless that dependency is the explicit point of the feature.
 - **Attribution.** How the source is credited, per its license.
 
-## Phase 3 — Handoff to the pipeline
+## Phase 3 — Return to the coordinator
 
-The build is **not** yours. Append to `handoff-log.md` and hand off to `/architecture-planning` (architecture + tests), citing both artifacts. From there the normal flow applies: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA) → `@zlydni`.
+The build is **not** yours, and neither is the routing. Append your return entry to `handoff-log.md`, then return — **do not invoke any agent or skill**:
+
+```
+## HH:MM patterns-adapting → Coordinator [design] done
+Result: adaptation designed. Core insight: [one line]. Source: [attribution].
+Artifacts: research-brief.md, adaptation.md
+Recommend: /architecture-planning (arch + tests)
+Why: the adaptation is specified; the build needs tests first.
+```
+
+From there the coordinator runs the normal route: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA) → `@zlydni`. Cite both artifacts in your return so it can relay them.
 
 ## Guardrails
 
 - **No build.** You produce the brief and the design; `@cmok` builds. No scaffolding beyond illustrative snippets in `adaptation.md`.
+- **No invocations.** Never launch another agent or skill. Recommend, log, return — the coordinator routes.
 - **No verbatim copy.** Re-express the pattern in this project's idiom; don't paste incompatible code or import accidental complexity.
 - **No core insight, no design.** If you can't name what makes the pattern work in one sentence, say so and ask the user whether a straight port is really what they want.
 - **Stay self-contained.** Don't introduce a runtime dependency on an external plugin/skill/tool unless that is the explicit intent — re-express the idea natively.

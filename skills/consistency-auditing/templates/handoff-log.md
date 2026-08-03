@@ -1,7 +1,10 @@
 # Handoff Log — {{AUDIT_ID}}
 
-<!-- Append one entry per handoff. Format:
-## HH:MM [From] → [To] [context]
-Key decisions: ...
+<!-- The coordinator's event track. Every worker appends ONE entry before
+     returning; no worker invokes another. Format:
+## HH:MM [Worker] → Coordinator [context] [done|pass|fail|blocked]
+Result: ...
 Artifacts: ...
+Recommend: [@agent | /skill | STOP — user input needed | END]
+Why: ...
 -->

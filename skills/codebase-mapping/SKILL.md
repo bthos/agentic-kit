@@ -34,7 +34,7 @@ The slug should be short and area-shaped (`whole-repo`, `payments-service`, `aut
 5. **Trace invocation edges.** For each important boundary, find the call site (`path:line`) and record what triggers the call and what's passed. This is the part a file tree cannot show, and the reason the map is worth writing.
 6. **Capture conventions & schemas.** Config file shapes, frontmatter fields, naming patterns, error/exit-code conventions, where persistent state lives. Read recent git history (`git log` on hot paths) — it reveals intent the code doesn't state.
 7. **Fill `map.md`** using the template. Park anything you can't resolve from the code in `open-questions.md` — do **not** guess it into the map as fact.
-8. **Hand off.** Append to `handoff-log.md` and point the user to the next role (`/architecture-planning`, `/requirements-eliciting`), citing the map path.
+8. **Log and return.** Append your return entry to `handoff-log.md`, citing the map path, and recommend the next role (`/architecture-planning`, `/requirements-eliciting`). The coordinator routes from there.
 
 ## Map quality bar
 
@@ -51,6 +51,7 @@ A good map is:
 - **Don't boil the ocean.** A 4000-line map of a 4000-file repo is not a map. Spend depth where a newcomer would actually need it; collapse the rest.
 - **Snapshot, not gospel.** Record the commit sha; a map decays. Say what was excluded.
 - **No fixes or refactor proposals.** Observations belong in the map; recommendations belong to `/architecture-planning`.
+- **No invocations.** Never launch another agent or skill. Log, return, recommend — the coordinator routes.
 
 ## Memory
 

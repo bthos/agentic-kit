@@ -73,6 +73,7 @@ Fix mechanical issues directly; raise judgment calls (contradictions needing a h
 - **Never skip the bookkeeping.** An ingest that doesn't update `index.md` and `log.md` didn't happen. Cross-references are the product.
 - **Cite or don't claim.** Wiki pages state where each claim came from; answers cite pages.
 - **Stay in `wiki/`.** This skill writes nowhere else (memory L2 excepted, below).
+- **No invocations.** Never launch another agent or skill. Return to the coordinator; it routes.
 
 ## Memory
 

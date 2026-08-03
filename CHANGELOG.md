@@ -10,6 +10,46 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ## [Unreleased]
 
+### Changed — coordinator-driven routing (agents no longer invoke agents)
+
+- **Routing moved out of the agents and into a single coordinator.** Previously each agent decided
+  who ran next and launched it via the Agent tool — Bagnik auto-invoked Cmok or Zlydni, Cmok
+  auto-invoked Bagnik and Mokash, architecture-planning re-invoked Bagnik, Yaga launched Cmok,
+  requirements-eliciting and ux-designing launched their successors, and Zlydni backgrounded
+  `autoresearch/run.sh`. Every one of those chains is removed. **No agent and no skill invokes
+  another agent.** A worker does its task, appends one return entry to `handoff-log.md`, and
+  returns; the coordinator — the main session — reads the log and decides who runs next.
+- **Why.** A chained agent sees only its own slice, so it cannot detect a fix loop that is not
+  converging, a gate failing twice for the same opaque reason, or two workers recommending each
+  other. Nesting also loses context at every hop and removes the user's ability to intervene
+  mid-chain. The coordinator holds the whole event track and can do all three.
+- **Return entry format** (replaces the old `[From] → [To]` handoff entry):
+  `## HH:MM [Worker] → Coordinator [context] [done|pass|fail|blocked]` plus `Result:`,
+  `Artifacts:`, `Recommend:`, `Why:`, `Blockers:`. The `→ Coordinator` target is literal.
+  Bagnik still writes `PASS`/`FAIL` uppercase in `Result:` — `autoresearch/tools/build-eval-set.sh`
+  parses it, and its existing regexes still match the new header.
+- **`PIPELINE.md.template` restructured.** *Handoff Protocol* → **Coordinator Protocol**: worker vs
+  coordinator roles, the one routing rule, the coordinator loop, the return entry format, a
+  **Routing Table** keyed on `(last worker, context, status)`, **Loop breaking** rules (stop after
+  three unproductive fix cycles; surface `@yaga` after a second opaque failure), the invocation
+  prompt template, and per-worker invocation checklists. The old *Handoff Map* is superseded by the
+  Routing Table.
+- **Bagnik's role is now assigned, not inferred.** It used to deduce test gate vs code QA from its
+  caller; with no caller, the coordinator states the context in the invocation prompt.
+- **Zlydni no longer fires autoresearch.** It recommends `@veles` instead of backgrounding
+  `run.sh` — starting a mutation loop over installed agent files is a coordinator/user decision,
+  not a side effect of a commit.
+- **Veles invariant added** (`templates/autoresearch/program.md` #8): a mutation that introduces an
+  agent-to-agent invocation is rejected regardless of its composite score.
+- **Enforced by tests.** `tests/lint/structure.test.sh` gains two guards: no shipped prompt under
+  `agents/`, `skills/`, or `templates/` may contain an invocation imperative (`auto-invoke`,
+  `use the Agent tool`, `launch agent …`, `re-invoke @…`), and every agent must state the
+  no-invocation rule explicitly so it survives a trimmed context.
+- **Migration:** if you have customised installed copies under `.claude/agents/` or `.claude/skills/`,
+  the update merge will surface these edits as conflicts. Resolve toward the kit version — a
+  customised agent that still auto-invokes will keep chaining and bypass the coordinator's
+  loop-breaking.
+
 ### Added — 3-way merge on update (autoresearch edits survive kit refreshes)
 - **Installed agents/skills are now reconciled with a 3-way merge on update instead of being
   skipped or clobbered.** Previously, once Veles (`autoresearch/tools/ratchet.sh`) ratcheted a

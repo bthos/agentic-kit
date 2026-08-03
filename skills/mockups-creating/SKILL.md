@@ -31,16 +31,18 @@ talaka/memory/tools/session.sh agent mockups-creating
    - Skip silently if no path is defined or the directory is absent.
 3. **Create mockups** — Low-fidelity wireframes, screen flows, component sketches
 4. **Cover all states** — Implement every state from the UX states matrix (empty, loading, error, success, retry)
-5. **STOP after** — Do NOT auto-invoke architecture-planning. User UAT is required before proceeding.
+5. **STOP after** — Log, return, and recommend STOP. User UAT is required before anything proceeds.
 
 ## Feature Path
 
 Read spec and UX design from `.tlk/features/YYYY-MM-DD-feature-name/`. Write mockup output there. Pass the feature path in handoffs.
 
-## Handoff
+## Return to Coordinator
 
-**Receive from:** ux-designing (UX design)
-**Hand off to:** User (UAT) — STOP, do not auto-invoke
+**You do not invoke anyone**, and here the coordinator stops too — user UAT is a hard gate.
+
+- **Never** use the Agent/Task tool. Never launch, spawn, or "auto-invoke" `/architecture-planning`, `@cmok`, or anything else.
+- Your recommendation is **STOP**. Say so explicitly so the coordinator does not route onward.
 
 After mockups are complete:
 - Record metrics:
@@ -52,8 +54,15 @@ After mockups are complete:
     --wall-ms $(( ($(date +%s) - start) * 1000 ))
   ```
   Skip silently if `.tlk/autoresearch/tools/record-metrics.sh` does not exist.
-- Present mockups to the user
-- **STOP — User UAT required.** Do not proceed to architecture-planning without user approval.
+- Append your log entry to `handoff-log.md`:
+  ```
+  ## HH:MM mockups-creating → Coordinator [mockups] done
+  Result: mockups complete. States implemented: [list]. Design system: [reused components/tokens, or omit].
+  Artifacts: [paths]
+  Recommend: STOP — user UAT required before architecture-planning.
+  Why: mockups are unapproved; building on them risks rework.
+  ```
+- Present the mockups in your return so the user can review them.
 - Include in output: "UAT: Review mockups above. Approve to proceed to architecture-planning (arch + tests)."
 
 ## Output
@@ -85,5 +94,5 @@ Record in-flight decisions as you make them: `talaka/memory/tools/session.sh dec
 ## Guardrails
 
 - Do NOT implement application code — mockups only
-- Do NOT auto-invoke the next agent — always stop for user UAT
-- If asked to build, hand off to the **Cmok build agent** (`@cmok`)
+- Do NOT invoke any agent — return to the coordinator and recommend STOP for user UAT
+- If asked to build, return and recommend the **Cmok build agent** (`@cmok`); the coordinator invokes it

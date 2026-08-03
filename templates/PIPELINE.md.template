@@ -47,7 +47,7 @@ Any workspace-aware IDE discovers the kit through `CLAUDE.md` or `AGENTS.md` (th
 
 ## Pipeline Overview
 
-A self-organizing team of agents. Each agent knows who to hand off to next based on the context it receives. Nothing ships without passing Bagnik.
+A **coordinator-driven** team of agents. The coordinator — the main session the user talks to — is the only actor that invokes agents. Each agent does its own task, appends an entry to `handoff-log.md`, and returns. The coordinator reads the log and decides who runs next. Nothing ships without passing Bagnik.
 
 ```
 Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, parallel)
@@ -60,6 +60,23 @@ Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, par
        /bugs-diagnosing (hypothesis) → @yaga (instrument + observe) → @cmok (fix)
        → @bagnik (gate) → @yaga (strip instrumentation) → @zlydni
 ```
+
+Every `→` above is a **coordinator decision**, not a call one agent makes to another. Agents never see each other; they see the coordinator.
+
+### The one routing rule
+
+> **No agent and no skill invokes another agent.**
+> Do your task → append a return entry to `handoff-log.md` → return to the coordinator.
+> The coordinator reads the log and decides who runs next.
+
+Concretely, in every agent and skill prompt in this kit:
+
+- **Never** call the Agent/Task tool, and never launch, spawn, or "auto-invoke" `@bagnik`, `@cmok`, `@mokash`, `@yaga`, `@zlydni`, `@veles`, or any `/skill`.
+- **Never** wait on, poll for, or block on another agent's result. You cannot observe one — you have already returned by the time it runs.
+- **Do** name a *recommended* next step in your return block. A recommendation is data for the coordinator, not an instruction it must obey.
+- Mentioning another agent by name (in a recommendation, a fix note, or an artifact) is fine. Calling one is not.
+
+**Why:** a single decision-maker holding the whole event log can see loops, repeated failures, and stalled gates that an agent — which only sees its own slice — cannot. Chained agents also nest context: each hop loses what the previous hop knew and the user loses the ability to intervene mid-chain.
 
 ### Agents
 
@@ -99,148 +116,171 @@ Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, par
 
 The build implementation after Bagnik passes is the `@cmok` agent. The mockup phase uses the `/mockups-creating` skill. They are distinct roles: the build agent keeps the mythology name `cmok`, while skills use purpose-based names.
 
-The **Handoff Map** below uses the same `/…` and `@…` tokens.
+These tokens are **coordinator vocabulary**. The user types them to start a step; the coordinator uses them to route. A worker that writes `@cmok` in its output is naming a recommendation, never issuing a call — see the **Routing Table** below.
 
 ---
 
-## Handoff Protocol
+## Coordinator Protocol
 
-Structured handoff format for agent-to-agent transitions. Explicit handoffs reduce context loss.
+Two roles, and they never swap:
 
-*Agents: requirements-eliciting, ux-designing, architecture-planning, Cmok, Bagnik, Zlydni, Mokash, Veles, Yaga.*
+| Role | Who | May invoke agents? | Sees |
+|------|-----|--------------------|------|
+| **Coordinator** | The main session (you, talking to the user) | **Yes — exclusively** | The whole `handoff-log.md`, every return block, the user |
+| **Worker** | Any agent (`@…`) or skill (`/…`) the coordinator launches | **No — never** | Only the prompt it was given, plus files it reads |
 
-### Autonomous Flow
+*Workers: requirements-eliciting, ux-designing, mockups-creating, architecture-planning, Cmok, Bagnik, Zlydni, Mokash, Veles, Yaga, and every other `/skill`.*
 
-Agents hand off to each other without user intervention where possible. Flow stops only when user input is required.
+### The coordinator loop
 
-| Transition | Auto? | User stop? |
-|------------|-------|------------|
-| requirements-eliciting → ux-designing | yes | — |
-| ux-designing → Mokash + mockups-creating | yes | — |
-| mockups-creating → User UAT | — | **Yes** — user must approve mockups |
-| User UAT → architecture-planning | — | **Yes** — user confirms to proceed |
-| architecture-planning → Bagnik | yes | — |
-| Bagnik (test gate pass) → Cmok build | yes | — |
-| Cmok build → Bagnik + Mokash | yes | — |
-| Bagnik (code QA pass) → Zlydni | yes | — |
-| Bagnik (test gate fail) → architecture-planning | yes | — |
-| Bagnik (code QA fail) → Cmok | yes | — |
-| Zlydni → End | — | Optional — user may push |
+1. **Read the log.** `handoff-log.md` in the active feature folder is the event track — the full chain of custody. The last entry says where the pipeline stands.
+2. **Decide.** Apply the Routing Table below to `(last worker, context, status)`. The worker's `Recommend:` line is an input, not a verdict — override it when the log says otherwise (see *Loop breaking*).
+3. **Invoke exactly one step.** One agent, or one parallel pair where the table says so (only Mokash runs in parallel).
+4. **Wait for the return.** The worker finishes, having appended its log entry.
+5. **Repeat** until the table says STOP (user input required) or the pipeline ends.
 
-**Parallel docs (Mokash):** Mokash runs alongside ux-designing or Cmok whenever the flow calls for docs + design or docs + build. In Claude Code this is enabled with `background: true`; other IDEs may not expose a background flag, but the same handoff context should still be passed in parallel.
+The coordinator does not do the workers' jobs. It routes, relays context, and stops for the user.
+
+### Worker contract
+
+Every agent and every skill, without exception:
+
+1. Does its task.
+2. Appends **one** return entry to `handoff-log.md` (format below).
+3. Returns to the coordinator with the same information in its final message.
+
+It does **not** invoke the next worker. See *The one routing rule* above.
+
+### Return entry format
+
+Appended to `handoff-log.md` before returning. The `→ Coordinator` target is literal — every worker returns to the coordinator, so there is never another value:
+
+```markdown
+## HH:MM [Worker] → Coordinator [context] [status]
+Result: [one line — what happened]
+Artifacts: [paths written or updated]
+Recommend: [@agent | /skill | STOP — user input needed | END]
+Why: [one line justifying the recommendation]
+Blockers: [None | list]
+```
+
+- **context** — `spec | UX | mockups | test gate | build | code QA | docs | commit | investigation`
+- **status** — `done | pass | fail | blocked`
+- Bagnik writes `PASS` / `FAIL` in its `Result:` line; downstream tooling (`autoresearch/tools/build-eval-set.sh`) parses those.
+
+### Routing Table
+
+The coordinator's decision function. Keyed on the last return entry.
+
+| Last worker | Context | Status | Coordinator invokes next | User stop? |
+|-------------|---------|--------|--------------------------|------------|
+| *(none — idea)* | — | — | `/requirements-eliciting` | — |
+| requirements-eliciting | spec | done | `/ux-designing` **+** `@mokash` (parallel, if user-facing flows) | — |
+| ux-designing | UX | done | `/mockups-creating` **+** `@mokash` (parallel) | — |
+| mockups-creating | mockups | done | — | **STOP** — user approves mockups |
+| *(user approved)* | UAT | — | `/architecture-planning` | — |
+| architecture-planning | arch + tests | done | `@bagnik` (test gate) | — |
+| Bagnik | test gate | pass | `@cmok` (build) | — |
+| Bagnik | test gate | fail | `/architecture-planning` (fix tests/arch) | — |
+| Cmok | build | done | `@bagnik` (code QA) **+** `@mokash` (parallel) | — |
+| Bagnik | code QA | pass | `@zlydni` (commit + archive) | — |
+| Bagnik | code QA | fail | `@cmok` (fix) | — |
+| Zlydni | commit | done | — | Optional — user may push / run `@veles` |
+| Mokash | docs | done | — (nothing; docs are consumed) | — |
+| any worker | any | blocked | Read `Blockers:`; route to the worker that owns the blocker, or STOP | depends |
+| *(side-loop)* user authorises | — | — | `/bugs-diagnosing` then `@yaga` | **STOP** first — user authorises |
+| Yaga | investigation | done | `@cmok` (fix the confirmed root cause) | — |
+| Bagnik | code QA (Yaga-originated) | pass | `@yaga` (strip instrumentation) | — |
+| Yaga | strip | done | `@bagnik` (re-gate the stripped tree) | — |
+| consistency-auditing | audit | done | `@cmok` (apply fixes) | — |
+| cli-designing / patterns-adapting / tasks-researching | design / brief | done | `/architecture-planning` | — |
+
+**Parallel docs (Mokash):** Mokash is the only worker the coordinator launches alongside another. Launch it with `background: true` in Claude Code; in IDEs without a background flag, launch it in the same turn with the same context. Mokash returns to the coordinator like everyone else and routes nowhere.
+
+### Loop breaking
+
+Fix loops (`Bagnik ⇄ Cmok`, `Bagnik ⇄ architecture-planning`) have **no iteration limit** — the coordinator keeps routing until Bagnik passes. But because the coordinator holds the whole log, it can see what neither side can:
+
+- **Same check failed twice** with a non-obvious cause → stop routing to Cmok. Surface `@yaga` to the user and let them authorise the side-loop.
+- **Three fix cycles, no change in the failure** → stop and report to the user with the log excerpt. Do not spend a fourth.
+- **Two workers each recommending the other** → the log shows the cycle. Break it; do not follow either recommendation.
+
+An agent cannot detect any of these — it sees only its own invocation. This is the reason routing lives here.
 
 ### Principles
 
+- **One decision-maker** — Workers recommend; the coordinator decides. Never both.
 - **Interrupt when valuable** — Have a valuable thought → interrupt. Have nothing to add → remain silent.
-- **Explicit over implicit** — Never assume context carries; pass it explicitly
-- **Structured format** — Use the handoff template below
-- **Justify routing** — Explain why the next agent is appropriate
-- **Auto-handoff** — When completing, hand off to the next role using the **How to invoke** table above unless a user stop applies
+- **Explicit over implicit** — Never assume context carries; the coordinator passes it explicitly in each prompt.
+- **Log before returning** — A worker that returns without a log entry has broken the chain of custody; the coordinator should ask it to write one.
+- **Justify routing** — The coordinator states why the next worker is the right one.
 
-### Handoff Template
+### Invocation Prompt Template
 
-When handing off to another agent, include:
+What the **coordinator** puts in the prompt when it launches a worker. The worker cannot see the previous worker's context, so the coordinator carries it forward:
 
 ```markdown
-## Handoff: [From Agent] → [To Agent]
-
-**Context:** [spec | design | mockups | test gate | build | code QA | commit]
-**Trigger:** [Task completed | Blocked | User request]
+**Context:** [spec | UX | mockups | test gate | build | code QA | docs | commit | investigation]
 **Feature path:** `.tlk/features/YYYY-MM-DD-feature-name/`
+**Why you:** [one line — what the log says makes this your turn]
 
-### Deliverables
-- [Artifact 1]: [path or description]
-- [Artifact 2]: [path or description]
+### Inputs
+- [Artifact 1]: [path]
+- [Artifact 2]: [path]
 
-### Context
-- **Decisions:** [Key decisions made]
-- **Constraints:** [Limitations, dependencies]
-- **Blockers:** [None | List if any]
+### Carried context
+- **Decisions:** [key decisions from prior workers]
+- **Constraints:** [limitations, dependencies]
+- **Prior attempts:** [for fix loops — what was already tried and failed]
 
-### Next Agent
-**Invoke:** name the next **role** from the Handoff Map (e.g. `/requirements-eliciting`, `/architecture-planning`, `@bagnik`, `@cmok` for build, `@mokash`, `@zlydni`).
-**Why:** [One-line justification for this agent]
-**Prompt:** [Suggested prompt for next agent]
+### On completion
+Append your return entry to `handoff-log.md` and return to me. Do not invoke another agent.
 ```
 
-**Feature path rule:** All feature artifacts live in `.tlk/features/YYYY-MM-DD-feature-name/`. Include this path in every handoff so the next agent knows where to read/write. When feature is complete, Zlydni moves the folder to `.tlk/archive/`.
+That last line is not boilerplate — restate it in every invocation.
 
-### Agent-Specific Handoff Checklists
+**Feature path rule:** All feature artifacts live in `.tlk/features/YYYY-MM-DD-feature-name/`. The coordinator includes this path in every invocation so the worker knows where to read/write. When the feature is complete, Zlydni moves the folder to `.tlk/archive/`.
 
-**requirements-eliciting → ux-designing:** Open questions listed? Deferred decisions documented? Feature path included?
-**ux-designing → mockups-creating:** States matrix for each screen? UX path? Key decisions?
-**ux-designing → Mokash:** UX path? Key flows to document?
-**architecture-planning → Bagnik:** Coverage summary? Known gaps? Arch path? Test paths?
-**Cmok → Bagnik:** Feature path? What was built? Changed files? New storage/API?
-**Cmok → Mokash:** What was built? Feature path? Spec/UX/tech plan paths?
-**Bagnik → Zlydni:** Bagnik passed. Feature path. Changed files. Safe to commit.
+### Per-Worker Invocation Checklists
 
-### Handoff Map
+What the coordinator must include when launching each worker:
 
-| From | To | Invocation | Auto? |
-|------|-----|------------|-------|
-| Idea/User | requirements-eliciting | `/requirements-eliciting` | — |
-| requirements-eliciting | ux-designing | `/ux-designing` | yes |
-| ux-designing | Mokash (parallel) | `@mokash` | yes |
-| ux-designing | mockups-creating | `/mockups-creating` (mockups) | yes |
-| mockups-creating | User UAT | — | **STOP** |
-| User UAT | architecture-planning | `/architecture-planning` | **STOP** |
-| architecture-planning | Bagnik | `@bagnik` (test gate) | yes |
-| Bagnik (test gate pass) | Cmok | `@cmok` (build) | yes |
-| Cmok | Mokash (parallel) | `@mokash` | yes |
-| Cmok | Bagnik | `@bagnik` (code QA) | yes |
-| Bagnik (code QA pass) | Zlydni | `@zlydni` | yes |
-| Bagnik (test gate fail) | architecture-planning | `/architecture-planning` | yes |
-| Bagnik (code QA fail) | Cmok | `@cmok` | yes |
-| Zlydni | End | — | Optional push |
-| *(side-loop)* User / Cmok / Bagnik | Yaga | `/bugs-diagnosing` then `@yaga` | **STOP** (user authorises) |
-| Yaga (findings) | Cmok | `@cmok` (fix) | yes |
-| Bagnik (Yaga-originated pass) | Yaga | `@yaga` (strip) | yes |
-| *(entry)* Idea/User (new CLI) | cli-designing | `/cli-designing` | — |
-| cli-designing (design done) | architecture-planning | `/architecture-planning` | yes |
-| *(entry)* Idea/User (new pattern) | patterns-adapting | `/patterns-adapting` | — |
-| patterns-adapting (design done) | architecture-planning | `/architecture-planning` | yes |
-| *(entry)* Idea/User (uncertain approach) | tasks-researching | `/tasks-researching` | — |
-| tasks-researching (brief done) | architecture-planning | `/architecture-planning` | yes |
-| *(ad-hoc)* User | knowledge-curating | `/knowledge-curating` | — |
-| *(ad-hoc)* User / before planning | codebase-mapping | `/codebase-mapping` | — |
-| *(ad-hoc)* User | prompts-building | `/prompts-building` | — |
-| *(side-loop)* User / any agent | assumptions-challenging | `/assumptions-challenging` | — |
-| consistency-auditing (findings) | Cmok | `@cmok` (apply fixes) | yes |
+**→ ux-designing:** Spec path. Open questions. Deferred decisions. Feature path.
+**→ mockups-creating:** UX path. States matrix per screen. Key decisions. Feature path.
+**→ Mokash:** Feature path. Spec/UX/tech-plan paths. "What was built" (post-build). Doc scope: README | API | user guide | all.
+**→ architecture-planning:** Feature path. Spec + UX paths. For a fix loop: failing test names, error output, affected files.
+**→ Bagnik (test gate):** Feature path. Arch path. Test paths. Coverage summary. Known gaps. AC-to-test map path. **State the context explicitly — "test gate".**
+**→ Bagnik (code QA):** Feature path. "What was built". Changed files. New storage/API surface. Tech plan path. Divergences. **State the context explicitly — "code QA".**
+**→ Cmok (build):** Feature path. Spec, UX, tech plan paths. Bagnik's test-gate result.
+**→ Cmok (fix):** Feature path. Failed check. Error output. Affected files. Suggested fix. Prior fix attempts.
+**→ Zlydni:** Feature path. Changed files. Confirmation that Bagnik's code QA passed.
+**→ Yaga:** Bug description. Investigation dir (if `/bugs-diagnosing` created one). Failing repro/test command. Affected files.
 
-*The **Invocation** column uses `/` for skills and `@` for agents — the kit's universal shorthand.*
-
-**Bagnik context inference:** Bagnik determines its role from who invoked it. From architecture-planning = test gate (fail → architecture-planning, pass → Cmok build). From Cmok = code QA (fail → Cmok, pass → Zlydni). Fix loops repeat until Bagnik passes — no iteration limit.
+**Bagnik context is set by the coordinator, not inferred.** Bagnik has two roles — test gate and code QA — and no longer has a caller to infer them from. The coordinator states which one in the invocation prompt. Fix loops repeat until Bagnik passes, subject to *Loop breaking* above.
 
 ### Quality Gates
 
-- **Bagnik test gate** — Block if tests fail. Do not proceed to build.
-- **Bagnik code QA** — Block if QA fails. Do not proceed to Zlydni.
+- **Bagnik test gate** — Block if tests fail. Coordinator does not route to build.
+- **Bagnik code QA** — Block if QA fails. Coordinator does not route to Zlydni.
 - **Bagnik security & PII** — Block if security issues or personal data leaks found.
-- **Nothing ships without passing Bagnik.** Bagnik does not negotiate.
+- **Nothing ships without passing Bagnik.** Bagnik does not negotiate, and the coordinator does not route around it.
 
 ### Handoff Log
 
-Each feature folder contains a `handoff-log.md` created by **`.claude/skills/requirements-eliciting/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh`). Every agent appends one entry before handing off:
+Each feature folder contains a `handoff-log.md` created by **`.claude/skills/requirements-eliciting/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh`). It is the coordinator's event track: every worker appends exactly one entry before returning, using the **Return entry format** above.
 
-```markdown
-## HH:MM [From] → [To] [context]
-Key decisions: ...
-Artifacts: ...
-```
-
-This gives any agent a full chain of custody when context is lost, especially across Bagnik-Cmok fix loop iterations. `talaka/shared/project/tools/feature-status.sh` checks whether the log exists.
+The coordinator reads this log before every routing decision. It is the only place the full history survives — each worker sees just its own invocation, so without the log there is no chain of custody across Bagnik–Cmok fix loop iterations. `talaka/shared/project/tools/feature-status.sh` shows the last entry per active feature.
 
 ### Best Practices
 
-1. **Include file paths** — Receiving agent needs to know what to read
-2. **Include feature path** — Always pass `.tlk/features/YYYY-MM-DD-feature-name/` in handoffs
-3. **Summarize decisions** — Don't make the next agent re-derive
-4. **Flag blockers early** — Hand back to the appropriate agent
-5. **Parallel handoffs** — Mokash can run alongside ux-designing or Cmok; pass same context to both
-6. **Close feature after commit** — After Zlydni commit, move feature folder to `.tlk/archive/`
-7. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
-8. **Mokash handoff template:** Feature path, Spec path, UX path, Tech plan path, What was built, Document: [scope]
+1. **Include file paths** — The next worker starts cold and reads nothing you don't name
+2. **Include feature path** — Always pass `.tlk/features/YYYY-MM-DD-feature-name/` in every invocation
+3. **Summarize decisions** — Don't make the next worker re-derive what the last one settled
+4. **Carry failure history** — In fix loops, tell the worker what was already tried; it has no memory of its previous run
+5. **Flag blockers early** — Workers report blockers in the return entry; the coordinator routes or stops
+6. **Parallel work** — Only Mokash runs in parallel; pass it the same context
+7. **Close feature after commit** — After Zlydni commit, move feature folder to `.tlk/archive/`
+8. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
 
 ## Shell command conventions
 
@@ -312,4 +352,4 @@ Boundary with memory: the **wiki** holds knowledge distilled from *sources* (pap
 - `design.md` — ~10–15 deep commands (depth over breadth), local persistence (`sync`/`search`/`sql`), and the **agent-native contract**: typed exit codes `0/2/3/4/5/7`, `--json`/`--compact`/`--dry-run`/`--stdin`, auto-JSON when piped, bounded output with continuation hints.
 - `scorecard.md` — two-tier 100-point QA contract. **Bagnik gates code QA at ≥85/100**: scorecard → dogfood → proof-of-behaviour → optional read-only live smoke test.
 
-Flow: `/cli-designing` (design) → `/architecture-planning` (arch + tests) → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA, scorecard-gated) → `@zlydni`.
+Route: `/cli-designing` (design) → `/architecture-planning` (arch + tests) → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA, scorecard-gated) → `@zlydni`. Each step is a coordinator decision made after reading the previous step's return entry.

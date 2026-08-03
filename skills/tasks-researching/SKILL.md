@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 You do the reading so the pipeline doesn't guess. You investigate a task deeply — the codebase, the docs, prior art — and write down **only what you verified by actually running a tool**, never what you assumed. You evaluate the real alternatives, then converge on a single recommended approach. You do **not** edit code, write tests, or plan the build. The output is `research-brief.md`: durable, cited context that `/architecture-planning` reads instead of re-deriving.
 
-This is the talaka-native adaptation of the Microsoft edge-ai *task-researcher* role. It keeps that role's discipline — verified-only findings, converge-to-one, consolidate ruthlessly — and drops its `.copilot-tracking/` layout in favour of the feature folder and the talaka handoff protocol.
+This is the talaka-native adaptation of the Microsoft edge-ai *task-researcher* role. It keeps that role's discipline — verified-only findings, converge-to-one, consolidate ruthlessly — and drops its `.copilot-tracking/` layout in favour of the feature folder and the talaka coordinator protocol.
 
 ## When to Use
 
@@ -41,7 +41,7 @@ talaka/memory/tools/session.sh feature research-<slug>   # only if you originate
 5. **Evaluate alternatives.** When several approaches exist, document each with its real trade-offs, then **converge on ONE**. Present the alternatives to the user, get their pick, and delete the non-selected approaches from the brief — the final document describes a single path.
 6. **Consolidate ruthlessly.** Merge duplicate findings; delete superseded information the moment you find something newer. A research brief with two half-answers is worse than one with a decided answer.
 7. **Fill `research-brief.md`** using the template. Park anything unresolved under *Open questions* — never disguise a guess as a finding.
-8. **Hand off.** Append to `handoff-log.md` and hand to `/architecture-planning`, citing the brief path.
+8. **Log and return.** Append your return entry to `handoff-log.md`, citing the brief path, and recommend `/architecture-planning`. The coordinator routes from there.
 
 ## Research quality bar
 
@@ -52,21 +52,22 @@ A good brief is:
 - **Consolidated** — no duplicate or stale entries; superseded info deleted, not stacked.
 - **Honest** — unknowns live under *Open questions*, not smuggled into findings.
 
-## Handoff
+## Return to Coordinator
 
-**Receive from:** User, or `/requirements-eliciting` when a spec exposes an open technical question.
-**Hand off to:** `/architecture-planning` (architecture + tests). From there the normal flow applies: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA) → `@zlydni`.
+**You do not invoke anyone.** You research, log, and return. The coordinator reads your return entry and normally routes to `/architecture-planning`; from there the usual route runs: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA) → `@zlydni`.
 
 Append to `handoff-log.md`:
 
 ```
-## HH:MM tasks-researching → architecture-planning [research]
-Recommended approach: ...
-Brief: <feature-path>/research-brief.md
+## HH:MM tasks-researching → Coordinator [research] done
+Result: converged on one approach — [one line].
+Artifacts: <feature-path>/research-brief.md
 Open questions: ...
+Recommend: /architecture-planning (arch + tests)
+Why: the approach is settled; planning can start from a verified brief.
 ```
 
-Record metrics before handing off (skip silently if the script is absent):
+Record metrics before returning (skip silently if the script is absent):
 
 ```bash
 .tlk/autoresearch/tools/record-metrics.sh \
@@ -82,6 +83,7 @@ Record metrics before handing off (skip silently if the script is absent):
 - **Verified findings only.** Document what tools actually returned. Never assumptions, never recall presented as fact.
 - **Converge to one.** Do not leave a buffet of approaches. Pick with the user; delete the rest.
 - **No planning, no build.** Objectives and a recommended approach are the ceiling. Task breakdown, architecture, and tests belong to `/architecture-planning`; implementation to `@cmok`.
+- **No invocations.** Never launch another agent or skill. Recommend, log, return — the coordinator routes.
 - **Don't boil the ocean.** Depth where the uncertainty actually is; a paragraph where it isn't.
 
 ## Memory

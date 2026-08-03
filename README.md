@@ -1,6 +1,6 @@
 # Talaka
 
-A reusable AI development pipeline — 6 agents, 13 skills, and a structured handoff protocol. Installs one Claude-shaped layout (`.claude/agents/`, `.claude/skills/`) with two entry-point files at the project root: **`CLAUDE.md`** (read natively by Claude Code) and **`AGENTS.md`** (the cross-IDE convention — read by any workspace-aware tool that follows the AGENTS.md spec). One install covers every IDE.
+A reusable AI development pipeline — 6 agents, 13 skills, and a coordinator-driven handoff protocol. Installs one Claude-shaped layout (`.claude/agents/`, `.claude/skills/`) with two entry-point files at the project root: **`CLAUDE.md`** (read natively by Claude Code) and **`AGENTS.md`** (the cross-IDE convention — read by any workspace-aware tool that follows the AGENTS.md spec). One install covers every IDE.
 
 The kit is **minimally invasive** and **per-developer** (it commits nothing of its own): every kit-touched path is either inside the git-ignored `.tlk/`, inside `.claude/`, the optional committed `wiki/`, or wrapped in a removable `<!-- talaka:start --> … <!-- talaka:end -->` block in `CLAUDE.md` / `AGENTS.md` / `.gitignore`. `teardown.sh` strips the block (or removes the file when its SHA-256 still matches the kit copy recorded in `.tlk/.talaka.files`), so manual edits are always preserved.
 
@@ -8,7 +8,7 @@ Import as a git submodule in under a minute.
 
 ## What it is
 
-A self-organizing team of AI agents for structured development. Each agent knows its role and who to hand off to next. Quality gates ensure nothing ships without passing Bagnik.
+A coordinator-driven team of AI agents for structured development. Each agent knows its own job — and only its own job. Quality gates ensure nothing ships without passing Bagnik.
 
 ```
 Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, parallel)
@@ -17,6 +17,10 @@ Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, par
      → Cmok (build) + Mokash (docs, parallel) → Bagnik (code QA)
      → Zlydni (commit + archive)
 ```
+
+**One decision-maker.** No agent invokes another. Every agent and skill does its task, appends one return entry to the feature's `handoff-log.md`, and returns to the **coordinator** — the main session you talk to. The coordinator reads that log and decides who runs next, so each `→` above is its decision, not a call one agent makes to another.
+
+This keeps routing observable and interruptible: the coordinator holds the whole event track, so it can spot a fix loop that is not converging, splice in `@yaga` when a gate fails twice for opaque reasons, or stop and ask you — none of which an agent seeing only its own slice can do. Agents still *recommend* a next step; the recommendation is an input, not a jump. See `.tlk/PIPELINE.md` → **Coordinator Protocol** for the routing table, and `tests/lint/structure.test.sh` for the guard that keeps invocations out of shipped prompts.
 
 ### Agents
 
@@ -441,6 +445,8 @@ requirements-eliciting creates the feature folder automatically when starting a 
 | Stress-test an approach / challenge assumptions | `/assumptions-challenging` |
 | Commit | `@zlydni` |
 
+These are **coordinator vocabulary**: you type them to start a step, and the coordinator uses them to route. Agents never invoke each other — when one names `@cmok` in its output it is recommending, not calling.
+
 ## Scripts
 
 Each skill bundles its own script. Shared scripts live under `talaka/shared/<category>/tools/`, and component scripts under their component (e.g. `talaka/memory/tools/`, `talaka/statusline/tools/`). Run them from the **project root** so paths like `.tlk/PROJECT.md` resolve correctly.
@@ -480,9 +486,9 @@ Each skill bundles its own script. Shared scripts live under `talaka/shared/<cat
 | `shared/lifecycle/tools/teardown.sh` | Strips managed include blocks from `CLAUDE.md` and `AGENTS.md`; strips the managed `.gitignore` block; removes kit-installed copies when SHA-256 matches **`.tlk/.talaka.files`**; sweeps any legacy `.cursor/` and `.github/` artefacts. `--full-clean` also removes `.tlk/PROJECT.md`, `.tlk/.talaka.cfg`, and `.tlk/scratch/`; `--remove-submodule` deinits git. |
 | `talaka/shared/lifecycle/tools/lib.sh` | Shared helpers (colors, paths, managed blocks, `.gitignore` renderer) — sourced by `shared/lifecycle/tools/init.sh`, `shared/lifecycle/tools/update.sh`, `shared/lifecycle/tools/teardown.sh`, and some tools; not run directly. |
 
-## Handoff protocol
+## Coordinator protocol
 
-See `.tlk/PIPELINE.md` (Handoff Protocol section) — referenced from `CLAUDE.md` and `AGENTS.md` via the managed include block — for the full structured handoff format, handoff map, and agent-specific checklists.
+See `.tlk/PIPELINE.md` (Coordinator Protocol section) — referenced from `CLAUDE.md` and `AGENTS.md` via the managed include block — for the worker contract, the return entry format, the coordinator's routing table, loop-breaking rules, and the per-worker invocation checklists.
 
 ## Team use
 

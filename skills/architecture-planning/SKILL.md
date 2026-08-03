@@ -44,7 +44,7 @@ talaka/memory/tools/session.sh agent architecture-planning
 
 ### AC-to-Test Traceability (mandatory)
 
-Before handing off to Bagnik, produce an **AC-to-test mapping table** in the tech plan:
+Before returning, produce an **AC-to-test mapping table** in the tech plan:
 
 | Acceptance Criterion | Test file | Test name/describe block | Status |
 |----------------------|-----------|--------------------------|--------|
@@ -56,36 +56,41 @@ Every acceptance criterion from `spec.md` must appear in this table with a corre
 
 When handoff specifies a feature path (`.tlk/features/YYYY-MM-DD-feature-name/`), write tech plan and architecture docs there. Include this path in handoffs.
 
-## Fix Loop (invoked by Bagnik on test gate failure)
+## Fix Loop (test gate failure)
 
-When Bagnik fails the test gate and hands back to architecture-planning:
+When the coordinator routes a Bagnik test-gate failure back to you:
 
-1. **Analyze failures** — Read error output and stack traces from the handoff
+1. **Analyze failures** — Read the error output and stack traces carried in your prompt
 2. **Fix tests or arch** — Fix broken tests, adjust architecture, add missing coverage
-3. **Re-invoke Bagnik** — When done, use the **Agent tool** to launch agent `bagnik` with prompt: `"Fix complete. Feature path: [path]. Fixed files: [list]. What changed: [summary]. Re-run test gate. Block if fail."`
+3. **Log and return** — one clean fix cycle, then hand back to the coordinator
 
-**Loop until Bagnik passes.** If Bagnik fails again, receive the next handoff and fix again. No iteration limit. Do not give up.
+**Do not re-invoke Bagnik.** The loop belongs to the coordinator and has no iteration limit; your job each time is one fix cycle. You have no memory of your previous attempts — the coordinator carries that history into your prompt. If it did not, say so in your return.
 
-## Handoff
+## Return to Coordinator
 
-**Receive from:** User (after UAT), mockups-creating (mockups), Bagnik (test gate fail)
-**Hand off to:** Bagnik (test gate)
+**You do not invoke anyone.** You write architecture and tests, log, and return. The coordinator reads your return entry and routes to `@bagnik` for the test gate.
 
-Before handing off to Bagnik, run:
+- **Never** use the Agent/Task tool. Never launch, spawn, or "auto-invoke" `@bagnik`, `@cmok`, or anything else.
+- **Do** name what you recommend and hand the coordinator the payload it needs to relay.
+
+Before returning, run:
 
 ```bash
 /skills/architecture-planning/check-coverage.sh <feature-path>
 ```
 
-This runs the test command from `.tlk/PROJECT.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output for the handoff.
+This runs the test command from `.tlk/PROJECT.md`, prints results, and appends a coverage entry to `handoff-log.md`. Use its output in your return.
 
-**Handoff log:** The `check-coverage.sh` script appends automatically. If run manually, append to `handoff-log.md`:
+**Log entry:** The `check-coverage.sh` script appends automatically. If run manually, append to `handoff-log.md`:
 ```
-## HH:MM architecture-planning → Bagnik [test gate]
-Coverage: [summary]. Gaps: [list]. Arch: [path]. Tests: [paths].
+## HH:MM architecture-planning → Coordinator [arch + tests] done
+Result: architecture and tests written. Coverage: [summary]. Gaps: [list].
+Artifacts: Arch: [path]. Tests: [paths]. AC-to-test map: [tech-plan path].
+Recommend: @bagnik (test gate)
+Why: [one line]
 ```
 
-Record metrics before handing off:
+Record metrics before returning:
 ```bash
 .tlk/autoresearch/tools/record-metrics.sh \
   --feature <feature-path> \
@@ -95,9 +100,7 @@ Record metrics before handing off:
 ```
 Skip silently if `.tlk/autoresearch/tools/record-metrics.sh` does not exist.
 
-- **Always include:** "Coverage summary: [what tests cover]. Known gaps: [what's not yet tested]."
-- Format: "Context: test gate. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. Block if fail."
-- **Use the Agent tool** to launch agent `bagnik` with prompt: `"Run test gate. Feature path: [path]. Arch at [path]. Tests in [paths]. Coverage: [summary]. Gaps: [list]. AC-to-test map at [tech-plan path]. Block if fail."`
+**Payload for Bagnik** (the coordinator relays it; Bagnik sees nothing else): Feature path. Arch path. Test paths. Coverage summary — what the tests actually cover. Known gaps — what is not yet tested. AC-to-test map path. Context: **test gate**.
 
 ## Effort Scaling
 
@@ -127,7 +130,7 @@ Layered memory drives architecture and test choices (see `talaka/templates/memor
 
 ### Mandatory write checklist
 
-Before handing off to Bagnik, log via `talaka/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to L2 and runs promotion) when any of these fire:
+Before returning, log via `talaka/memory/tools/log.sh --type <t> [--confidence high] "…"` (appends to L2 and runs promotion) when any of these fire:
 
 - [ ] **Architectural decision** with explicit alternatives considered — `entity_type: decision`
 - [ ] **Test pattern** worth reusing or **anti-pattern** to avoid — `entity_type: pattern` / `anti-pattern`
@@ -148,7 +151,7 @@ When an architecture or test decision cannot be resolved now (insufficient infor
      --trigger "<condition to revisit>" \
      --context "<why deferred>"
    ```
-2. **Note in handoff** — mention deferred decision count so downstream agents are aware.
+2. **Note it in your return** — state the deferred decision count so the coordinator can carry it downstream.
 
 Do not silently skip decisions. If something is punted, it must be tracked.
 
@@ -158,4 +161,4 @@ Do not silently skip decisions. If something is punted, it must be tracked.
 - Architecture decisions should be documented
 - Prefer composition over inheritance; keep boundaries clear
 
-**Mode-like constraint:** Plan or Agent mode. Create architecture docs and test code. Do NOT implement application features — only tests and design artifacts. For implementation, hand off to Cmok.
+**Mode-like constraint:** Plan or Agent mode. Create architecture docs and test code. Do NOT implement application features — only tests and design artifacts. Implementation is `@cmok`'s: return and recommend it, do not invoke it.
