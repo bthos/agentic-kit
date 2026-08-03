@@ -133,7 +133,7 @@ Two roles, and they never swap:
 
 ### The coordinator loop
 
-1. **Read the log.** `handoff-log.md` in the active feature folder is the event track — the full chain of custody. The last entry says where the pipeline stands.
+1. **Read the log.** `handoff-log.md` in the active feature folder is the event track — the full chain of custody. The last **return entry** (the one with `→ Coordinator`) says where the pipeline stands; `progress` entries under it are in-flight detail, not routing signals.
 2. **Decide.** Apply the Routing Table below to `(last worker, context, status)`. The worker's `Recommend:` line is an input, not a verdict — override it when the log says otherwise (see *Loop breaking*).
 3. **Invoke exactly one step.** One agent, or one parallel pair where the table says so (only Mokash runs in parallel).
 4. **Wait for the return.** The worker finishes, having appended its log entry.
@@ -146,14 +146,46 @@ The coordinator does not do the workers' jobs. It routes, relays context, and st
 Every agent and every skill, without exception:
 
 1. Does its task.
-2. Appends **one** return entry to `handoff-log.md` (format below).
-3. Returns to the coordinator with the same information in its final message.
+2. Appends a **progress entry** to `handoff-log.md` at each meaningful checkpoint along the way.
+3. Appends exactly **one return entry** immediately before returning (format below).
+4. Returns to the coordinator with the same information in its final message.
 
 It does **not** invoke the next worker. See *The one routing rule* above.
 
-### Return entry format
+### Log entries
 
-Appended to `handoff-log.md` before returning. The `→ Coordinator` target is literal — every worker returns to the coordinator, so there is never another value:
+`handoff-log.md` takes two kinds of entry, and only one of them ends your turn.
+
+#### Progress entry — mid-run, no arrow
+
+Written when you reach a checkpoint worth recording but are **not** finished. There is no `→ Coordinator` on the header: the arrow means "I have returned", and you have not.
+
+```markdown
+## HH:MM [Worker] [context] progress
+Result: [what is now true — what got done, and what it means]
+Artifacts: [paths written or updated so far, or "none yet"]
+Next: [what you do next in this same run]
+```
+
+**Write one whenever any of these fire** (not an exhaustive list — the test is "would someone reading the log later want to know this happened?"):
+
+- **A unit of work is complete but unverified** — the build compiles but no tests have run yet; the spec is drafted but open questions remain.
+- **A verification produced results** — the suite ran and N tests failed; the security sweep found an issue; a hypothesis was confirmed or eliminated.
+- **You are about to start something long or expensive** — a multi-hour build chunk, a full regression run, an instrumentation pass, an autoresearch round.
+- **The plan changed** — implementation diverged from the tech plan, a dependency is missing, an assumption turned out false.
+- **An artifact landed that a later worker will read** — `spec.md`, `findings.md`, `audit.md`, a mockup, a doc page.
+- **You are about to do something hard to undo** — strip instrumentation, move the feature folder, commit.
+
+Rules for progress entries:
+
+- **No `Recommend:` line.** You are not handing anything over, so there is nothing to route. The coordinator does **not** act on a progress entry — it reads them when the user asks where things stand, when a run dies mid-way, or when it needs to see whether a fix loop is converging.
+- **No uppercase `PASS` / `FAIL`.** Those are reserved for Bagnik's return entry; downstream tooling parses them.
+- **Still write the return entry.** Progress entries are additive; they never replace the one that ends your run.
+- Two to four per run is normal. One per file touched is noise.
+
+#### Return entry — written once, immediately before returning
+
+The `→ Coordinator` target is literal — every worker returns to the coordinator, so there is never another value:
 
 ```markdown
 ## HH:MM [Worker] → Coordinator [context] [status]
@@ -167,6 +199,8 @@ Blockers: [None | list]
 - **context** — `spec | UX | mockups | test gate | build | code QA | docs | commit | investigation`
 - **status** — `done | pass | fail | blocked`
 - Bagnik writes `PASS` / `FAIL` in its `Result:` line; downstream tooling (`autoresearch/tools/build-eval-set.sh`) parses those.
+
+**Why progress entries exist:** a worker's context dies when it returns. Everything it learned that did not make the one-line `Result:` is gone — including partial results that are genuinely valuable (a build that works but is untested, failures found but not yet diagnosed). The log is the only thing that survives, and it is what the coordinator, the user, and the next worker all read.
 
 ### Routing Table
 
@@ -188,6 +222,7 @@ The coordinator's decision function. Keyed on the last return entry.
 | Zlydni | commit | done | — | Optional — user may push / run `@veles` |
 | Mokash | docs | done | — (nothing; docs are consumed) | — |
 | any worker | any | blocked | Read `Blockers:`; route to the worker that owns the blocker, or STOP | depends |
+| any worker | any | progress | — (nothing; that worker is still running) | — |
 | *(side-loop)* user authorises | — | — | `/bugs-diagnosing` then `@yaga` | **STOP** first — user authorises |
 | Yaga | investigation | done | `@cmok` (fix the confirmed root cause) | — |
 | Bagnik | code QA (Yaga-originated) | pass | `@yaga` (strip instrumentation) | — |
@@ -212,7 +247,8 @@ An agent cannot detect any of these — it sees only its own invocation. This is
 - **One decision-maker** — Workers recommend; the coordinator decides. Never both.
 - **Interrupt when valuable** — Have a valuable thought → interrupt. Have nothing to add → remain silent.
 - **Explicit over implicit** — Never assume context carries; the coordinator passes it explicitly in each prompt.
-- **Log before returning** — A worker that returns without a log entry has broken the chain of custody; the coordinator should ask it to write one.
+- **Log as you go, and before returning** — Progress entries at each checkpoint, one return entry at the end. A worker that returns without a return entry has broken the chain of custody; the coordinator should ask it to write one.
+- **Partial results are still results** — "built but untested", "tests run, three failures found" belong in the log the moment they are true, not only when the run ends. A run that dies mid-way should still have left something useful behind.
 - **Justify routing** — The coordinator states why the next worker is the right one.
 
 ### Invocation Prompt Template
@@ -234,7 +270,7 @@ What the **coordinator** puts in the prompt when it launches a worker. The worke
 - **Prior attempts:** [for fix loops — what was already tried and failed]
 
 ### On completion
-Append your return entry to `handoff-log.md` and return to me. Do not invoke another agent.
+Append progress entries to `handoff-log.md` as you hit checkpoints, then one return entry before returning to me. Do not invoke another agent.
 ```
 
 That last line is not boilerplate — restate it in every invocation.
@@ -250,9 +286,9 @@ What the coordinator must include when launching each worker:
 **→ Mokash:** Feature path. Spec/UX/tech-plan paths. "What was built" (post-build). Doc scope: README | API | user guide | all.
 **→ architecture-planning:** Feature path. Spec + UX paths. For a fix loop: failing test names, error output, affected files.
 **→ Bagnik (test gate):** Feature path. Arch path. Test paths. Coverage summary. Known gaps. AC-to-test map path. **State the context explicitly — "test gate".**
-**→ Bagnik (code QA):** Feature path. "What was built". Changed files. New storage/API surface. Tech plan path. Divergences. **State the context explicitly — "code QA".**
-**→ Cmok (build):** Feature path. Spec, UX, tech plan paths. Bagnik's test-gate result.
-**→ Cmok (fix):** Feature path. Failed check. Error output. Affected files. Suggested fix. Prior fix attempts.
+**→ Bagnik (code QA):** Feature path. "What was built". Changed files. New storage/API surface. Tech plan path. Divergences. Which tests Cmok ran (its focused set) so Bagnik knows what is unverified. **State the context explicitly — "code QA".**
+**→ Cmok (build):** Feature path. Spec, UX, tech plan paths. Bagnik's test-gate result. Say so explicitly if you want a full-suite run instead of Cmok's focused set — otherwise it runs focused tests only.
+**→ Cmok (fix):** Feature path. Failed check. Error output. Affected files. Suggested fix. Prior fix attempts. The exact failing test names — Cmok re-runs those plus its focused set, not the whole suite.
 **→ Zlydni:** Feature path. Changed files. Confirmation that Bagnik's code QA passed.
 **→ Yaga:** Bug description. Investigation dir (if `/bugs-diagnosing` created one). Failing repro/test command. Affected files.
 
@@ -267,9 +303,9 @@ What the coordinator must include when launching each worker:
 
 ### Handoff Log
 
-Each feature folder contains a `handoff-log.md` created by **`.claude/skills/requirements-eliciting/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh`). It is the coordinator's event track: every worker appends exactly one entry before returning, using the **Return entry format** above.
+Each feature folder contains a `handoff-log.md` created by **`.claude/skills/requirements-eliciting/new-feature.sh <feature-slug>`** (run from project root; `.claude/skills/` is populated by `init.sh`). It is the coordinator's event track: every worker appends progress entries as it works and exactly one return entry before returning, using the formats in **Log entries** above.
 
-The coordinator reads this log before every routing decision. It is the only place the full history survives — each worker sees just its own invocation, so without the log there is no chain of custody across Bagnik–Cmok fix loop iterations. `talaka/shared/project/tools/feature-status.sh` shows the last entry per active feature.
+The coordinator reads this log before every routing decision. It is the only place the full history survives — each worker sees just its own invocation, so without the log there is no chain of custody across Bagnik–Cmok fix loop iterations. `talaka/shared/project/tools/feature-status.sh` shows the last entry per active feature, which during a long run is the worker's latest `progress` line.
 
 ### Best Practices
 
@@ -278,9 +314,22 @@ The coordinator reads this log before every routing decision. It is the only pla
 3. **Summarize decisions** — Don't make the next worker re-derive what the last one settled
 4. **Carry failure history** — In fix loops, tell the worker what was already tried; it has no memory of its previous run
 5. **Flag blockers early** — Workers report blockers in the return entry; the coordinator routes or stops
-6. **Parallel work** — Only Mokash runs in parallel; pass it the same context
-7. **Close feature after commit** — After Zlydni commit, move feature folder to `.tlk/archive/`
-8. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
+6. **Log partial results** — Progress entries as checkpoints land, not one dump at the end
+7. **Parallel work** — Only Mokash runs in parallel; pass it the same context
+8. **Close feature after commit** — After Zlydni commit, move feature folder to `.tlk/archive/`
+9. **Version bumping** — Cmok: bump patch before each build. Zlydni: bump minor before commit. Update all version files listed in Project-Specific Configuration.
+
+### Test scope — who runs what
+
+Running the full suite on every build and every fix-loop iteration is the single largest avoidable cost in the pipeline. The split:
+
+| Worker | Runs | Why |
+|--------|------|-----|
+| Cmok (build, fix) | **Focused tests only** — the feature's own tests plus tests covering the files it touched. Uses **Focused test command** from `.tlk/PROJECT.md` when set, otherwise filters the test command itself. | Fast inner loop. Cmok's job is to arrive at the gate not-obviously-broken, not to be the gate. |
+| Bagnik (test gate, code QA) | **The full regression suite**, always. | Bagnik *is* the gate. It is the only worker whose pass means the suite is green. |
+| architecture-planning | Full suite via `check-coverage.sh` | Establishes the coverage baseline before any build exists. |
+
+Cmok runs the full suite in exactly two cases: the change is cross-cutting (shared config, build tooling, dependency bump, wide rename) so no meaningful subset exists, or the coordinator asked for it in the invocation prompt. Cmok's return entry names which tests it ran — a Cmok "done" never means "regression is green".
 
 ## Shell command conventions
 

@@ -132,6 +132,27 @@ Recommend: @bagnik (re-gate the stripped tree)
 Why: stripping edits real files; the gate must confirm nothing broke.
 ```
 
+### Progress entries — log as you go
+
+An investigation is a chain of evidence, and half of it is negative results that never reach the return entry. Append a **progress entry** at each step — no `→ Coordinator` arrow (you have not returned), no `Recommend:` line:
+
+```
+## HH:MM Yaga [investigation|strip] progress
+Result: [what the evidence now says]
+Artifacts: [investigation dir, files updated]
+Next: [what you probe next in this same run]
+```
+
+Write one when:
+
+- **Hypotheses are written** — the ranked list is in `hypothesis.md` and probing is about to start. This is the "authorised to instrument" checkpoint.
+- **Probes are injected and the server is up** — say how many probes, which files, which port. Instrumentation is now live in the tree; the log is what proves it needs stripping if your run dies here.
+- **A hypothesis is confirmed or eliminated** — one entry per verdict, including the eliminations. A hypothesis ruled out with evidence is a result.
+- **You are about to strip** — before running `debug-strip.sh`, since it edits real files.
+- **The strip grep comes back dirty** — residue found, self-blocking.
+
+`instrumentation-log.md` still gets the full probe-by-probe detail; the handoff log gets the checkpoints the coordinator and the user care about.
+
 ## Memory
 
 ### Mandatory write checklist

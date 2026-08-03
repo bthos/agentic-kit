@@ -89,6 +89,14 @@ When the UX design is complete:
    Why: [one line]
    ```
 
+**Progress entries — log as you go.** Before that final entry, append a `progress` entry to `handoff-log.md` at each checkpoint: when the screen inventory and states matrix are settled, when a flow is designed but its states are not yet filled in, and when you hit an unanswered question in the spec that changes the design. No `→ Coordinator` arrow (you have not returned), no `Recommend:` line:
+```
+## HH:MM ux-designing [UX] progress
+Result: [what is now decided]
+Artifacts: [feature-path]/ux-design.md
+Next: [what you design next in this same run]
+```
+
 3. **Return** with the payloads the coordinator will relay:
 
    **For mockups-creating:** Feature path. UX design path. States to implement (from the states matrix). Key decisions. Accessibility notes.

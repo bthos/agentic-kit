@@ -90,6 +90,14 @@ Recommend: @bagnik (test gate)
 Why: [one line]
 ```
 
+**Progress entries — log as you go.** Append a `progress` entry to `handoff-log.md` when the architecture is decided but tests are not yet written, when the test suite is written but not yet run, and when coverage comes back with gaps you cannot close. No `→ Coordinator` arrow (you have not returned), no `Recommend:` line:
+```
+## HH:MM architecture-planning [arch + tests] progress
+Result: [what is now decided or measured]
+Artifacts: [paths]
+Next: [what you do next in this same run]
+```
+
 Record metrics before returning:
 ```bash
 .tlk/autoresearch/tools/record-metrics.sh \

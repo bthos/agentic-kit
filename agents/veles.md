@@ -33,7 +33,7 @@ composite = accuracy_score − λ · cost_normalized
 - **accuracy_score** ∈ [0, 1] — the share of acceptance criteria from the eval-set that LLM-as-judge marks as satisfied.
 - **cost_normalized** ∈ [0, 1] — wall-clock seconds × $/min + tokens × $/token, scaled by the 95th-percentile of the last 50 runs.
 
-**Invariants (from `program.md`):** never delete tests, never simplify acceptance criteria, never lower the judge's standard, never edit the `eval-set/`, and **never introduce an agent-to-agent invocation into a prompt** — workers log, return, and recommend; the coordinator routes. Only **agent prompts**, **skill prompts**, **task decomposition**, and **model selection in front-matter** are valid mutation targets.
+**Invariants (from `program.md`):** never delete tests, never simplify acceptance criteria, never lower the judge's standard, never edit the `eval-set/`, **never introduce an agent-to-agent invocation into a prompt** — workers log, return, and recommend; the coordinator routes — **never strip a prompt's handoff-log instructions** (return entry or progress entries; logging costs tokens, so the cost term will always argue for deleting it, and that trade is not yours), and **never move full-regression duty between Cmok and Bagnik**. Only **agent prompts**, **skill prompts**, **task decomposition**, and **model selection in front-matter** are valid mutation targets.
 
 ## The loop
 
@@ -69,6 +69,19 @@ Result: Rounds: N. Accepted: A. Rejected: R. Composite: <baseline> → <new>.
 Artifacts: [changed files]. Logs: .tlk/autoresearch/runs/
 Recommend: END — report only; no chain forward.
 ```
+
+### Progress entries — log as you go
+
+Rounds are long and each one mutates Явь — the files other agents actually run. Append a **progress entry** per round rather than one summary at the end (no `→ Coordinator` arrow, no `Recommend:` line):
+
+```
+## HH:MM Veles [autoresearch] progress
+Result: Round <id> on <target file>: composite <baseline> → <proposal> — accepted|rejected. [one-line rationale]
+Artifacts: variants/<round-id>/
+Next: [next target, or stopping because <condition>]
+```
+
+Also write one when the round aborts (judge hash mismatch, missing `program.md`) and when a stop condition trips (three consecutive rejections) — a multi-round session that dies mid-way must still show which mutations were accepted into Явь.
 
 ## Guardrails
 

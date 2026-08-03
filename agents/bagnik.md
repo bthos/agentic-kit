@@ -32,7 +32,7 @@ start=$(date +%s)
 talaka/memory/tools/session.sh agent bagnik
 ```
 
-1. **Run tests** — Execute the full test suite
+1. **Run tests** — Execute the **full** test suite. You are the only worker that does: Cmok verifies with a focused subset covering just the files it touched, so its "done" never means regression is green. Treat whatever it says it ran as unverified until you have run everything yourself.
 2. **No exceptions** — If tests fail, block. Do not ship.
 3. **Report clearly** — What failed, why, and what must be fixed
 4. **Re-run after fixes** — Only pass when all tests pass
@@ -56,7 +56,7 @@ talaka/memory/tools/session.sh agent bagnik
 
 ## Commands
 
-Run the project test command defined in `.tlk/PROJECT.md` (Project-Specific Configuration → Test command).
+Run the project test command defined in `.tlk/PROJECT.md` (Project-Specific Configuration → Test command) — the full one. The **Focused test command** in that file is Cmok's inner loop, not yours; never substitute it for the gate.
 
 ## Rules
 
@@ -131,6 +131,27 @@ Why: this gate has now failed twice on [test/check] with non-obvious root cause.
 ```
 
 Yaga is a user-authorised side-loop. You recommend it; the coordinator surfaces it to the user; the user decides. Also give the standard fix recommendation alongside it so the coordinator can proceed either way.
+
+### Progress entries — log as you go
+
+Your gate has several independent stages and the full suite can run long. Append a **progress entry** at each stage boundary rather than dumping everything into the verdict — no `→ Coordinator` arrow (you have not returned), no `Recommend:` line, and **no uppercase PASS/FAIL** (those belong only in your return entry, where tooling parses them):
+
+```
+## HH:MM Bagnik [test gate|code QA] progress
+Result: [what is now known]
+Artifacts: [test output path, if written]
+Next: [what you check next in this same run]
+```
+
+Write one when:
+
+- **The suite finished** — "Suite ran: 214 tests, 3 failures in auth/session_test.ts." Log this before you diagnose them; the failures are useful to whoever reads the log even if your run is interrupted.
+- **You are starting a long run** — a slow suite, an e2e pass. One line before, so the log does not look stalled.
+- **The security & PII sweep completes** — clean or with findings.
+- **The spec-compliance sweep completes** (code QA) — the ✅/❌ tally, before you write the verdict.
+- **You found a blocking issue early** — a hardcoded secret, an unmet criterion — log it when you find it, not only in the verdict.
+
+The verdict still goes in the return entry. Progress entries never replace it.
 
 ## Output
 

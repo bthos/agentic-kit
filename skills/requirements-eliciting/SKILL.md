@@ -80,6 +80,14 @@ When the spec is ready:
    Why: [one line]
    ```
 
+**Progress entries — log as you go.** Before that entry, append a `progress` entry to `handoff-log.md` at each checkpoint: when the feature folder is bootstrapped, when the spec has requirements but acceptance criteria are still open, and when an elicitation round surfaces something that changes scope. No `→ Coordinator` arrow (you have not returned), no `Recommend:` line:
+```
+## HH:MM requirements-eliciting [spec] progress
+Result: [what is now settled]
+Artifacts: [feature-path]/spec.md
+Next: [what you elicit next in this same run]
+```
+
 3. **Return** with the payloads the coordinator will relay:
 
    **For ux-designing:** Feature path. Spec path. Key decisions. Acceptance criteria. Open questions.

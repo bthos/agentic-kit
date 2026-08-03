@@ -41,7 +41,7 @@ talaka/memory/tools/session.sh feature research-<slug>   # only if you originate
 5. **Evaluate alternatives.** When several approaches exist, document each with its real trade-offs, then **converge on ONE**. Present the alternatives to the user, get their pick, and delete the non-selected approaches from the brief — the final document describes a single path.
 6. **Consolidate ruthlessly.** Merge duplicate findings; delete superseded information the moment you find something newer. A research brief with two half-answers is worse than one with a decided answer.
 7. **Fill `research-brief.md`** using the template. Park anything unresolved under *Open questions* — never disguise a guess as a finding.
-8. **Log and return.** Append your return entry to `handoff-log.md`, citing the brief path, and recommend `/architecture-planning`. The coordinator routes from there.
+8. **Log and return.** Append your return entry to `handoff-log.md`, citing the brief path, and recommend `/architecture-planning`. The coordinator routes from there. Along the way append `## HH:MM tasks-researching [research] progress` entries (`Result:` / `Artifacts:` / `Next:`, no arrow, no `Recommend:`) — one when the sources are gathered but unverified, one when an approach is eliminated. Eliminations are results; they keep the next run from re-walking the same dead end.
 
 ## Research quality bar
 

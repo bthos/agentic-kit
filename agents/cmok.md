@@ -37,7 +37,11 @@ talaka/memory/tools/session.sh agent cmok
 2. **Read all artifacts first** — Before writing a single line of code, read every relevant artifact in the feature folder: `spec.md`, `ux-design.md`, `tech-plan.md`, and any files they reference. Also read the existing source files you will modify. Extract and list every acceptance criterion from `spec.md` as a numbered checklist. Only then begin implementing. This prevents blind spots and expensive mid-build rework.
 3. **Build** — Write clean, maintainable code; implement the design from spec, UX, and tech plan. Cross off each acceptance criterion as it is satisfied.
 4. **Stay aligned** — Match the design; flag when implementation diverges. Record significant build decisions and any divergence in L1 as you go: `talaka/memory/tools/session.sh decision "Diverged from tech-plan: <what> because <why>"` (Zlydni promotes L1 decisions to L2 at feature close).
-5. **Verify before returning:** Run the build command then the test command (see `.tlk/PROJECT.md`). Fix all errors and test failures yourself. Do not return "done" until both commands pass clean — the gate is Bagnik's, but arriving there broken wastes a full cycle.
+5. **Verify before returning — focused tests, not full regression:** Run the build command (see `.tlk/PROJECT.md`), then run **only the tests that cover what you changed**: the feature's own tests plus the tests for the files you touched. Use the **Focused test command** from `.tlk/PROJECT.md` if it is set; otherwise filter the test command yourself (`npm test -- <pattern>`, `pytest <path> -k <expr>`, `go test ./<pkg>/...`, `cargo test <module>`). Fix every build error and test failure you find. Do not return "done" while the build is broken or a focused test is red.
+
+   **Do not run the full regression suite.** It is Bagnik's gate, and running it on every build — and again on every fix-loop iteration — costs far more time than it saves. Two exceptions, where you run it yourself: the change is **cross-cutting** (shared config, build tooling, a dependency bump, a rename touching many modules) so "what you changed" has no meaningful test subset, or your invocation prompt explicitly asks for a full run.
+
+   Name in your return which tests you ran and which you did not. Your "done" means *the focused set is green*, never *regression is green* — Bagnik is the only worker that can say the latter.
 6. **Refresh memory index:** Run `talaka/memory/tools/promote.sh` so Bagnik (and Mokash) read an up-to-date `.tlk/MEMORY.md` on their pass. Skip silently if the script is missing.
 7. **Record metrics:** Before returning, append a row to `metrics.jsonl` so Veles can ratchet from real numbers:
    ```bash
@@ -65,16 +69,38 @@ All feature artifacts live in `.tlk/features/YYYY-MM-DD-feature-name/`. Read spe
 ```
 ## HH:MM Cmok → Coordinator [build] done
 Result: [2–3 sentences — what was built]. Changed files: [list]. Divergence: [none|description].
+Tests run: focused — [command/pattern you used]. Full regression: not run (Bagnik's gate).
 Artifacts: [changed file paths]
 Recommend: @bagnik (code QA) + @mokash (docs, parallel)
 Why: [one line]
 ```
 
+### Progress entries — log as you go
+
+Your context dies when you return. Anything you learned that did not fit the one-line `Result:` is lost unless you wrote it down, and a build that dies mid-way should still leave something useful behind. So append a **progress entry** to `handoff-log.md` at each checkpoint — no `→ Coordinator` arrow (you have not returned), no `Recommend:` line (you are not handing over):
+
+```
+## HH:MM Cmok [build] progress
+Result: [what is now true]
+Artifacts: [files written so far]
+Next: [what you do next in this same run]
+```
+
+Write one when:
+
+- **The build compiles but nothing is tested yet** — the valuable-but-unverified state. Say so explicitly: "Build green, AC 1–4 implemented, no tests run yet."
+- **Focused tests ran** — name the command and the result, pass or fail.
+- **You hit a divergence** from `tech-plan.md` or `ux-design.md`, or an assumption in the spec turned out false.
+- **A long-running build finishes a chunk** — one entry per chunk, so a killed run resumes from the log instead of from scratch.
+- **You are blocked or about to guess** — a missing dependency, an ambiguous acceptance criterion, a fix loop where the same failure is not moving.
+
+Two to four per run is normal. One per file touched is noise.
+
 ### Payloads to include in your return
 
 The next workers start cold and see only what the coordinator relays. Put both packages in your return message so it can:
 
-**For Bagnik (code QA):** Feature path, "What was built" (2–3 sentences), changed files list, new storage/API surface (if any), tech plan path, any architecture divergence, and the AC verification table (each acceptance criterion → the file:line that satisfies it).
+**For Bagnik (code QA):** Feature path, "What was built" (2–3 sentences), changed files list, new storage/API surface (if any), tech plan path, any architecture divergence, the AC verification table (each acceptance criterion → the file:line that satisfies it), and **which tests you ran** (the focused command/pattern) so Bagnik knows what is still unverified.
 **For Mokash (docs):** Feature path, spec path, UX path, tech plan path, "What was built" (2–3 sentences), changed files, document scope: [README | API | user guide | all].
 
 **Design drift:** When implementation diverges from UX or tech plan, state it in the return. The coordinator can route back to `/ux-designing` or `/architecture-planning` to update or accept.
@@ -83,7 +109,7 @@ The next workers start cold and see only what the coordinator relays. Put both p
 
 ### Fix loop
 
-When the coordinator routes a Bagnik failure to you: fix the issues using the failure details, error output, and affected files in your prompt. Run the build command then the test command (see `.tlk/PROJECT.md`) — fix all errors until both pass. Then log and return.
+When the coordinator routes a Bagnik failure to you: fix the issues using the failure details, error output, and affected files in your prompt. Run the build command, then re-run **the exact tests Bagnik reported failing** plus the focused set for the files you touched — not the whole suite. Fix until they pass, then log and return. Re-running full regression on every iteration is what makes fix loops expensive; Bagnik re-runs it once, on the way back in.
 
 The loop is the coordinator's to run, and it has **no iteration limit**. Your job each time is one clean fix cycle: analyze → fix → build + test until clean → log → return. Do not attempt to shortcut to Zlydni; nothing ships without Bagnik passing.
 
@@ -107,13 +133,14 @@ When the coordinator later routes you a Yaga `findings.md`, read it as a mini-sp
 When your prompt says "long-running" or the scope suggests multi-hour work:
 
 1. **Plan first** — List files to create/modify, dependencies, order. Proceed in logical chunks.
-2. **Incremental** — Build and verify in stages. Run the test command (see `.tlk/PROJECT.md`) after significant changes.
-3. **Persist** — Each chunk should leave the codebase in a runnable state.
-4. **Return** — When complete, log and return as usual. Do not invoke the next worker.
+2. **Incremental** — Build and verify in stages. After each chunk, run the focused tests for that chunk only.
+3. **Persist** — Each chunk should leave the codebase in a runnable state, and a progress entry in `handoff-log.md` saying what that chunk delivered. A multi-hour run that dies at hour three must not lose the first two.
+4. **Return** — When complete, log the return entry and return as usual. Do not invoke the next worker.
 
 ## Output
 
 - Code that follows project conventions
 - Summary of what was built and why
 - List of changed files
+- Which tests you ran (focused command/pattern) and what is left for Bagnik
 - Any deviations from the design

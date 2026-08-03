@@ -62,6 +62,13 @@ After mockups are complete:
   Recommend: STOP — user UAT required before architecture-planning.
   Why: mockups are unapproved; building on them risks rework.
   ```
+- **Progress entries — log as you go.** Append a `progress` entry to `handoff-log.md` as each screen's mockup lands, and when a state in the matrix turns out to be undesignable as specified. No `→ Coordinator` arrow (you have not returned), no `Recommend:` line:
+  ```
+  ## HH:MM mockups-creating [mockups] progress
+  Result: [which screens/states are now mocked]
+  Artifacts: [paths]
+  Next: [what you mock next in this same run]
+  ```
 - Present the mockups in your return so the user can review them.
 - Include in output: "UAT: Review mockups above. Approve to proceed to architecture-planning (arch + tests)."
 

@@ -66,6 +66,8 @@ Recommend: /architecture-planning (arch + tests)
 Why: the adaptation is specified; the build needs tests first.
 ```
 
+Log the phase boundaries as you cross them rather than only at the end: append a `## HH:MM patterns-adapting [design] progress` entry (`Result:` / `Artifacts:` / `Next:` — no arrow, no `Recommend:`) when the research brief lands with the core insight extracted, and when you decide something is deliberately **not** ported. Rejected ports are results worth keeping.
+
 From there the coordinator runs the normal route: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA) → `@zlydni`. Cite both artifacts in your return so it can relay them.
 
 ## Guardrails

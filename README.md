@@ -18,7 +18,9 @@ Idea → requirements-eliciting (spec) → ux-designing (UX) + Mokash (docs, par
      → Zlydni (commit + archive)
 ```
 
-**One decision-maker.** No agent invokes another. Every agent and skill does its task, appends one return entry to the feature's `handoff-log.md`, and returns to the **coordinator** — the main session you talk to. The coordinator reads that log and decides who runs next, so each `→` above is its decision, not a call one agent makes to another.
+**One decision-maker.** No agent invokes another. Every agent and skill does its task, appends `progress` entries to the feature's `handoff-log.md` as checkpoints land, appends one return entry, and returns to the **coordinator** — the main session you talk to. The coordinator reads that log and decides who runs next, so each `→` above is its decision, not a call one agent makes to another.
+
+**Partial results survive.** A worker's context dies when it returns, so anything it learned that did not fit the one-line result is lost unless it was written down. Progress entries are that record: *build compiles, nothing tested yet*; *suite ran, three failures in auth*; *round 2 rejected, composite regressed*. They carry no `Recommend:` line and the coordinator does not route on them — they exist so a run that is interrupted, or a fix loop that is not converging, still leaves evidence behind.
 
 This keeps routing observable and interruptible: the coordinator holds the whole event track, so it can spot a fix loop that is not converging, splice in `@yaga` when a gate fails twice for opaque reasons, or stop and ask you — none of which an agent seeing only its own slice can do. Agents still *recommend* a next step; the recommendation is an input, not a jump. See `.tlk/PIPELINE.md` → **Coordinator Protocol** for the routing table, and `tests/lint/structure.test.sh` for the guard that keeps invocations out of shipped prompts.
 
@@ -91,10 +93,13 @@ When a kit-managed path already exists, the interactive prompt is: **s**kip this
 Then open **`.tlk/PROJECT.md`** and fill in the **Project-Specific Configuration** section:
 
 ```markdown
-- Test command:   `npm test`
-- Build command:  `npm run build`
-- Version files:  `package.json, manifest.json`
+- Test command:           `npm test`
+- Focused test command:   `npm test --`
+- Build command:          `npm run build`
+- Version files:          `package.json, manifest.json`
 ```
+
+**Test command** is the full suite — Bagnik's gate runs it, and Bagnik is the only worker whose pass means regression is green. **Focused test command** is optional and is Cmok's inner loop: during a build or a fix cycle Cmok runs only the tests covering the files it touched (appending a path or pattern to this command), so a fix loop does not pay for the whole suite on every iteration. Leave it as a placeholder and Cmok filters the test command itself.
 
 Start a feature by invoking the `/requirements-eliciting` skill. Skills are invoked with `/<skill-name>`; agents with `@<agent-name>`. The kit added managed blocks to `CLAUDE.md` and `AGENTS.md` that both point at `.tlk/PIPELINE.md` — your IDE picks up whichever entry-point file it reads.
 
@@ -488,7 +493,7 @@ Each skill bundles its own script. Shared scripts live under `talaka/shared/<cat
 
 ## Coordinator protocol
 
-See `.tlk/PIPELINE.md` (Coordinator Protocol section) — referenced from `CLAUDE.md` and `AGENTS.md` via the managed include block — for the worker contract, the return entry format, the coordinator's routing table, loop-breaking rules, and the per-worker invocation checklists.
+See `.tlk/PIPELINE.md` (Coordinator Protocol section) — referenced from `CLAUDE.md` and `AGENTS.md` via the managed include block — for the worker contract, both log entry formats (progress and return), the coordinator's routing table, loop-breaking rules, the test-scope split between Cmok and Bagnik, and the per-worker invocation checklists.
 
 ## Team use
 

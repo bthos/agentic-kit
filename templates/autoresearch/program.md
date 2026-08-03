@@ -24,6 +24,8 @@ composite = accuracy_score − λ · cost_normalized
 6. **No `rm -rf`.** Veles only modifies installed agent/skill copies and writes to `talaka/autoresearch/`.
 7. **Manifest integrity.** After every accepted mutation, `.tlk/.talaka.files` must record the new SHA-256 for the changed file. `teardown.sh` must still recognise the file as kit-managed.
 8. **Coordinator routing is sacred.** Never introduce an agent-to-agent invocation into any prompt. A mutation must not add instructions to launch, spawn, or auto-invoke another agent or skill (Agent/Task tool calls, "auto-invoke `@x`", "then launch `/y`"). Workers log, return, and *recommend*; the coordinator routes. A proposal that adds one is rejected regardless of its composite score. See `.tlk/PIPELINE.md` → Coordinator Protocol.
+9. **The handoff log is sacred.** Never remove or weaken a prompt's logging instructions — neither the single return entry nor the mid-run progress entries. Logging costs tokens, so the cost term will always favour deleting it; that trade is not Veles's to make. The log is the pipeline's only chain of custody, and progress entries are the only record that survives an interrupted run. A proposal that strips either is rejected regardless of its composite score.
+10. **Test scope is fixed by role.** Never move full-regression duty off Bagnik, and never put it back on Cmok. Cmok runs focused tests covering what it changed; Bagnik's gate runs the full suite. A mutation may reword the instruction but must not flip which worker runs what — deleting Cmok's focused-test rule looks like a cost win on a single build and silently doubles every fix loop.
 
 ## Allowed mutation targets
 

@@ -88,7 +88,16 @@ When commit completes:
    ```
    Keep entries specific and actionable. Skip tags that have nothing meaningful to add.
 
-2. **Append final return entry** to `handoff-log.md` — before the archive move, so it travels with the folder:
+2. **Append final return entry** to `handoff-log.md` — before the archive move, so it travels with the folder. Append **progress entries** before it as you go (no `→ Coordinator` arrow, no `Recommend:` line): after staging and writing the commit message but before committing; after the commit lands but before the archive move; and if the version bump or memory promotion fails while the commit itself succeeded. The archive move is irreversible for the log — anything unwritten at that point is gone.
+
+   ```
+   ## HH:MM Zlydni [commit] progress
+   Result: [what is now true — e.g. "Committed a1b2c3d. Archive move next."]
+   Artifacts: [paths]
+   Next: [what you do next in this same run]
+   ```
+
+   Then the return entry itself:
    ```
    ## HH:MM Zlydni → Coordinator [commit] done
    Result: commit [hash]. Version: [new version]. Feature archived to .tlk/archive/.

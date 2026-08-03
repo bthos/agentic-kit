@@ -10,6 +10,61 @@ tags yet — entries are dated and grouped by submodule HEAD).
 
 ## [Unreleased]
 
+### Added — progress entries in `handoff-log.md` (partial results survive the run)
+
+- **Every worker now logs mid-run, not only on the way out.** The handoff log takes two kinds of
+  entry: a **progress** entry at each meaningful checkpoint, and the single **return** entry that
+  ends the run. Progress entries use `## HH:MM [Worker] [context] progress` with `Result:`,
+  `Artifacts:`, `Next:` — deliberately **no `→ Coordinator` arrow** (the arrow means "I have
+  returned") and **no `Recommend:` line** (nothing is being handed over, so there is nothing to
+  route).
+- **Why.** A worker's context dies when it returns, so anything that did not fit the one-line
+  `Result:` is lost — including results that are genuinely valuable but not hand-off-ready: a build
+  that compiles with no tests run yet, a suite that produced three failures nobody has diagnosed,
+  an autoresearch round that was rejected. A run that is interrupted now still leaves evidence.
+- **Triggers documented per agent.** Cmok logs the build-green-but-untested state, focused-test
+  results, tech-plan divergences, and each chunk of a long-running build. Bagnik logs suite results
+  before diagnosing them, the security/PII sweep, and the spec-compliance tally. Yaga logs
+  hypotheses written, probes injected (instrumentation is now live in the tree), and every
+  hypothesis confirmed *or eliminated*. Zlydni logs before the commit and before the irreversible
+  archive move. Veles logs per round. Mokash logs per document. The in-pipeline skills
+  (requirements-eliciting, ux-designing, mockups-creating, architecture-planning) and the
+  artifact-producing side skills (cli-designing, patterns-adapting, tasks-researching,
+  codebase-mapping, consistency-auditing, bugs-diagnosing) carry the same instruction, tuned to
+  their own phase boundaries — including the negative results (an approach eliminated, a pattern
+  deliberately not ported) that never survive into a return entry.
+- **Coordinator behaviour is unchanged.** It routes on the last **return** entry; progress entries
+  are read for status, for a run that died mid-way, and to see whether a fix loop is converging.
+  Routing Table gains an explicit `progress → invoke nothing` row.
+- **Bootstrap headers updated** — `new-feature.sh`, `new-cli.sh`, and the five
+  `skills/*/templates/handoff-log.md` templates document both entry kinds.
+- **Enforced by tests.** `tests/lint/structure.test.sh` gains
+  `every_agent_documents_progress_entries` and `progress_entry_format_has_no_arrow_or_recommend`.
+- **Veles invariant added** (`templates/autoresearch/program.md` #9): a mutation that removes or
+  weakens a prompt's logging instructions is rejected regardless of composite. Logging costs tokens,
+  so the cost term will always argue for deleting it — that trade is not the ratchet's to make.
+
+### Changed — Cmok runs focused tests; full regression stays Bagnik's
+
+- **Cmok no longer runs the full test suite.** During a build it runs only the tests covering what
+  it changed — the feature's own tests plus tests for the files it touched — and in a fix loop it
+  re-runs the exact tests Bagnik reported failing plus that focused set. Two exceptions where it
+  still runs everything: a cross-cutting change (shared config, build tooling, dependency bump,
+  wide rename) with no meaningful subset, or an explicit request in the invocation prompt.
+- **Why.** Full regression on every build *and* every fix-loop iteration was the pipeline's largest
+  avoidable cost, and it bought nothing: Bagnik re-runs the whole suite immediately afterwards, so
+  the gate's verdict was never based on Cmok's run.
+- **New optional config field** — `Focused test command:` in `PROJECT.md.template`, warn-only in
+  `validate-config.sh`. Cmok appends a path/pattern to it. Left as a placeholder, Cmok filters the
+  full test command itself. Bagnik must never substitute it for the gate.
+- **Cmok's return entry names what it ran** (`Tests run: focused — <pattern>. Full regression: not
+  run`), and Bagnik's prompt states that a Cmok "done" never means regression is green.
+- **Enforced by tests.** `cmok_does_not_run_full_regression` and `bagnik_owns_full_regression` in
+  `tests/lint/structure.test.sh`. Backed by `program.md` invariant #10 — Veles may reword the rule
+  but must not flip which worker runs what.
+- **Migration:** none required — `Focused test command:` is optional and absent copies of
+  `.tlk/PROJECT.md` keep working. Add the field to yours if your suite is slow enough to matter.
+
 ### Changed — coordinator-driven routing (agents no longer invoke agents)
 
 - **Routing moved out of the agents and into a single coordinator.** Previously each agent decided

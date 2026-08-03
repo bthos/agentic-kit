@@ -83,6 +83,8 @@ Recommend: /architecture-planning (arch + tests)
 Why: design and QA contract are settled; the build needs tests first.
 ```
 
+The design spans three phases, so log the phase boundaries as you cross them rather than only at the end. Append a `## HH:MM cli-designing [design] progress` entry (`Result:` / `Artifacts:` / `Next:` — no arrow, no `Recommend:`) when the research brief lands with the Non-Obvious Insight named, and again when the command surface is settled but the scorecard is not yet written.
+
 From there the coordinator runs the normal route: architecture-planning → `@bagnik` (test gate) → `@cmok` (build) → `@bagnik` (code QA, **scorecard-gated**) → `@zlydni`. Cite all three artifacts in your return so it can relay them.
 
 `scorecard.md` is the QA contract: two tiers, 100 points, **Grade A (≥85) required to ship**. Tier 1 scores the agent-native infrastructure; Tier 2 scores domain correctness (paths valid against the spec, auth protocol fidelity, sync→upsert→search pipeline actually flows, no dead flags). Bagnik scores it during code QA and blocks below 85. Verification is mechanical, in layers: scorecard → dogfood (run every command; dead flags, invalid paths, auth mismatches) → proof-of-behaviour (write through the pipeline, read it back) → optional **read-only** live smoke test.

@@ -103,6 +103,55 @@ test_every_agent_states_the_no_invocation_rule() {
   done
 }
 
+test_every_agent_documents_progress_entries() {
+  # A worker's context dies when it returns, so partial results ("built but
+  # untested", "suite ran, 3 failures") only survive if it logged them while
+  # still running. Every shipped agent prompt must carry the progress-entry
+  # instruction — inheriting it from PIPELINE.md is lost on a trimmed context.
+  local f
+  for f in "$KIT_ROOT"/agents/*.md; do
+    [ -f "$f" ] || continue
+    grep -qE '\[context\] progress|\] progress$|progress entry|Progress entries' "$f" \
+      || fail "$(basename "$f"): missing the progress-entry instruction"
+  done
+}
+
+test_progress_entry_format_has_no_arrow_or_recommend() {
+  # The arrow means "I have returned" and Recommend: is routing data; a mid-run
+  # entry has neither. Catch a template block that starts a progress header and
+  # then carries either.
+  local f hits
+  for f in "$KIT_ROOT"/agents/*.md "$KIT_ROOT"/skills/*/SKILL.md \
+           "$KIT_ROOT"/skills/*/templates/handoff-log.md \
+           "$KIT_ROOT"/templates/PIPELINE.md.template; do
+    [ -f "$f" ] || continue
+    hits=$(awk '
+      /^## .*progress[[:space:]]*$/ { inblock=1; hdr=$0; hdrline=NR
+        if ($0 ~ /→ Coordinator/) print FILENAME": "NR": progress header carries the arrow"
+        next }
+      inblock && /^(Recommend|Why):/ { print FILENAME": "NR": progress entry carries "$1; inblock=0; next }
+      inblock && /^(##|```|$)/ { inblock=0 }
+    ' "$f")
+    [ -z "$hits" ] || fail "$hits"
+  done
+}
+
+test_cmok_does_not_run_full_regression() {
+  # Full regression is Bagnik's gate. Cmok running it on every build and every
+  # fix-loop iteration is the pipeline's largest avoidable cost.
+  local f="$KIT_ROOT/agents/cmok.md"
+  grep -qiE 'do not run the full regression' "$f" \
+    || fail "cmok.md: missing the explicit 'do not run the full regression suite' rule"
+  grep -qiE 'focused test|focused tests|Focused test command' "$f" \
+    || fail "cmok.md: missing the focused-test instruction"
+}
+
+test_bagnik_owns_full_regression() {
+  local f="$KIT_ROOT/agents/bagnik.md"
+  grep -qiE 'full.{0,15}(test suite|suite|regression)' "$f" \
+    || fail "bagnik.md: no longer states that it runs the full suite"
+}
+
 test_managed_block_markers_are_balanced() {
   # lib.sh defines paired begin/end markers; render output must contain both.
   source "$KIT_ROOT/shared/lifecycle/tools/lib.sh"

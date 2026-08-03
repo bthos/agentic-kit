@@ -7,11 +7,14 @@
 ## Project-Specific Configuration
 
 - **Test command:** `<your test command, e.g. npm test or pytest>`
+- **Focused test command:** `<optional: run a subset, e.g. npm test -- or pytest — Cmok appends a path/pattern. Leave as a placeholder to have Cmok filter the test command itself.>`
 - **Build command:** `<your build command, e.g. npm run build or make>`
 - **Version files:** `<comma-separated list of files to version-bump, or "none", e.g. package.json, manifest.json>`
 - **Artifacts directory:** `.tlk/`
 - **Design system directory:** `design-system/`
 - **Judge command:** `<optional: CLI for LLM-as-judge in autoresearch loop. Defaults to `claude -p --allowedTools none`. Set to e.g. `gemini -p` to swap providers.>`
+
+> **Test command vs Focused test command.** Bagnik's gate always runs the full **Test command** — it is the only worker that can say regression is green. Cmok runs only the tests covering what it changed: the **Focused test command** if you set one, otherwise it filters the test command itself. Keep both values as bare commands with no trailing prose — scripts read them by stripping the label and executing the rest.
 
 ## Project Context
 
