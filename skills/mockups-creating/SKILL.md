@@ -1,12 +1,12 @@
 ---
 name: mockups-creating
-description: Mockups. Creates low-fidelity mockups from the UX design before implementation. Use for mockup creation and user UAT.
+description: Mockups. Creates high-fidelity mockups from the UX design before implementation. Use for mockup creation and user UAT.
 disable-model-invocation: false
 ---
 
 # Creating Mockups
 
-Your job is to create low-fidelity mockups from the UX design before implementation.
+Your job is to create high-fidelity mockups from the UX design before implementation.
 
 ## When to Use
 
@@ -29,7 +29,7 @@ talaka/memory/tools/session.sh agent mockups-creating
    - **Reference by name** — name the design system's tokens and components (colors, type, spacing, components) instead of inventing ad-hoc values.
    - **Pick a theme up front** — if the design system defines multiple themes/modes, choose one before sketching and stay consistent.
    - Skip silently if no path is defined or the directory is absent.
-3. **Create mockups** — Low-fidelity wireframes, screen flows, component sketches
+3. **Create mockups** — High-fidelity wireframes, screen flows, component sketches
 4. **Cover all states** — Implement every state from the UX states matrix (empty, loading, error, success, retry)
 5. **STOP after** — Log, return, and recommend STOP. User UAT is required before anything proceeds.
 
@@ -74,7 +74,7 @@ After mockups are complete:
 
 ## Output
 
-- Low-fidelity structured wireframes per screen
+- High-fidelity structured wireframes per screen
 - State coverage confirmation: "States implemented: [list]"
 - Design system alignment note when a design system was used: "Design system: [components/tokens reused]" (omit if none defined)
 - UAT prompt for user
