@@ -6,7 +6,7 @@
 set -euo pipefail
 
 FEATURE_PATH="${1:-}"
-PROJECT_MD="${PROJECT_MD:-PROJECT.md}"
+PROJECT_MD="${PROJECT_MD:-.tlk/PROJECT.md}"
 
 if [ ! -f "$PROJECT_MD" ]; then
   echo "Error: $PROJECT_MD not found. Run from project root." >&2
