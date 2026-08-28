@@ -32,12 +32,16 @@ test_unparseable_output_reports_broken_not_zero() {
   # score. program.md rule 5 (uncertainty = failure) applies to the *model's*
   # answer; it must not be used to launder tool failures into a clean-looking 0.
   local art; art=$(_art_with_judge "printf maybe")
-  local out rc=0
-  out=$(ARTEFACTS_DIR="$art" bash "$JUDGE" --requirement "x" --output "y" 2>&1) || rc=$?
+  local proj; proj=$(make_tmp_project)
+  local rc=0
+  # stdout and stderr separately: stdout is the score channel and must stay
+  # empty, which is the whole point — a caller reading it gets nothing to record.
+  ARTEFACTS_DIR="$art" bash "$JUDGE" --requirement "x" --output "y" \
+    >"$proj/out.txt" 2>"$proj/err.txt" || rc=$?
   assert_eq "3" "$rc" "unparseable judge output exits 3"
-  assert_not_contains "$out" $'\n0\n' "no verdict emitted on stdout"
-  assert_contains "$out" "no usable verdict" "diagnostic names the failure"
-  assert_contains "$out" "maybe" "raw judge output echoed for debugging"
+  assert_eq "" "$(cat "$proj/out.txt")" "nothing written to the score channel"
+  assert_file_contains "$proj/err.txt" "no usable verdict" "diagnostic names the failure"
+  assert_file_contains "$proj/err.txt" "maybe" "raw judge output echoed for debugging"
 }
 
 test_failing_judge_command_reports_broken() {
