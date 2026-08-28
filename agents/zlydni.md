@@ -105,7 +105,7 @@ When commit completes:
    Why: pipeline complete for this feature.
    ```
 
-3. **Record metrics — before archiving.** When a feature path was provided, record it now, while the feature folder is still at its live `.tlk/features/…` path. `record-metrics.sh` appends to `<feature-path>/metrics.jsonl`, so it **must** run before the archive move (step 4). If it runs after the move, `mkdir -p` inside the script silently recreates the just-moved folder and the row is orphaned in a resurrected `.tlk/features/<slug>/`, while the archived `metrics.jsonl` loses it:
+3. **Record metrics — before archiving.** When a feature path was provided, record it now, while the feature folder is still at its live `.tlk/features/…` path. `record-metrics.sh` appends to `<feature-path>/metrics.jsonl`, so run it before the archive move (step 4) and the row lands with the rest. Run after the move and the script falls back to the archived copy, printing where the row went — recoverable, but the ordering above keeps it boring:
    ```bash
    .tlk/autoresearch/tools/record-metrics.sh \
      --feature <feature-path> \
