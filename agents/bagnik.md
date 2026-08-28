@@ -44,6 +44,8 @@ talaka/memory/tools/session.sh agent bagnik
      --requirement-file <feature-path>/spec.md \
      --output-file <feature-path>/handoff-log.md
    ```
+   `judge.sh` prints `0` or `1` and exits 0 when it actually judged. **If it exits non-zero, do not record an accuracy** — exit 3 means the judge pipeline is broken (auth, model, unparseable output), and a recorded `0` there is a fabricated score, not a failing one. Report the diagnostic instead and run `talaka/autoresearch/tools/judge.sh --self-test` to confirm.
+
    Append the verdict (0 or 1) plus your run metrics to `metrics.jsonl` via:
    ```bash
    .tlk/autoresearch/tools/record-metrics.sh \
