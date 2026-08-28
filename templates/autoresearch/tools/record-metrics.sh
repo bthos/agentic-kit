@@ -16,6 +16,12 @@
 #     [--cost-per-min 0.02] \
 #     [--cost-per-token 0.000003]
 #
+# --feature must name a directory that already exists. A bare slug
+# (2026-04-30-foo) is resolved against .tlk/features, .tlk/archive and
+# .tlk/audits; a .tlk/features/<slug> path whose feature has already been
+# archived falls back to .tlk/archive/<slug>. An unresolvable --feature is an
+# error — the row is never written to a freshly created directory.
+#
 # Anything missing is recorded as null. Run from project root.
 
 set -euo pipefail
@@ -60,13 +66,61 @@ while [ $# -gt 0 ]; do
     --cost-per-token) cost_per_tok="$2"; shift 2 ;;
     --log-file=*) LOG_FILE="${1#--log-file=}"; shift ;;
     --log-file) LOG_FILE="${2:-}"; shift 2 ;;
-    -h|--help)        sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)        sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
 [ -n "$feature" ] || { echo "--feature required" >&2; exit 2; }
 [ -n "$agent" ]   || { echo "--agent required"   >&2; exit 2; }
+
+# ---------------------------------------------------------------------------
+# Resolve --feature to a directory that already exists.
+#
+# The old code ran `mkdir -p "$feature"` unconditionally, so any path the caller
+# invented — a bare slug, a typo, a stale relative path — was created on the
+# spot and the row was orphaned there (issue #3). Resolution now has to succeed
+# against something on disk; otherwise we refuse to write.
+#
+#   1. the path as given, if it is a directory
+#   2. archive race: .tlk/features/<slug> already moved to .tlk/archive/<slug>
+#   3. bare slug: look it up under the known artefact roots
+# ---------------------------------------------------------------------------
+resolved=""
+if [ -d "$feature" ]; then
+  resolved="$feature"
+else
+  archived="${feature/\/features\//\/archive\/}"
+  if [ "$archived" != "$feature" ] && [ -d "$archived" ]; then
+    echo "record-metrics: '$feature' not found — feature already archived; appending to '$archived'" >&2
+    resolved="$archived"
+  else
+    # Prefer a project-relative artefacts prefix so an auto-prefixed slug is
+    # recorded as ".tlk/features/<slug>" — the same string agents pass — rather
+    # than an absolute path that would split this run off in fleet aggregation.
+    art_prefix="$ARTEFACTS"
+    case "$ARTEFACTS" in
+      "$PROJECT_ROOT"/*) art_prefix="${ARTEFACTS#"$PROJECT_ROOT"/}" ;;
+    esac
+    for candidate in "$art_prefix/features/$feature" "$art_prefix/archive/$feature" "$art_prefix/audits/$feature"; do
+      [ -d "$candidate" ] || continue
+      resolved="$candidate"
+      break
+    done
+  fi
+fi
+
+if [ -z "$resolved" ]; then
+  {
+    echo "record-metrics: --feature '$feature' does not resolve to an existing directory."
+    echo "  Tried: '$feature', its /archive/ counterpart, and"
+    echo "         ${art_prefix:-$ARTEFACTS}/{features,archive,audits}/$feature"
+    echo "  Pass a real feature path (e.g. .tlk/features/<slug>) — refusing to create it,"
+    echo "  because an invented path orphans this row where nothing will ever read it."
+  } >&2
+  exit 2
+fi
+feature="$resolved"
 
 ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 run_id=$(printf '%s_%s' "$ts" "$RANDOM")
@@ -86,22 +140,13 @@ fi
 json_line=$(printf '{"ts":"%s","run_id":"%s","feature":"%s","agent":"%s","variant":"%s","tokens":%s,"wall_ms":%s,"cost_usd":%s,"accuracy":%s}' \
   "$ts" "$run_id" "$feature" "$agent" "$variant" "$tokens" "$wall_ms" "$cost_usd" "$accuracy")
 
-# Per-feature metrics file.
-# Guard against the archive race: if the feature folder has already been moved to
-# .tlk/archive/<slug>/ (e.g. a commit agent recording metrics after archiving),
-# append to the archived copy instead of letting `mkdir -p` resurrect an empty
-# .tlk/features/<slug>/ and orphan this row there.
-if [ ! -d "$feature" ]; then
-  archived="${feature/\/features\//\/archive\/}"
-  if [ "$archived" != "$feature" ] && [ -d "$archived" ]; then
-    echo "record-metrics: '$feature' not found — feature already archived; appending to '$archived'" >&2
-    feature="$archived"
-  fi
-fi
-mkdir -p "$feature"
+# Per-feature metrics file. $feature is already resolved to an existing
+# directory above, so this only ever appends inside a real feature/archive/audit
+# folder — no mkdir, no orphans.
 printf '%s\n' "$json_line" >> "$feature/metrics.jsonl"
 
 # Fleet-wide cost log
 printf '%s\n' "$json_line" >> "$COST_LOG"
 
 echo "$json_line"
+echo "record-metrics: appended to $feature/metrics.jsonl and $COST_LOG" >&2

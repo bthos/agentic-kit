@@ -42,7 +42,7 @@ Note start time on entry: `start=$(date +%s)`
 1. **Snapshot Явь** — copy every agent and skill into `.tlk/autoresearch/variants/<round-id>/baseline/`.
 2. **Pick a target** — one agent or one skill file. Prefer files that recently lost composite points or that the latest archived feature failed on.
 3. **Ask for a single small mutation** — call the Edit tool to propose ONE focused change (a new rule, a clearer guardrail, a model swap). Save the variant copy under `variants/<round-id>/proposal/`.
-4. **Run the eval-set** — for each entry under `eval-set/*.md`, produce candidate output (Generator side) and score it with `talaka/autoresearch/tools/judge.sh` (Evaluator side: returns 0/1 per acceptance criterion).
+4. **Run the eval-set** — for each entry under `eval-set/*.md`, produce candidate output (Generator side) and score it with `talaka/autoresearch/tools/judge.sh` (Evaluator side: returns 0/1 per acceptance criterion). Confirm the pipeline first with `talaka/autoresearch/tools/judge.sh --self-test`; if the judge exits non-zero at any point, **abort the round** rather than scoring — exit 3 is a broken judge, not a zero, and a round decided on fabricated zeros is worse than no round.
 5. **Compute composite for baseline and proposal.**
 6. **Ratchet:**
    - If `composite_proposal ≥ composite_baseline` AND every invariant in `program.md` still holds → **accept**: keep the proposal in Явь, refresh the manifest hash in `.tlk/.talaka.files`, append a row to `.tlk/autoresearch/runs/ratchet.jsonl`.
